@@ -209,7 +209,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.0';
+const VERSION='0.3.1';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -302,9 +302,17 @@ const SR=window.SLEEP_RULES||{nightWindowDefault:{from:19,to:7},nightShareMin:.5
 function nightWin(){ const b=S.baby; return {from:b.nightFrom??SR.nightWindowDefault.from, to:b.nightTo??SR.nightWindowDefault.to} }
 function nightOverlap(a,b){ const {from,to}=nightWin(); let s=0; for(let d=dayStart(a)-DAY; d<b; d+=DAY) s+=Math.max(0,Math.min(b,d+DAY+to*H)-Math.max(a,d+from*H)); return s }
 // 직접 고른 값이 있으면 그것, 없으면 밤 시간대(기본 19~7시)에 절반 이상 걸치면 밤잠
-function autoKind(x){ const {from,to}=nightWin();
-  if(x.end==null){ const h=new Date(x.start).getHours(); return (h>=from||h<to)?'night':'nap' }
+// 1) 밤 시간대 안에 잠들었으면 밤잠 2) 밤 시간대에 절반 이상 걸치면 밤잠
+// 3) 밤잠에서 아침 기상 시각+1시간 전에 깨서 60분 안에 다시 잔 것은 밤잠의 연장 (예: 6시 40분 수유 후 7시 20분~9시)
+function baseKind(x){ const {from,to}=nightWin(), h=new Date(x.start).getHours();
+  if(h>=from||h<to) return 'night';
+  if(x.end==null) return 'nap';
   const len=x.end-x.start; return len>0&&nightOverlap(x.start,x.end)/len>=SR.nightShareMin?'night':'nap' }
+function autoKind(x){ const k=baseKind(x); if(k==='night') return k;
+  const {to}=nightWin(), c=SR.nightContinue||{gapMin:60,wokeBeforeToPlusH:1}, d=dayStart(x.start);
+  // 밤잠에서 깬 시각이 아침 기상 시각+1시간 이전이어야 함 (9시에 깨고 10시에 잔 건 첫 낮잠)
+  const prev=S.events.find(p=>p.type==='sleep'&&p!==x&&p.end!=null&&p.end<=x.start&&x.start-p.end<=c.gapMin*MIN&&p.end<=d+(to+c.wokeBeforeToPlusH)*H&&(p.kind==='night'||(p.kind!=='nap'&&baseKind(p)==='night')));
+  return prev?'night':k }
 function sleepKind(x){ return x.kind==='night'||x.kind==='nap'?x.kind:autoKind(x) }
 // 밤잠은 아침이 오는 날짜, 낮잠은 잠든 날짜에 셈
 function sleepDate(x){ if(sleepKind(x)==='nap') return dayStart(x.start);
@@ -341,7 +349,7 @@ function sleepCard(d){
 function sleepInfoSheet(){
   const r=sleepRef(Date.now()), {from,to}=nightWin();
   openSheet(`<h2>낮잠·밤잠 기준</h2>
-  <p class="small" style="margin:0">수면 버튼 하나로 기록하면, 밤 시간대(<b>${from}시~다음 날 ${to}시</b>)에 절반 이상 걸친 잠은 밤잠, 나머지는 낮잠으로 나눠요. 밤잠은 아침이 오는 날짜에 셈해요. 틀리게 나뉜 기록은 눌러서 직접 바꿀 수 있고, 밤 시간대는 설정에서 바꿀 수 있어요.</p>
+  <p class="small" style="margin:0">수면 버튼 하나로 기록하면, 밤 시간대(<b>${from}시~다음 날 ${to}시</b>)에 잠들었거나 그 시간대에 절반 이상 걸친 잠은 밤잠, 나머지는 낮잠으로 나눠요. 밤잠 중 잠깐 깼다가 아침에 다시 잔 것도 밤잠으로 이어 봐요. 밤잠은 아침이 오는 날짜에 셈해요. 틀리게 나뉜 기록은 눌러서 직접 바꿀 수 있고, 밤 시간대는 설정에서 바꿀 수 있어요.</p>
   <div class="card" style="overflow-x:auto;padding:4px 10px;flex-shrink:0"><table><thead><tr><th>월령</th><th>낮잠</th><th>낮잠 합계</th><th>깨어 있는 시간</th><th>하루 총</th></tr></thead><tbody>${SR.byAgeMonths.map(x=>`<tr${r&&r.from===x.from?' style="font-weight:700"':''}><td>${x.from===0?'0~2':x.from+'~'+(x.to-1)}개월</td><td>${rng(x.napCount,'회')}</td><td>${rng(x.napH,'h')}</td><td>${minR(x.wakeMin).join('~')}</td><td>${rng(x.totalH,'h')}</td></tr>`).join('')}</tbody></table></div>
   <p class="small muted" style="margin:0">하루 총 수면: 0~3개월은 미국 수면재단(NSF, 2015), 4개월 이후는 미국수면의학회(AASM) 합의·미국소아과학회(AAP) 지지(2016) 권고예요. 낮잠 횟수·합계·깨어 있는 시간은 공식 기준이 없어서 소아 수면 안내서에서 흔히 쓰는 대략적인 참고치예요. 조산이면 예정일 기준 월령을 써요.</p>
   <p class="small muted" style="margin:0">범위를 벗어나도 이상하다는 뜻은 아니에요. 아기마다 차이가 크고, 걱정되면 소아과에 물어보세요. 참고 정보이며 진단이 아니에요.</p>
