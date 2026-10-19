@@ -234,7 +234,7 @@ class MainActivity : Activity() {
                 // 타이머가 처음 시작될 때 알림 권한을 물어봄
                 if (!o.isNull("sleep") || !o.isNull("feed")) askNotifyPermission()
                 LiveNotify.update(this@MainActivity, o)
-                QuickWidget.save(this@MainActivity, o)
+                Widgets.save(this@MainActivity, o)
                 Push.onLocal(this@MainActivity, if (o.isNull("fid")) null else o.optString("fid"))
             }
         }

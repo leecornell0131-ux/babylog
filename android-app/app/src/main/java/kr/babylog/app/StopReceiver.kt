@@ -61,7 +61,7 @@ class StopReceiver : BroadcastReceiver() {
         // 누른 즉시 타이머 알림·위젯을 내리고, 기록했다는 짧은 알림을 띄움
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.cancel(if (a == "stop_feed") LiveNotify.ID_FEED else LiveNotify.ID_SLEEP)
-        if (a == "stop_sleep") QuickWidget.clearSleep(ctx)
+        Widgets.stopped(ctx, a, at)
         val hm = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(at))
         val n = Notification.Builder(ctx, LiveNotify.CH)
             .setSmallIcon(R.drawable.ic_stat)

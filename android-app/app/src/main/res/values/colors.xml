@@ -4,7 +4,7 @@
     <color name="widget_bg">#F7F5FF</color>
     <color name="widget_ink">#1F2340</color>
     <color name="widget_sub">#5A5F7A</color>
-    <color name="btn_feed">#FFE3C7</color>
+    <color name="btn_feed">#FCDCE8</color>
     <color name="btn_diaper">#DDEFD8</color>
     <color name="btn_sleep">#DCE5F5</color>
 </resources>
