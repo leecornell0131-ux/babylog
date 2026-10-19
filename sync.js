@@ -91,6 +91,8 @@ async function push(S) {
       chunk.forEach(([id, c]) => { st.synced[id] = c; if (inflight[id] === c) delete inflight[id]; });
       if (withMeta) { st.meta = m; if (inflight.__meta === m) delete inflight.__meta; }
       persist(); if (state !== 'on') setState('on');
+      // 갤럭시 위젯·잠금화면 즉시 갱신용 알림 서버에 요약 전달 (서버 설정이 없으면 아무것도 안 함)
+      import('./push-server/web-notify.js').then(m => m.notifyFamily(fid, App.state)).catch(() => {});
     }, e => {
       chunk.forEach(([id, c]) => { if (inflight[id] === c) delete inflight[id]; });
       if (withMeta && inflight.__meta === m) delete inflight.__meta;
