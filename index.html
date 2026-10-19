@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>아기로그</title>
+<meta name="description" content="수유·수면·기저귀 기록과 AI 질문용 내보내기">
+<meta name="theme-color" content="#3B49B8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="아기로그">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<script src="firebase-config.js"></script>
+<style>
+/* 레이아웃: 폰 폭 한 열 앱. 위 날짜·요약, 가운데 세로 24시간 막대 + 기록 목록, 아래 큰 기록 버튼과 탭 */
+:root{
+  --bg:#F3F5F8; --card:#FFFFFF; --fg:#1B2430; --muted:#5B6472; --line:#E2E6EC; --soft:#EEF0F4;
+  --ink:#1B2430; --on-ink:#FFFFFF; --accent:#3B49B8; --accent-soft:#E8EBFB;
+  --sleep:#4C5BD4; --feed:#D9731F; --pee:#1F8A7E; --poo:#7A4E22; --warn:#B3261E; --ok:#1F7A3A;
+  --feed-text:#A85210; --sleep-text:#3B49B8; --pee-text:#1A6F66;
+  --hatch1:#E4E8EE; --hatch2:#F3F5F8;
+  --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
+  --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
+  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --warn:#F2B8B5; --ok:#7FD39A;
+  --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
+  --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
+  --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
+  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --warn:#F2B8B5; --ok:#7FD39A;
+  --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
+  --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+[hidden]{display:none!important}
+.app{max-width:440px;margin:0 auto;padding-block:16px calc(150px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.row{display:flex;align-items:center;gap:8px}
+.between{justify-content:space-between}
+.card{background:var(--card);border-radius:14px}
+.sample{background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.linkbtn{background:none;border:0;color:var(--accent);font-weight:600;padding:6px 0;min-height:36px}
+header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:0;background:var(--card);display:flex;align-items:center;justify-content:center}
+.iconbtn svg{stroke:var(--fg)}
+.iconbtn:disabled{opacity:.35;cursor:default}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
+.stats .card{padding:8px 4px;display:flex;flex-direction:column}
+.stats b{font-size:16px;font-variant-numeric:tabular-nums}
+.alertline{border-radius:14px;padding:10px 14px;font-size:14px;background:var(--accent-soft)}
+.alertline.warn{background:transparent;border:1.5px solid var(--warn)}
+.day{display:flex;gap:12px;align-items:flex-start}
+.bar{width:84px;flex-shrink:0;padding:12px 0}
+.bar .track{position:relative;height:480px}
+.bar .tick{position:absolute;left:6px;font-size:10px;color:var(--muted);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.bar .bg{position:absolute;left:28px;top:0;width:18px;height:100%;background:var(--soft);border-radius:4px}
+.bar .s{position:absolute;left:28px;width:18px;background:var(--sleep);border-radius:4px;min-height:3px}
+.bar .s.live{opacity:.6}
+.bar .g{position:absolute;left:28px;width:18px;border-radius:4px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 6px);opacity:.6}
+.bar .f{position:absolute;left:52px;width:12px;height:6px;border-radius:3px;background:var(--feed);transform:translateY(-50%)}
+.bar .d{position:absolute;left:68px;width:7px;height:7px;border-radius:4px;background:var(--pee);transform:translateY(-50%)}
+.bar .d.poo{border-radius:2px;background:var(--poo)}
+.bar .now{position:absolute;left:24px;right:4px;height:2px;background:var(--fg)}
+.list{flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.item{background:var(--card);border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:10px;border:0;text-align:left;width:100%}
+.item .sw{width:8px;height:28px;border-radius:4px;flex-shrink:0}
+.item .t{display:flex;flex-direction:column;min-width:0}
+.item .t b{font-size:14px;font-weight:600}
+.item.live{box-shadow:inset 0 0 0 2px var(--sleep)}
+.gap{border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);
+  background:repeating-linear-gradient(135deg,var(--hatch1) 0 8px,var(--hatch2) 8px 16px)}
+.gap b{font-size:15px}
+.btn{min-height:44px;border-radius:12px;border:0;background:var(--ink);color:var(--on-ink);font-weight:600;padding:0 14px}
+.btn.ghost{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.btn.full{width:100%}
+.btn:disabled{opacity:.5}
+.empty{padding:16px;text-align:center;color:var(--muted);font-size:14px}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));z-index:5}
+.dock .inner{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.rec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rec button{height:52px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
+.rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
+:root[data-theme="dark"] .rec button{color:#12161C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button{color:#12161C}}
+nav.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:48px}
+nav.tabs button{background:none;border:0;font-size:13px;color:var(--muted)}
+nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
+.sheetwrap{position:fixed;inset:0;background:rgba(10,14,20,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:var(--card);width:100%;max-width:470px;border-radius:20px 20px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-height:90%;overflow:auto}
+.sheet h2{margin:0;font-size:18px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper output{font-size:28px;font-weight:700;min-width:110px;text-align:center;font-variant-numeric:tabular-nums}
+.stepper button{width:52px;height:52px;border-radius:26px;border:1px solid var(--line);background:var(--card);font-size:20px}
+label.field,.field{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px}
+.field + .field{border-top:1px solid var(--soft)}
+/* iOS는 16px 미만 입력칸에 포커스하면 화면을 확대하므로 16px 고정 */
+input[type=time],input[type=date],input[type=text],input[type=number]{font-size:16px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;min-width:0}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--ink)}
+.panel{padding:4px 14px}
+h2.sec{font-size:13px;color:var(--muted);font-weight:500;margin:6px 4px 0}
+.week{display:grid;grid-template-columns:28px repeat(7,minmax(0,1fr));gap:4px;padding:12px 10px}
+.week .col{position:relative;height:300px;background:var(--soft);border-radius:4px}
+.week .col .s{position:absolute;left:2px;right:2px;background:var(--sleep);border-radius:2px}
+.week .col .f{position:absolute;left:30%;right:30%;height:3px;background:var(--feed);border-radius:2px}
+.week .col .g{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 6px);opacity:.5}
+.week .lbl{font-size:11px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.week .axis{position:relative;height:300px}
+.week .axis span{position:absolute;right:2px;font-size:10px;color:var(--muted);transform:translateY(-50%)}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 6px;text-align:right;border-top:1px solid var(--soft)}
+th{font-weight:500;color:var(--muted);font-size:12px;border-top:0}
+th:first-child,td:first-child{text-align:left}
+pre.out{margin:0;background:#1B2430;color:#DDE2EA;border-radius:14px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:380px;overflow:auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--on-ink);padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;max-width:90vw;text-align:center}
+.warnbox{border:1.5px solid var(--warn);border-radius:12px;padding:10px 12px;font-size:13px}
+.install{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.install ol{margin:0;padding-left:20px}
+.welcome{display:flex;flex-direction:column;gap:14px;padding-top:24px}
+.welcome h1{font-size:26px;margin:0}
+.welcome img{width:72px;height:72px;border-radius:16px}
+.code{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:2px;text-align:center;padding:10px;background:var(--bg);border-radius:10px;user-select:all;-webkit-user-select:all}
+.dot{display:inline-block;width:8px;height:8px;border-radius:4px;background:var(--muted)}
+.dot.on{background:var(--ok)}.dot.err{background:var(--warn)}
+body.nodock .dock{display:none}
+@media (prefers-reduced-motion: no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="dock" id="dock">
+  <div class="inner">
+    <div class="rec" id="recBtns">
+      <button class="feed" id="bFeed" type="button">수유</button>
+      <button class="sleep" id="bSleep" type="button">수면</button>
+      <button class="diaper" id="bDiaper" type="button">기저귀</button>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="화면">
+      <button type="button" data-tab="today">오늘</button>
+      <button type="button" data-tab="week">주간</button>
+      <button type="button" data-tab="export">내보내기</button>
+      <button type="button" data-tab="settings">설정</button>
+    </nav>
+  </div>
+</div>
+<div id="sheetRoot"></div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+(function(){
+const VERSION='0.1.0';
+const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H;
+const KEY='babylog-v1';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const hm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())};
+const md=t=>{const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()};
+const dow=t=>'일월화수목금토'[new Date(t).getDay()];
+const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
+const dur=ms=>{const m=Math.round(ms/MIN);const h=Math.floor(m/60);return h?(h+'시간'+(m%60?' '+(m%60)+'분':'')):(m+'분')};
+const durS=ms=>{const m=Math.round(ms/MIN);return Math.floor(m/60)+'h '+pad(m%60)+'m'};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+let topLevel=true; try{topLevel=window.top===window.self}catch(_){topLevel=false}
+
+// ---------- 상태 ----------
+function emptyState(){ return {v:1,onboarded:false,sample:false,
+  baby:{name:'',birth:'',birthKg:null,nowKg:null,preterm:false,due:'',feeding:'분유'},
+  items:{feed:true,sleep:true,diaper:true}, events:[], gaps:{}} }
+function sampleData(){
+  const today=dayStart(Date.now()), now=Date.now(), ev=[];
+  const birth=new Date(today-64*DAY);
+  for(let d=7;d>=0;d--){
+    const base=today-d*DAY;
+    [0.1,3.2,6.6,9.6,12.8,16,18.6,20.2].forEach((h,i)=>{const t=base+h*H+((d*7+i*13)%25)*MIN; if(t<now) ev.push({id:uid(),type:'feed',sub:'formula',start:t,ml:[120,110,120,100,120,90,120,130][i]-(d===1&&i>3?30:0)})});
+    [[0.4,2.6],[3.5,6.2],[7.8,9.3],[11.2,12.4],[14.0,15.1],[17.5,18.2],[20.5,24.3]].forEach(([a,b],i)=>{let s=base+a*H+((d*5+i*7)%20)*MIN, e=base+b*H+((d*3+i*11)%20)*MIN;
+      if(s<now) ev.push({id:uid(),type:'sleep',start:s,end:e>now?null:e})});
+    [2.8,6.7,10,13,16.3,19.2].forEach((h,i)=>{const t=base+h*H+((d+i)*9%15)*MIN; if(t<now) ev.push({id:uid(),type:'diaper',sub:(i===2||i===4)&&d%2===0?'poo':(i===4?'both':'pee'),start:t})});
+  }
+  const y=today-DAY, gs=y+2.6*H, ge=y+8.4*H;
+  const kept=ev.filter(e=>!(e.start>gs && e.start<ge && !(e.type==='sleep'&&e.start<gs)));
+  let live=kept.filter(e=>e.type==='sleep'&&e.end===null); live.slice(0,-1).forEach(e=>e.end=e.start+40*MIN);
+  return {v:1,onboarded:true,sample:true, baby:{name:'콩이',birth:birth.toISOString().slice(0,10),birthKg:3.2,nowKg:5.1,preterm:false,due:'',feeding:'분유'},
+    items:{feed:true,sleep:true,diaper:true}, events:kept, gaps:{}};
+}
+
+let S;
+function load(){ try{const raw=localStorage.getItem(KEY); if(raw){S=JSON.parse(raw); S.gaps=S.gaps||{}; return}}catch(e){} S=emptyState(); }
+let saveFailed=false;
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S)); saveFailed=false}catch(e){ if(!saveFailed) toast('저장 공간에 쓰지 못했어요. 백업 파일을 저장해 두세요'); saveFailed=true }
+  if(window.BabySync&&!S.sample) try{window.BabySync.local(S)}catch(e){console.warn(e)}
+}
+load();
+
+let view={tab:'today',day:dayStart(Date.now()),exp:{days:7,q:'normal',anon:true,custom:''}};
+try{const v=JSON.parse(localStorage.getItem(KEY+'-tab')||'null'); if(v&&v.tab) view.tab=v.tab}catch(e){}
+
+// 사파리가 저장 공간을 비우지 않도록 요청 (홈 화면 앱이면 대개 허용됨)
+try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist() }catch(_){}
+
+// ---------- 계산 ----------
+function ageText(at){
+  const b=new Date(S.baby.birth+'T00:00:00').getTime(); if(isNaN(b)) return '';
+  const days=Math.floor((dayStart(at)-b)/DAY); const w=Math.floor(days/7);
+  let s='생후 '+w+'주 · D+'+(days+1);
+  if(S.baby.preterm&&S.baby.due){const due=new Date(S.baby.due+'T00:00:00').getTime(); const cw=Math.floor((dayStart(at)-due)/DAY/7); s+=' · 교정 '+(cw<0?'예정일 전':cw+'주')}
+  return s;
+}
+function evOfDay(d){const e=d+DAY, now=Date.now();
+  return S.events.filter(x=> x.type==='sleep' ? (x.start<e && (x.end??now)>d) : (x.start>=d&&x.start<e)).sort((a,b)=>a.start-b.start)}
+function dayStats(d){
+  const e=d+DAY, now=Date.now(), list=evOfDay(d);
+  let ml=0,feeds=0,sleep=0,pee=0,poo=0,longest=0;
+  list.forEach(x=>{
+    if(x.type==='feed'){feeds++; ml+=(x.ml||0)}
+    if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,e); sleep+=Math.max(0,b-a); longest=Math.max(longest,(x.end??now)-x.start)}
+    if(x.type==='diaper'){ if(x.sub!=='poo') pee++; if(x.sub!=='pee') poo++ }
+  });
+  return {ml,feeds,sleep,pee,poo,longest,list};
+}
+// 기록 공백: 켜 둔 항목의 기록 사이가 4시간 넘게 비면 공백
+function gapsOfDay(d){
+  const e=d+DAY, now=Date.now(), end=Math.min(e,now);
+  const iv=[];
+  S.events.forEach(x=>{ if(!S.items[x.type]) return;
+    const a=x.start, b=x.type==='sleep'?(x.end??now):x.start;
+    if(b>=d-6*H && a<end) iv.push([a,b]) });
+  iv.sort((p,q)=>p[0]-q[0]);
+  const out=[]; let cur=null;
+  for(const [a,b] of iv){ if(cur===null){cur=b;continue}
+    if(a-cur>GAP_MIN){ const gs=Math.max(cur,d), ge=Math.min(a,end); if(ge-gs>GAP_MIN) out.push({start:gs,end:ge}) }
+    cur=Math.max(cur,b) }
+  if(cur!==null && end-cur>GAP_MIN && end===now && !S.events.some(x=>x.type==='sleep'&&x.end===null)){
+    const gs=Math.max(cur,d); if(end-gs>GAP_MIN) out.push({start:gs,end:end,open:true}) }
+  return out.map(g=>({...g,key:String(g.start),state:S.gaps[String(g.start)]||null}));
+}
+function completeness(d){
+  const end=Math.min(d+DAY,Date.now()), span=end-d; if(span<=0) return 1;
+  const miss=gapsOfDay(d).filter(g=>g.state!=='slept'&&g.state!=='none').reduce((s,g)=>s+(g.end-g.start),0);
+  return Math.max(0,1-miss/span);
+}
+function liveSleep(){return S.events.find(x=>x.type==='sleep'&&x.end===null)}
+function lastFeed(){return S.events.filter(x=>x.type==='feed').sort((a,b)=>b.start-a.start)[0]}
+
+// ---------- 화면 ----------
+const ICON={prev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+  next:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'};
+function sampleBanner(){ return S.sample?`<div class="sample"><span>지금 보이는 기록은 <b>예시 데이터</b>예요.</span><button class="linkbtn" type="button" data-act="clear">비우고 내 기록 시작</button></div>`:'' }
+let installHidden=false; try{installHidden=localStorage.getItem(KEY+'-install-hide')==='1'}catch(_){}
+function installBanner(){
+  if(!isIOS||standalone||!topLevel||installHidden) return '';
+  return `<div class="install"><b>아이폰 홈 화면에 앱으로 추가하기</b>
+  <ol><li>Safari 아래쪽의 공유 버튼(네모에 위쪽 화살표)을 눌러요</li><li>"홈 화면에 추가"를 눌러요</li><li>홈 화면의 아기로그 아이콘으로 열어요</li></ol>
+  <span class="small muted">홈 화면으로 열어야 기록이 오래 안전하게 남아요.</span>
+  <button class="linkbtn" style="align-self:flex-start" type="button" data-act="hideInstall">다음에 할게요</button></div>`;
+}
+
+function itemHTML(x){
+  const now=Date.now();
+  if(x.type==='feed'){const names={formula:'분유',breastL:'모유 왼쪽',breastR:'모유 오른쪽',pump:'유축 수유'};
+    return `<button class="item" type="button" data-ev="${x.id}"><span class="sw" style="background:var(--feed)"></span><span class="t"><b>${names[x.sub]||'수유'}${x.ml?' '+x.ml+'ml':''}${x.min?' '+x.min+'분':''}</b><span class="small muted">${hm(x.start)}${x.note?' · '+esc(x.note):''}</span></span></button>`}
+  if(x.type==='sleep'){const live=x.end===null, len=(x.end??now)-x.start, night=new Date(x.start).getHours()>=19||new Date(x.start).getHours()<5;
+    return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="background:var(--sleep)"></span><span class="t"><b>${live?(night?'밤잠':'낮잠')+' 중 · '+dur(len)+'째':(night?'밤잠 ':'낮잠 ')+dur(len)}</b><span class="small muted">${hm(x.start)}${live?' 시작':' – '+hm(x.end)}</span></span></button>`}
+  const n={pee:'소변',poo:'대변',both:'소변+대변'}[x.sub];
+  return `<button class="item" type="button" data-ev="${x.id}"><span class="sw" style="background:${x.sub==='pee'?'var(--pee)':'var(--poo)'}"></span><span class="t"><b>기저귀 · ${n}</b><span class="small muted">${hm(x.start)}${x.note?' · '+esc(x.note):''}</span></span></button>`;
+}
+function gapHTML(g){
+  const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
+  if(g.state){const t={slept:'쭉 잤다고 표시함',missed:'기록 못 함 · 통계와 AI 분석에서 빠짐',none:'실제로 아무 일 없었음'}[g.state];
+    return `<div class="gap" style="opacity:.75"><div class="row between"><b>${label}</b><span class="small muted">${hm(g.start)} – ${g.open?'지금':hm(g.end)}</span></div><div class="row between"><span class="small">${t}</span><button class="linkbtn" type="button" data-gap="${g.key}" data-st="">되돌리기</button></div></div>`}
+  return `<div class="gap"><div class="row between"><b>${label}</b><span class="small muted">${hm(g.start)} – ${g.open?'지금':hm(g.end)}</span></div>
+  <span class="small">이 시간에 켜 둔 항목의 기록이 하나도 없어요. 어떻게 된 건가요?</span>
+  <div class="row"><button class="btn ghost" style="flex:1;font-size:14px;white-space:nowrap;padding:0 8px" type="button" data-gap="${g.key}" data-st="slept" data-s="${g.start}" data-e="${g.end}">쭉 잤어요</button><button class="btn ghost" style="flex:1;font-size:14px;white-space:nowrap;padding:0 8px" type="button" data-gap="${g.key}" data-st="missed">기록 못 했어요</button></div></div>`;
+}
+function renderWelcome(){
+  return `<div class="welcome"><img src="icons/icon-192.png" alt="" onerror="this.remove()">
+  <h1>아기로그</h1>
+  <p style="margin:0">수유·수면·기저귀를 버튼 한 번으로 기록하고, 모은 기록을 ChatGPT나 Claude에 붙여넣어 물어볼 수 있게 정리해 줘요.</p>
+  <p class="small muted" style="margin:0">기록은 이 휴대폰에만 저장돼요. 회원가입이 없어요.</p>
+  ${installBanner()}
+  <button class="btn full" style="height:52px" type="button" data-act="start">내 아기 기록 시작하기</button>
+  <button class="btn ghost full" type="button" data-act="sample">예시 데이터로 둘러보기</button>
+  <button class="linkbtn" type="button" data-act="import">백업 파일 불러오기</button>
+  <p class="small muted" style="margin:0">이 앱은 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p></div>`;
+}
+function renderToday(){
+  const d=view.day, today=dayStart(Date.now()), st=dayStats(d), gaps=gapsOfDay(d), now=Date.now();
+  const lf=lastFeed();
+  const top=d===today&&lf?`<div class="alertline">마지막 수유 <b>${dur(now-lf.start)} 전</b> · ${lf.ml?lf.ml+'ml ':''}${hm(lf.start)}</div>`:'';
+  // 규칙 기반 알림: 하루 분유량이 지난 7일 평균의 70% 미만 (기록 완성도 80% 이상인 날만)
+  let warn='';
+  if(d<today){ let sum=0,n=0; for(let i=1;i<=7;i++){const s=dayStats(d-i*DAY); if(s.feeds){sum+=s.ml;n++}}
+    if(n>=3&&st.ml&&completeness(d)>=0.8&&st.ml<0.7*sum/n) warn=`<div class="alertline warn">이날 분유량이 지난 평균보다 ${Math.round((1-st.ml/(sum/n))*100)}% 적어요. 이어지면 소아과 상담을 권해요. 참고 정보이며 진단이 아니에요.</div>` }
+  const span=480, y=t=>((t-d)/DAY*span);
+  let bar='';
+  for(let h=0;h<=24;h+=3) bar+=`<span class="tick" style="top:${h/24*span}px">${h}</span>`;
+  bar+='<div class="bg"></div>';
+  st.list.forEach(x=>{
+    if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${x.end===null?' live':''}" style="top:${y(a)}px;height:${Math.max(3,y(b)-y(a))}px"></div>`}
+    else if(x.type==='feed') bar+=`<div class="f" style="top:${y(x.start)}px"></div>`;
+    else bar+=`<div class="d${x.sub!=='pee'?' poo':''}" style="top:${y(x.start)}px"></div>`;
+  });
+  gaps.filter(g=>g.state!=='slept').forEach(g=>bar+=`<div class="g" style="top:${y(g.start)}px;height:${y(g.end)-y(g.start)}px"></div>`);
+  if(d===today) bar+=`<div class="now" style="top:${y(now)}px"></div>`;
+  const rows=[...st.list.map(x=>({t:x.start,h:itemHTML(x)})),...gaps.map(g=>({t:g.end-1,h:gapHTML(g)}))].sort((a,b)=>b.t-a.t);
+  const comp=Math.round(completeness(d)*100);
+  return `${sampleBanner()}${d===today?installBanner():''}
+  <header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${esc(S.baby.name)}${S.baby.name&&ageText(d)?' · ':''}${ageText(d)}</span><h1>${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일</h1></div>
+  <div class="row"><button class="iconbtn" type="button" aria-label="이전 날" data-act="prev">${ICON.prev}</button><button class="iconbtn" type="button" aria-label="다음 날" data-act="next" ${d>=today?'disabled':''}>${ICON.next}</button></div></header>
+  ${top}${warn}
+  <div class="stats">
+    ${S.items.feed?`<div class="card"><span class="small muted">수유 ${st.feeds}회</span><b style="color:var(--feed-text)">${st.ml}ml</b></div>`:''}
+    ${S.items.sleep?`<div class="card"><span class="small muted">수면</span><b style="color:var(--sleep-text)">${durS(st.sleep)}</b></div>`:''}
+    ${S.items.diaper?`<div class="card"><span class="small muted">기저귀</span><b style="color:var(--pee-text)">소${st.pee} · 대${st.poo}</b></div>`:''}
+  </div>
+  <div class="row between small"><span class="muted">기록 완성도</span><span><b>${comp}%</b></span></div>
+  <div class="day"><div class="card bar" role="img" aria-label="하루 24시간 세로 타임라인"><div class="track">${bar}</div></div>
+  <div class="list">${rows.length?rows.map(r=>r.h).join(''):'<div class="card empty">아직 기록이 없어요. 아래 버튼으로 첫 기록을 남겨 보세요.</div>'}</div></div>`;
+}
+function renderWeek(){
+  const today=dayStart(Date.now()), days=[...Array(7)].map((_,i)=>today-(6-i)*DAY), now=Date.now(), hgt=300;
+  let cols='<div class="axis">'+[0,6,12,18,24].map(h=>`<span style="top:${h/24*hgt}px">${h}</span>`).join('')+'</div>';
+  days.forEach(d=>{const st=dayStats(d); let c='';
+    st.list.forEach(x=>{ if(x.type==='sleep'){const a=Math.max(x.start,d),b=Math.min(x.end??now,d+DAY); c+=`<div class="s" style="top:${(a-d)/DAY*hgt}px;height:${Math.max(2,(b-a)/DAY*hgt)}px"></div>`}
+      else if(x.type==='feed') c+=`<div class="f" style="top:${(x.start-d)/DAY*hgt}px"></div>`});
+    gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>c+=`<div class="g" style="top:${(g.start-d)/DAY*hgt}px;height:${(g.end-g.start)/DAY*hgt}px"></div>`);
+    cols+=`<div class="col" role="img" aria-label="${md(d)} 하루 패턴">${c}</div>`});
+  let lbl='<span></span>'+days.map(d=>`<span class="lbl">${dow(d)}<br>${md(d)}</span>`).join('');
+  const rows=days.slice().reverse().map(d=>{const s=dayStats(d);return `<tr><td>${md(d)} ${dow(d)}</td><td>${durS(s.sleep)}</td><td>${s.ml}ml · ${s.feeds}회</td><td>${s.pee}/${s.poo}</td><td>${Math.round(completeness(d)*100)}%</td></tr>`}).join('');
+  return `${sampleBanner()}<header><span class="small muted">이전 기록</span><h1>최근 7일 패턴</h1></header>
+  <div class="card"><div class="week">${cols}${lbl}</div><div class="row small muted" style="padding:0 12px 12px;gap:14px;flex-wrap:wrap"><span class="row" style="gap:4px"><i style="width:10px;height:10px;background:var(--sleep);border-radius:2px;display:inline-block"></i>수면</span><span class="row" style="gap:4px"><i style="width:10px;height:3px;background:var(--feed);display:inline-block"></i>수유</span><span class="row" style="gap:4px"><i style="width:10px;height:10px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 4px);display:inline-block"></i>기록 공백</span></div></div>
+  <div class="card" style="overflow-x:auto;padding:4px 10px"><table><thead><tr><th>날짜</th><th>수면</th><th>분유</th><th>소/대</th><th>완성도</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+// ---------- 내보내기 ----------
+const QS={normal:['정상 범위인지','생후 {age} 기준으로 수유·수면·배변이 일반적인 범위인지 알려줘.'],sleep:['수면 패턴','수면 패턴에서 눈에 띄는 변화가 있는지, 이 시기에 흔한 일인지 알려줘.'],feed:['수유 간격','수유량과 간격이 이 시기에 일반적인 범위인지 알려줘.'],custom:['직접 쓰기','']};
+function exportText(){
+  const ex=view.exp, today=dayStart(Date.now());
+  // 기록이 하나도 없는 날은 평균에서 빼고 따로 알림 (0으로 계산하면 AI가 잘못 판단함)
+  const range=ex.days===1?[today]:[...Array(ex.days)].map((_,i)=>today-(ex.days-i)*DAY);
+  const emptyDays=range.filter(d=>!dayStats(d).list.length);
+  let days=range.filter(d=>dayStats(d).list.length); if(!days.length) days=[today];
+  const b=S.baby, nm=ex.anon?'아기':(b.name||'아기'), age=(ageText(Date.now()).split(' · ')[0]||'').replace('생후 ','')||'(태어난 날 미입력)';
+  const sts=days.map(dayStats), n=days.length;
+  const avg=f=>sts.reduce((s,x)=>s+f(x),0)/n;
+  const feedsAll=days.flatMap(d=>dayStats(d).list.filter(x=>x.type==='feed').map(x=>x.start)).sort((a,c)=>a-c);
+  let gi=0; for(let i=1;i<feedsAll.length;i++) gi+=feedsAll[i]-feedsAll[i-1]; const gapAvg=feedsAll.length>1?gi/(feedsAll.length-1)/H:0;
+  const longestNight=Math.max(0,...days.map(d=>Math.max(0,...S.events.filter(x=>x.type==='sleep'&&x.end&&x.start>=d-5*H&&x.start<d+DAY).map(x=>x.end-x.start))));
+  const comps=days.map(completeness), comp=Math.round(comps.reduce((a,c)=>a+c,0)/n*100);
+  const missed=days.flatMap(d=>gapsOfDay(d).filter(g=>g.state!=='slept'&&g.state!=='none').map(g=>`${md(g.start)} ${hm(g.start)}–${g.open?'지금':hm(g.end)}${g.state==='missed'?' (기록 못 함)':' (확인 안 됨)'}`));
+  const lines=[];
+  lines.push(`[${nm} 정보] 생후 ${age}, 출생 ${b.birthKg||'?'}kg → 현재 ${b.nowKg||'?'}kg, ${b.preterm?'조산'+(b.due?' (예정일 '+b.due+', '+ageText(Date.now()).split(' · ').slice(-1)[0]+')':''):'만삭'}, ${b.feeding}수유`);
+  lines.push(days[0]===today&&n===1?`[기간] 오늘 ${md(days[0])} (지금까지)`:`[기간] ${md(days[0])}–${md(days[n-1])} (기록 있는 ${n}일, 오늘 제외)`);
+  if(ex.days>1&&emptyDays.length) lines.push(`[기록 없는 날] ${emptyDays.length===ex.days?'선택한 기간 전체 (대신 오늘 기록을 보냄)':emptyDays.map(md).join(', ')+' (평균에서 뺌)'}`);
+  lines.push(`[${n===1?'오늘':'최근 '+n+'일'} 요약 · 앱이 계산함]`);
+  if(S.items.feed) lines.push(`분유 평균 ${Math.round(avg(s=>s.ml))}ml/일 (${avg(s=>s.feeds).toFixed(1)}회), 수유 간격 평균 ${gapAvg.toFixed(1)}h`);
+  if(S.items.sleep) lines.push(`수면 평균 ${(avg(s=>s.sleep)/H).toFixed(1)}h/일, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h`);
+  if(S.items.diaper) lines.push(`소변 ${avg(s=>s.pee).toFixed(1)}회 · 대변 ${avg(s=>s.poo).toFixed(1)}회/일`);
+  lines.push(`[기록 완성도] ${comp}%${missed.length?' · 빈 시간: '+missed.join(', '):''}`);
+  lines.push(`[기록하지 않는 항목] ${['feed','sleep','diaper'].filter(k=>!S.items[k]).map(k=>({feed:'수유',sleep:'수면',diaper:'기저귀'}[k])).join(', ')||'없음'}`);
+  days.forEach((d,i)=>{const s=sts[i]; lines.push(`[상세 · ${md(d)} ${dow(d)}] 분유 ${s.ml}ml/${s.feeds}회, 수면 ${durS(s.sleep)}, 소${s.pee} 대${s.poo}`);
+    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} 수유 ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}`);
+      else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} 수면`);
+      else lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}`) })});
+  const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
+  lines.push(`[요청] ${q}`);
+  lines.push('단정하지 말고, 소아과 상담이 필요한 신호가 있으면 따로 표시해줘. 기록 완성도가 낮은 날은 그 점을 감안해줘.');
+  return lines.join('\n');
+}
+function renderExport(){
+  const ex=view.exp, b=S.baby, miss=[]; if(!b.birth)miss.push('태어난 날'); if(!b.birthKg)miss.push('출생 체중'); if(!b.nowKg)miss.push('현재 체중');
+  return `${sampleBanner()}<header><span class="small muted">무료</span><h1>AI에게 물어볼 자료 만들기</h1></header>
+  ${miss.length?`<div class="warnbox">${miss.join(', ')}이(가) 비어 있어요. 이 정보가 없으면 AI가 "일반적인 범위"를 판단하기 어려워요. <button class="linkbtn" type="button" data-tabgo="settings">설정에서 입력</button></div>`:''}
+  <h2 class="sec">기간</h2><div class="chips">${[1,3,7].map(n=>`<button class="chip" type="button" aria-pressed="${ex.days===n}" data-days="${n}">${n===1?'오늘':n+'일'}</button>`).join('')}</div>
+  <h2 class="sec">무엇을 물어볼까요</h2><div class="chips">${Object.entries(QS).map(([k,v])=>`<button class="chip" type="button" aria-pressed="${ex.q===k}" data-q="${k}">${v[0]}</button>`).join('')}</div>
+  ${ex.q==='custom'?`<input type="text" id="customQ" placeholder="예: 요즘 밤에 자주 깨는데 괜찮을까?" value="${esc(ex.custom)}">`:''}
+  <div class="card panel"><label class="field" for="anon">이름 대신 "아기"로 표시<input type="checkbox" id="anon" ${ex.anon?'checked':''}></label></div>
+  <pre class="out" id="out" tabindex="0" aria-label="내보낼 텍스트">${esc(exportText())}</pre>
+  <div class="row"><button class="btn" style="flex:1;height:52px" type="button" data-act="copy">복사하기</button></div>
+  <p class="small muted" style="margin:0">복사한 뒤 ChatGPT나 Claude 앱에 붙여넣으세요. 앱은 AI를 직접 부르지 않아서 운영비가 들지 않아요.</p>`;
+}
+function familyHTML(){
+  const sy=window.BabySync;
+  if(!window.FIREBASE_CONFIG) return `<div class="card panel"><div class="field"><span class="small muted">가족 공유는 아직 꺼져 있어요. 무료 서버 연결을 마치면 여기서 초대코드로 배우자와 기록을 함께 볼 수 있어요.</span></div></div>`;
+  if(!sy) return `<div class="card panel"><div class="field"><span class="small muted">가족 공유를 불러오는 중이에요. 인터넷 연결을 확인해 주세요.</span></div></div>`;
+  if(S.sample) return `<div class="card panel"><div class="field"><span class="small muted">예시 데이터를 보는 중에는 가족 공유를 쓸 수 없어요.</span></div></div>`;
+  const st=sy.status();
+  if(!st.fid) return `<div class="card panel" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+    <span class="small muted">한 사람이 가족을 만들고, 나온 초대코드를 배우자 휴대폰에 입력하면 기록이 같이 보여요.</span>
+    <button class="btn full" type="button" data-act="famCreate" ${st.busy?'disabled':''}>가족 만들기</button>
+    <div class="row"><input type="text" id="famCode" placeholder="초대코드 입력" autocapitalize="characters" autocomplete="off" style="flex:1"><button class="btn ghost" type="button" data-act="famJoin" ${st.busy?'disabled':''}>참여</button></div>
+    ${st.error?`<span class="small" style="color:var(--warn)">${esc(st.error)}</span>`:''}</div>`;
+  const lab={on:['on','연결됨'],off:['','연결 안 됨 · 기록은 이 휴대폰에 저장 중'],err:['err',st.error||'오류']}[st.state]||['',''];
+  return `<div class="card panel" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+    <span class="small muted">초대코드 (배우자 휴대폰에서 입력)</span><div class="code">${esc(st.fid)}</div>
+    <div class="row small"><span class="dot ${lab[0]}"></span><span>${esc(lab[1])}</span></div>
+    <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="famShare">코드 보내기</button><button class="btn ghost" style="flex:1" type="button" data-act="famLeave">가족에서 나가기</button></div></div>`;
+}
+function renderSettings(){
+  const b=S.baby;
+  return `${sampleBanner()}<header><span class="small muted">설정</span><h1>아기 정보와 기록 항목</h1></header>
+  <div class="card panel">
+    <label class="field" for="sName">이름 또는 애칭<input type="text" id="sName" value="${esc(b.name)}" style="width:150px"></label>
+    <label class="field" for="sBirth">태어난 날<input type="date" id="sBirth" value="${esc(b.birth)}"></label>
+    <label class="field" for="sBkg">출생 체중 (kg)<input type="number" inputmode="decimal" step="0.1" id="sBkg" value="${b.birthKg??''}" style="width:90px"></label>
+    <label class="field" for="sNkg">현재 체중 (kg)<input type="number" inputmode="decimal" step="0.1" id="sNkg" value="${b.nowKg??''}" style="width:90px"></label>
+    <label class="field" for="sPre">37주 전에 태어남 (조산)<input type="checkbox" id="sPre" ${b.preterm?'checked':''}></label>
+    ${b.preterm?`<label class="field" for="sDue">출산 예정일<input type="date" id="sDue" value="${esc(b.due)}"></label>`:''}
+  </div>
+  <h2 class="sec">주로 어떻게 먹나요</h2><div class="chips">${['모유','분유','혼합'].map(f=>`<button class="chip" type="button" aria-pressed="${b.feeding===f}" data-feeding="${f}">${f}</button>`).join('')}</div>
+  <h2 class="sec">기록 항목 (끈 항목은 기록 공백 판정과 내보내기에서 빠져요)</h2>
+  <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
+  <h2 class="sec">가족 공유</h2>${familyHTML()}
+  <h2 class="sec">백업</h2>
+  <div class="card panel"><div class="field"><span class="small muted">기록은 이 휴대폰에만 저장돼요. 휴대폰을 바꾸거나 앱을 지우기 전에 백업 파일을 저장해 두세요.</span></div></div>
+  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="backup">백업 파일 저장</button><button class="btn ghost" style="flex:1" type="button" data-act="import">백업 불러오기</button></div>
+  <h2 class="sec">데이터</h2>
+  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
+  <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p>`;
+}
+function render(){
+  const app=$('#app');
+  document.body.classList.toggle('nodock',!S.onboarded);
+  if(!S.onboarded){ app.innerHTML=renderWelcome(); return }
+  app.innerHTML=view.tab==='today'?renderToday():view.tab==='week'?renderWeek():view.tab==='export'?renderExport():renderSettings();
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
+  const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요 · '+dur(Date.now()-ls.start):'수면';
+  $('#bFeed').hidden=!S.items.feed; $('#bSleep').hidden=!S.items.sleep; $('#bDiaper').hidden=!S.items.diaper;
+}
+
+// ---------- 시트 (기록 입력) ----------
+function timeDefault(){const d=new Date(); if(view.tab==='today'&&view.day!==dayStart(Date.now())){d.setTime(view.day+12*H)} return pad(d.getHours())+':'+pad(d.getMinutes())}
+function timeToMs(v){const [h,m]=(v||hm(Date.now())).split(':').map(Number); const base=view.tab==='today'?view.day:dayStart(Date.now()); return base+h*H+m*MIN}
+function openSheet(html,onReady){ $('#sheetRoot').innerHTML=`<div class="sheetwrap" id="sw"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  $('#sw').addEventListener('click',e=>{if(e.target.id==='sw')closeSheet()}); onReady&&onReady() }
+function closeSheet(){ $('#sheetRoot').innerHTML='' }
+function feedSheet(){
+  let sub=S.baby.feeding==='모유'?'breastL':'formula', ml=120, min=15;
+  const last=S.events.filter(x=>x.type==='feed'&&x.ml).sort((a,b)=>b.start-a.start)[0]; if(last) ml=last.ml;
+  const draw=()=>{ const breast=sub==='breastL'||sub==='breastR';
+    openSheet(`<h2>수유 기록</h2>
+    <div class="chips">${[['formula','분유'],['breastL','모유 왼쪽'],['breastR','모유 오른쪽'],['pump','유축 수유']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${sub===k}" data-sub="${k}">${n}</button>`).join('')}</div>
+    <div class="stepper" style="justify-content:center"><button type="button" data-step="-1" aria-label="줄이기">−</button><output id="amt">${breast?min+'분':ml+'ml'}</output><button type="button" data-step="1" aria-label="늘리기">+</button></div>
+    <label class="field" for="fTime">시각<input type="time" id="fTime" value="${timeDefault()}"></label>
+    <label class="field" for="fNote">메모<input type="text" id="fNote" placeholder="예: 남김, 토함" style="width:180px"></label>
+    <button class="btn full" style="height:52px" type="button" id="save">저장</button>`,()=>{
+      $('#sw').querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{sub=b.dataset.sub;draw()});
+      $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const s=+b.dataset.step; if(breast){min=Math.max(1,min+s*5);$('#amt').textContent=min+'분'}else{ml=Math.max(10,ml+s*10);$('#amt').textContent=ml+'ml'}});
+      $('#save').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:timeToMs($('#fTime').value),note:$('#fNote').value.trim()}; if(breast)ev.min=min; else ev.ml=ml; add(ev,'수유를 기록했어요') };
+    })};
+  draw();
+}
+function diaperSheet(){
+  openSheet(`<h2>기저귀 기록</h2>
+  <div class="rec"><button type="button" style="background:var(--pee)" data-d="pee">소변</button><button type="button" style="background:var(--poo)" data-d="poo">대변</button><button type="button" style="background:var(--ink);color:var(--on-ink)" data-d="both">둘 다</button></div>
+  <label class="field" for="dTime">시각<input type="time" id="dTime" value="${timeDefault()}"></label>
+  <label class="field" for="dNote">메모<input type="text" id="dNote" placeholder="예: 노란색, 묽음" style="width:180px"></label>`,()=>{
+    $('#sw').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>add({id:uid(),type:'diaper',sub:b.dataset.d,start:timeToMs($('#dTime').value),note:$('#dNote').value.trim()},'기저귀를 기록했어요'));
+  });
+}
+function sleepAction(){
+  const ls=liveSleep();
+  if(ls){ ls.end=Date.now(); if(ls.end-ls.start<MIN) ls.end=ls.start+MIN; commit('수면 '+dur(ls.end-ls.start)+' 기록했어요'); return }
+  openSheet(`<h2>수면</h2><button class="btn full" style="height:52px" type="button" id="now">지금 잠들었어요</button>
+  <h2 class="sec">지난 수면 한 번에 넣기</h2>
+  <div class="card panel"><label class="field" for="s1">잠든 시각<input type="time" id="s1" value="${timeDefault()}"></label><label class="field" for="s2">깬 시각<input type="time" id="s2" value=""></label></div>
+  <button class="btn ghost full" type="button" id="past">저장</button>`,()=>{
+    $('#now').onclick=()=>add({id:uid(),type:'sleep',start:Date.now(),end:null},'수면 시작을 기록했어요');
+    $('#past').onclick=()=>{ if(!$('#s2').value){toast('깬 시각을 넣어 주세요');return} let a=timeToMs($('#s1').value), b=timeToMs($('#s2').value); if(b<=a) a-=DAY; add({id:uid(),type:'sleep',start:a,end:b},'수면을 기록했어요') };
+  });
+}
+function evSheet(id){
+  const x=S.events.find(e=>e.id===id); if(!x) return;
+  openSheet(`<h2>기록 수정</h2><div class="card panel" style="background:var(--bg)">${itemHTML(x).replace('<button','<div').replace(/<\/button>$/,'</div>')}</div>
+  <label class="field" for="eTime">${x.type==='sleep'?'시작 시각':'시각'}<input type="time" id="eTime" value="${hm(x.start)}"></label>
+  ${x.type==='sleep'&&x.end?`<label class="field" for="eEnd">깬 시각<input type="time" id="eEnd" value="${hm(x.end)}"></label>`:''}
+  ${x.type==='feed'&&x.ml?`<label class="field" for="eMl">양 (ml)<input type="number" inputmode="numeric" id="eMl" value="${x.ml}" style="width:90px"></label>`:''}
+  <div class="row"><button class="btn" style="flex:1" type="button" id="eSave">저장</button><button class="btn ghost" style="flex:1" type="button" id="eDel">삭제</button></div>`,()=>{
+    $('#eSave').onclick=()=>{ const t=$('#eTime').value.split(':').map(Number), dd=new Date(x.start); dd.setHours(t[0],t[1]); x.start=dd.getTime();
+      if($('#eEnd')){ const e=$('#eEnd').value.split(':').map(Number), de=new Date(x.start); de.setHours(e[0],e[1],0,0); let end=de.getTime(); if(end<=x.start) end+=DAY; x.end=end }
+      if($('#eMl')) x.ml=Math.max(0,+$('#eMl').value||0); commit('수정했어요') };
+    $('#eDel').onclick=()=>{ const b=$('#eDel'); if(b.dataset.ok){ S.events=S.events.filter(e=>e.id!==id); commit('삭제했어요') } else { b.dataset.ok=1; b.textContent='한 번 더 누르면 삭제'; b.style.borderColor='var(--warn)' } };
+  });
+}
+function add(ev,msg){ S.events.push(ev); commit(msg) }
+function commit(msg){ save(); closeSheet(); render(); if(msg) toast(msg) }
+let tt; function toast(m){ const t=$('#toast'); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2200) }
+
+// ---------- 백업 ----------
+async function backup(){
+  const name='babylog-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  const blob=new Blob([JSON.stringify({app:'babylog',v:1,exportedAt:new Date().toISOString(),state:S})],{type:'application/json'});
+  try{ const f=new File([blob],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:name}); return } }catch(e){ if(e&&e.name==='AbortError') return }
+  // 미리보기 창 안에서는 파일 저장이 막히므로 텍스트로 보여 주고 복사하게 함
+  if(!topLevel){ const txt=await blob.text();
+    openSheet(`<h2>백업 텍스트</h2><p class="small muted" style="margin:0">이 화면에서는 파일 저장이 막혀 있어요. 아래 내용을 복사해 메모 앱 등에 보관하세요. 홈 화면에 설치한 앱에서는 파일로 저장돼요.</p><pre class="out" id="bk">${esc(txt)}</pre><button class="btn full" type="button" id="bkCopy">복사하기</button>`,()=>{
+      $('#bkCopy').onclick=()=>{ try{ navigator.clipboard.writeText(txt).then(()=>toast('복사했어요'),()=>toast('텍스트를 길게 눌러 복사하세요')) }catch(_){ toast('텍스트를 길게 눌러 복사하세요') } } }); return }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  toast('백업 파일을 저장했어요. "파일" 앱에 보관하세요');
+}
+$('#importFile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{ const j=JSON.parse(await f.text()); const st=j.state||j;
+    if(!Array.isArray(st.events)||!st.baby) throw new Error('형식');
+    const merge=S.onboarded&&!S.sample&&S.events.length;
+    if(merge){ const ids=new Set(S.events.map(x=>x.id)); let n=0; st.events.forEach(x=>{if(!ids.has(x.id)){S.events.push(x);n++}}); S.gaps={...(st.gaps||{}),...S.gaps};
+      if(!S.baby.birth) S.baby=st.baby; commit('백업에서 기록 '+n+'개를 합쳤어요') }
+    else { S={...emptyState(),...st,onboarded:true,sample:false}; S.gaps=S.gaps||{}; view.tab='today'; view.day=dayStart(Date.now()); commit('백업을 불러왔어요 · 기록 '+S.events.length+'개') }
+  }catch(err){ toast('백업 파일을 읽지 못했어요') }
+});
+
+// ---------- 이벤트 ----------
+$('#bFeed').onclick=feedSheet; $('#bDiaper').onclick=diaperSheet; $('#bSleep').onclick=sleepAction;
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today') view.day=dayStart(Date.now());
+  try{localStorage.setItem(KEY+'-tab',JSON.stringify({tab:view.tab}))}catch(_){} render(); window.scrollTo(0,0)});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
+$('#app').addEventListener('click',async e=>{
+  const t=e.target.closest('button'); if(!t) return;
+  if(t.dataset.ev) return evSheet(t.dataset.ev);
+  if(t.dataset.tabgo){view.tab=t.dataset.tabgo;return render()}
+  if(t.dataset.gap!==undefined){ const k=t.dataset.gap, st=t.dataset.st;
+    if(!st) delete S.gaps[k]; else { S.gaps[k]=st; if(st==='slept') S.events.push({id:uid(),type:'sleep',start:+t.dataset.s,end:+t.dataset.e,fromGap:k}) }
+    if(!st) S.events=S.events.filter(x=>x.fromGap!==k);
+    return commit(st==='missed'?'이 시간은 분석에서 빼고 "기록 누락"으로 전달할게요':st==='slept'?'수면으로 채웠어요':'') }
+  if(t.dataset.days){view.exp.days=+t.dataset.days;return render()}
+  if(t.dataset.q){view.exp.q=t.dataset.q;return render()}
+  if(t.dataset.feeding){S.baby.feeding=t.dataset.feeding;save();return render()}
+  const a=t.dataset.act;
+  if(a==='start'){ S=emptyState(); S.onboarded=true; save(); view.tab='settings'; render(); toast('아기 정보를 넣어 주세요. 비워 둬도 기록은 할 수 있어요') }
+  if(a==='hideInstall'){ installHidden=true; try{localStorage.setItem(KEY+'-install-hide','1')}catch(_){} render() }
+  if(a==='prev'){view.day-=DAY;render()}
+  if(a==='next'){view.day=Math.min(dayStart(Date.now()),view.day+DAY);render()}
+  if(a==='backup') backup();
+  if(a==='import') $('#importFile').click();
+  if(a==='copy'){const txt=exportText(); const ok=()=>toast('복사했어요. AI 앱에 붙여넣으세요');
+    const fallback=()=>{const r=document.createRange(); r.selectNodeContents($('#out')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('텍스트를 선택해 두었어요. 길게 눌러 복사하세요')};
+    try{ navigator.clipboard.writeText(txt).then(ok,fallback) }catch(_){ fallback() } }
+  if(a==='clear'){ if(t.dataset.ok){ const wasSample=S.sample; S={...emptyState(),onboarded:true,items:S.items,baby:wasSample?emptyState().baby:S.baby}; save(); view.tab='settings'; render(); toast(wasSample?'비웠어요. 아기 정보부터 넣어 주세요':'모든 기록을 지웠어요') }
+    else { t.dataset.ok=1; t.textContent='한 번 더 누르면 모두 지워요' } }
+  if(a==='sample'){ if(S.onboarded&&!S.sample&&S.events.length&&!t.dataset.ok){ t.dataset.ok=1; t.textContent='내 기록이 지워져요. 한 번 더 누르기'; return }
+    S=sampleData(); save(); view.day=dayStart(Date.now()); view.tab='today'; render(); toast('예시 데이터를 넣었어요') }
+  // 가족 공유
+  const sy=window.BabySync;
+  if(a==='famCreate'&&sy){ await sy.create(); render() }
+  if(a==='famJoin'&&sy){ const c=($('#famCode').value||'').trim(); if(!c){toast('초대코드를 넣어 주세요');return} await sy.join(c); render() }
+  if(a==='famShare'&&sy){ const c=sy.status().fid, txt='아기로그 가족 초대코드: '+c;
+    try{ if(navigator.share){ await navigator.share({text:txt}); return } }catch(_){return}
+    try{ await navigator.clipboard.writeText(c); toast('초대코드를 복사했어요') }catch(_){ toast('코드를 길게 눌러 복사하세요') } }
+  if(a==='famLeave'&&sy){ if(!t.dataset.ok){ t.dataset.ok=1; t.textContent='한 번 더 누르면 나가요'; return } await sy.leave(); render(); toast('가족 공유를 껐어요. 기록은 이 휴대폰에 남아 있어요') }
+});
+$('#app').addEventListener('change',e=>{
+  const t=e.target, b=S.baby;
+  if(t.id==='anon'){view.exp.anon=t.checked;return render()}
+  if(t.dataset.item){S.items[t.dataset.item]=t.checked;save();return render()}
+  const map={sName:v=>b.name=v,sBirth:v=>b.birth=v,sBkg:v=>b.birthKg=v?+v:null,sNkg:v=>b.nowKg=v?+v:null,sDue:v=>b.due=v};
+  if(map[t.id]){map[t.id](t.value);save()}
+  if(t.id==='sPre'){b.preterm=t.checked;save();render()}
+});
+$('#app').addEventListener('input',e=>{ if(e.target.id==='customQ'){view.exp.custom=e.target.value; const o=$('#out'); if(o) o.textContent=exportText()} });
+
+// 가족 공유 모듈이 쓰는 연결점
+window.BabyApp={
+  get state(){return S},
+  // 원격 변경을 반영: fn이 S를 바꾼 뒤 저장·다시 그리기 (입력 중이면 그리기를 미룸)
+  applyRemote(fn){ fn(S); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){} if(!$('#sw')&&!(document.activeElement&&/INPUT/.test(document.activeElement.tagName))) render() },
+  refresh(){ if(!$('#sw')) render() },
+  toast
+};
+render();
+setInterval(()=>{ if(!$('#sw')&&view.tab==='today'&&!(document.activeElement&&document.activeElement.tagName==='INPUT')) render() },60000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!$('#sw')) render() });
+
+// 오프라인 실행 (홈 화면 앱). 미리보기 창 안에서는 건너뜀
+if('serviceWorker' in navigator && topLevel && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+// 가족 공유: firebase-config.js에 설정이 있을 때만 불러옴
+if(window.FIREBASE_CONFIG) import('./sync.js').then(()=>{ if(view.tab==='settings') render() }).catch(e=>{console.warn('sync load failed',e)});
+})();
+</script>
+</body>
+</html>

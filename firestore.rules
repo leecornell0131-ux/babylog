@@ -1,0 +1,31 @@
+rules_version = '2';
+// 가족 공유 규칙. 서버 코드(Cloud Functions) 없이 규칙만으로 초대코드를 처리함.
+// 초대코드 = families 문서 ID(10자리 무작위). 코드를 아는 사람만 자기 자신을 members에 추가할 수 있음.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isMember(fid) {
+      return signedIn() && exists(/databases/$(database)/documents/families/$(fid)/members/$(request.auth.uid));
+    }
+    match /families/{fid} {
+      allow get: if isMember(fid);
+      allow list, delete: if false;
+      allow create: if signedIn() && fid.size() == 10
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isMember(fid)
+        && request.resource.data.createdBy == resource.data.createdBy;
+
+      match /members/{uid} {
+        allow create: if signedIn() && request.auth.uid == uid
+          && exists(/databases/$(database)/documents/families/$(fid));
+        allow delete: if signedIn() && request.auth.uid == uid;
+        allow read: if isMember(fid);
+      }
+      match /events/{eid} {
+        allow read: if isMember(fid);
+        allow create, update: if isMember(fid) && request.resource.data.size() <= 20;
+        allow delete: if false;
+      }
+    }
+  }
+}
