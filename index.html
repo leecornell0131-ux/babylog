@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>아기로그</title>
-<meta name="description" content="수유·수면·기저귀 기록과 AI 질문용 내보내기">
+<meta name="description" content="수유·수면·기저귀와 성장 기록, AI 질문용 내보내기">
 <meta name="theme-color" content="#3B49B8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,13 +15,16 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <script src="firebase-config.js"></script>
+<script src="who_lms.js"></script>
 <style>
-/* 레이아웃: 폰 폭 한 열 앱. 위 날짜·요약, 가운데 세로 24시간 막대 + 기록 목록, 아래 큰 기록 버튼과 탭 */
+/* 레이아웃: 폰 폭 한 열 앱. 위 날짜·요약, 가운데 원형 또는 세로 24시간 + 기록 목록, 아래 큰 기록 버튼과 탭 */
 :root{
   --bg:#F3F5F8; --card:#FFFFFF; --fg:#1B2430; --muted:#5B6472; --line:#E2E6EC; --soft:#EEF0F4;
   --ink:#1B2430; --on-ink:#FFFFFF; --accent:#3B49B8; --accent-soft:#E8EBFB;
-  --sleep:#4C5BD4; --feed:#D9731F; --pee:#1F8A7E; --poo:#7A4E22; --warn:#B3261E; --ok:#1F7A3A;
+  --sleep:#4C5BD4; --feed:#D9731F; --pee:#1F8A7E; --poo:#7A4E22; --etc:#8A6FB0; --care:#2F7FA8; --health:#C2410C;
+  --warn:#B3261E; --ok:#1F7A3A; --warn-soft:#FBEAE8;
   --feed-text:#A85210; --sleep-text:#3B49B8; --pee-text:#1A6F66;
+  --band1:#DDE7F7; --band2:#B9CCEF; --median:#3B49B8; --pt:#D9731F;
   --hatch1:#E4E8EE; --hatch2:#F3F5F8;
   --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
   --mono:ui-monospace,Menlo,Consolas,monospace;
@@ -30,14 +33,18 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
-  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --warn:#F2B8B5; --ok:#7FD39A;
+  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
+  --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
+  --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
   --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
-  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --warn:#F2B8B5; --ok:#7FD39A;
+  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
+  --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
+  --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
   --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{min-height:100%;margin:0}
@@ -60,11 +67,15 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .iconbtn{width:44px;height:44px;border-radius:22px;border:0;background:var(--card);display:flex;align-items:center;justify-content:center}
 .iconbtn svg{stroke:var(--fg)}
 .iconbtn:disabled{opacity:.35;cursor:default}
+.seg{display:flex;background:var(--line);border-radius:12px;padding:3px}
+.seg button{height:36px;min-width:52px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--fg);font-weight:600}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
 .stats .card{padding:8px 4px;display:flex;flex-direction:column}
 .stats b{font-size:16px;font-variant-numeric:tabular-nums}
 .alertline{border-radius:14px;padding:10px 14px;font-size:14px;background:var(--accent-soft)}
 .alertline.warn{background:transparent;border:1.5px solid var(--warn)}
+.alertline.urgent{background:var(--warn-soft);border:1.5px solid var(--warn)}
 .day{display:flex;gap:12px;align-items:flex-start}
 .bar{width:84px;flex-shrink:0;padding:12px 0}
 .bar .track{position:relative;height:480px}
@@ -76,6 +87,7 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .bar .f{position:absolute;left:52px;width:12px;height:6px;border-radius:3px;background:var(--feed);transform:translateY(-50%)}
 .bar .d{position:absolute;left:68px;width:7px;height:7px;border-radius:4px;background:var(--pee);transform:translateY(-50%)}
 .bar .d.poo{border-radius:2px;background:var(--poo)}
+.bar .o{position:absolute;left:4px;width:7px;height:7px;border-radius:2px;background:var(--etc);transform:translateY(-50%) rotate(45deg)}
 .bar .now{position:absolute;left:24px;right:4px;height:2px;background:var(--fg)}
 .list{flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .item{background:var(--card);border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:10px;border:0;text-align:left;width:100%}
@@ -86,26 +98,39 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .gap{border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);
   background:repeating-linear-gradient(135deg,var(--hatch1) 0 8px,var(--hatch2) 8px 16px)}
 .gap b{font-size:15px}
+.dup{border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--card);box-shadow:inset 0 0 0 2px var(--feed)}
 .btn{min-height:44px;border-radius:12px;border:0;background:var(--ink);color:var(--on-ink);font-weight:600;padding:0 14px}
 .btn.ghost{background:var(--card);color:var(--fg);border:1px solid var(--line)}
 .btn.full{width:100%}
 .btn:disabled{opacity:.5}
 .empty{padding:16px;text-align:center;color:var(--muted);font-size:14px}
+.ring{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0}
+.ring svg{width:100%;max-width:320px;height:auto}
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
   padding:10px max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));z-index:5}
 .dock .inner{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
-.rec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .rec button{height:52px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
 .rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
-:root[data-theme="dark"] .rec button{color:#12161C}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button{color:#12161C}}
-nav.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:48px}
+.rec .more{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+:root[data-theme="dark"] .rec button:not(.more){color:#12161C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button:not(.more){color:#12161C}}
+.dtypes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dtypes button{height:52px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
+:root[data-theme="dark"] .dtypes button{color:#12161C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .dtypes button{color:#12161C}}
+nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:48px}
 nav.tabs button{background:none;border:0;font-size:13px;color:var(--muted)}
 nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
 .sheetwrap{position:fixed;inset:0;background:rgba(10,14,20,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--card);width:100%;max-width:470px;border-radius:20px 20px 0 0;
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-height:90%;overflow:auto}
 .sheet h2{margin:0;font-size:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;padding:6px}
+.tile i{width:10px;height:10px;border-radius:3px;display:block}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card)}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
@@ -127,18 +152,29 @@ h2.sec{font-size:13px;color:var(--muted);font-weight:500;margin:6px 4px 0}
 .week .lbl{font-size:11px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
 .week .axis{position:relative;height:300px}
 .week .axis span{position:absolute;right:2px;font-size:10px;color:var(--muted);transform:translateY(-50%)}
+.wring{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 6px;padding:14px 8px;justify-items:center}
+.wring button{border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
+.wring svg{width:92px;height:92px}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{padding:8px 6px;text-align:right;border-top:1px solid var(--soft)}
 th{font-weight:500;color:var(--muted);font-size:12px;border-top:0}
 th:first-child,td:first-child{text-align:left}
+.chart{padding:8px 4px 4px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{font-size:10px;fill:var(--muted);font-family:var(--sans)}
 pre.out{margin:0;background:#1B2430;color:#DDE2EA;border-radius:14px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:380px;overflow:auto}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--on-ink);padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;max-width:90vw;text-align:center}
 .warnbox{border:1.5px solid var(--warn);border-radius:12px;padding:10px 12px;font-size:13px}
+.redflag{border:1px solid var(--warn);border-radius:14px;padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.redflag b{color:var(--warn)}
 .install{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:6px}
 .install ol{margin:0;padding-left:20px}
 .welcome{display:flex;flex-direction:column;gap:14px;padding-top:24px}
 .welcome h1{font-size:26px;margin:0}
 .welcome img{width:72px;height:72px;border-radius:16px}
+.steps{display:flex;gap:6px}
+.steps i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.steps i.on{background:var(--accent)}
 .code{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:2px;text-align:center;padding:10px;background:var(--bg);border-radius:10px;user-select:all;-webkit-user-select:all}
 .dot{display:inline-block;width:8px;height:8px;border-radius:4px;background:var(--muted)}
 .dot.on{background:var(--ok)}.dot.err{background:var(--warn)}
@@ -154,10 +190,12 @@ body.nodock .dock{display:none}
       <button class="feed" id="bFeed" type="button">수유</button>
       <button class="sleep" id="bSleep" type="button">수면</button>
       <button class="diaper" id="bDiaper" type="button">기저귀</button>
+      <button class="more" id="bMore" type="button">더보기</button>
     </div>
     <nav class="tabs" id="tabs" aria-label="화면">
       <button type="button" data-tab="today">오늘</button>
-      <button type="button" data-tab="week">주간</button>
+      <button type="button" data-tab="week">기록</button>
+      <button type="button" data-tab="growth">성장</button>
       <button type="button" data-tab="export">내보내기</button>
       <button type="button" data-tab="settings">설정</button>
     </nav>
@@ -169,8 +207,8 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.1.0';
-const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H;
+const VERSION='0.2.0';
+const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -185,11 +223,34 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const standalone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
 let topLevel=true; try{topLevel=window.top===window.self}catch(_){topLevel=false}
+const pref=(k,v)=>{try{ if(v===undefined) return localStorage.getItem(KEY+'-'+k); localStorage.setItem(KEY+'-'+k,v) }catch(_){ return null }};
+// 이 기기 표시 (가족 공유에서 누가 기록했는지 구분, 동기화 안 함)
+let DEVICE=pref('device'); if(!DEVICE){ DEVICE=uid(); pref('device',DEVICE) }
+
+// ---------- 기록 종류 ----------
+// 수유·수면·기저귀 외 기록은 type:'etc' + sub
+const ETC={
+  solid:{label:'이유식',grp:'먹기',unit:'g',def:50,step:10,color:'--feed'},
+  snack:{label:'간식',grp:'먹기',unit:'g',def:20,step:5,color:'--feed'},
+  water:{label:'물·음료',grp:'먹기',unit:'ml',def:30,step:10,color:'--feed'},
+  pumping:{label:'유축하기',grp:'먹기',unit:'ml',def:80,step:10,color:'--feed'},
+  bath:{label:'목욕',grp:'돌보기',color:'--care'},
+  walk:{label:'산책',grp:'돌보기',unit:'분',def:30,step:10,color:'--care'},
+  tummy:{label:'터미타임',grp:'돌보기',unit:'분',def:5,step:1,color:'--care'},
+  temp:{label:'체온',grp:'건강',unit:'℃',def:36.8,step:0.1,color:'--health'},
+  med:{label:'약',grp:'건강',text:'약 이름과 양',color:'--health'},
+  vomit:{label:'토함',grp:'건강',text:'양이나 모양',color:'--health'},
+  cough:{label:'기침·콧물',grp:'건강',color:'--health'},
+  rash:{label:'발진·피부',grp:'건강',text:'부위',color:'--health'},
+  hospital:{label:'병원',grp:'건강',text:'진료 내용',color:'--health'},
+  vaccine:{label:'예방접종',grp:'건강',text:'접종 이름 (예: B형간염 2차)',color:'--health'},
+  memo:{label:'메모',grp:'기타',text:'내용',color:'--etc'},
+};
+const FEEDN={formula:'분유',breastL:'모유 왼쪽',breastR:'모유 오른쪽',pump:'유축 수유'};
 
 // ---------- 상태 ----------
-function emptyState(){ return {v:1,onboarded:false,sample:false,
-  baby:{name:'',birth:'',birthKg:null,nowKg:null,preterm:false,due:'',feeding:'분유'},
-  items:{feed:true,sleep:true,diaper:true}, events:[], gaps:{}} }
+function emptyBaby(){ return {name:'',birth:'',sex:'',birthKg:null,nowKg:null,preterm:false,due:'',feeding:'분유'} }
+function emptyState(){ return {v:2,onboarded:false,sample:false,baby:emptyBaby(),items:{feed:true,sleep:true,diaper:true},events:[],gaps:{},dups:{}} }
 function sampleData(){
   const today=dayStart(Date.now()), now=Date.now(), ev=[];
   const birth=new Date(today-64*DAY);
@@ -199,16 +260,20 @@ function sampleData(){
     [[0.4,2.6],[3.5,6.2],[7.8,9.3],[11.2,12.4],[14.0,15.1],[17.5,18.2],[20.5,24.3]].forEach(([a,b],i)=>{let s=base+a*H+((d*5+i*7)%20)*MIN, e=base+b*H+((d*3+i*11)%20)*MIN;
       if(s<now) ev.push({id:uid(),type:'sleep',start:s,end:e>now?null:e})});
     [2.8,6.7,10,13,16.3,19.2].forEach((h,i)=>{const t=base+h*H+((d+i)*9%15)*MIN; if(t<now) ev.push({id:uid(),type:'diaper',sub:(i===2||i===4)&&d%2===0?'poo':(i===4?'both':'pee'),start:t})});
+    if(d%2===0&&base+19.5*H<now) ev.push({id:uid(),type:'etc',sub:'bath',start:base+19.5*H});
   }
+  ev.push({id:uid(),type:'etc',sub:'temp',val:37.2,start:today-DAY+10*H});
+  [[0,3.3,50.5,34.5],[14,3.9,53,36],[30,4.6,55.5,37.5],[60,5.6,58.5,39.2]].forEach(([d,kg,cm,head])=>ev.push({id:uid(),type:'growth',start:birth.getTime()+d*DAY+11*H,kg,cm,head}));
   const y=today-DAY, gs=y+2.6*H, ge=y+8.4*H;
-  const kept=ev.filter(e=>!(e.start>gs && e.start<ge && !(e.type==='sleep'&&e.start<gs)));
+  const kept=ev.filter(e=>!(e.type!=='growth'&&e.type!=='etc'&&e.start>gs && e.start<ge && !(e.type==='sleep'&&e.start<gs)));
   let live=kept.filter(e=>e.type==='sleep'&&e.end===null); live.slice(0,-1).forEach(e=>e.end=e.start+40*MIN);
-  return {v:1,onboarded:true,sample:true, baby:{name:'콩이',birth:birth.toISOString().slice(0,10),birthKg:3.2,nowKg:5.1,preterm:false,due:'',feeding:'분유'},
-    items:{feed:true,sleep:true,diaper:true}, events:kept, gaps:{}};
+  return {...emptyState(),onboarded:true,sample:true, baby:{name:'콩이',birth:birth.toISOString().slice(0,10),sex:'f',birthKg:3.3,nowKg:5.6,preterm:false,due:'',feeding:'분유'}, events:kept};
 }
 
 let S;
-function load(){ try{const raw=localStorage.getItem(KEY); if(raw){S=JSON.parse(raw); S.gaps=S.gaps||{}; return}}catch(e){} S=emptyState(); }
+function normalize(st){ st.gaps=st.gaps||{}; st.dups=st.dups||{}; st.items=st.items||{feed:true,sleep:true,diaper:true}; st.baby={...emptyBaby(),...(st.baby||{})};
+  st.events=(st.events||[]).map(e=>e.type==='memo'?{...e,type:'etc',sub:'memo'}:e); st.v=2; return st }
+function load(){ try{const raw=localStorage.getItem(KEY); if(raw){S=normalize(JSON.parse(raw)); return}}catch(e){} S=emptyState(); }
 let saveFailed=false;
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(S)); saveFailed=false}catch(e){ if(!saveFailed) toast('저장 공간에 쓰지 못했어요. 백업 파일을 저장해 두세요'); saveFailed=true }
@@ -216,17 +281,17 @@ function save(){
 }
 load();
 
-let view={tab:'today',day:dayStart(Date.now()),exp:{days:7,q:'normal',anon:true,custom:''}};
-try{const v=JSON.parse(localStorage.getItem(KEY+'-tab')||'null'); if(v&&v.tab) view.tab=v.tab}catch(e){}
+let view={tab:'today',day:dayStart(Date.now()),exp:{days:7,q:'normal',anon:true,custom:''},growth:'wfa',ob:0};
+try{const v=JSON.parse(pref('tab')||'null'); if(v&&v.tab) view.tab=v.tab}catch(e){}
+view.todayMode=pref('todayMode')||'ring'; view.weekMode=pref('weekMode')||'bars';
 
-// 사파리가 저장 공간을 비우지 않도록 요청 (홈 화면 앱이면 대개 허용됨)
 try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist() }catch(_){}
 
 // ---------- 계산 ----------
+function ageDays(at){ const b=new Date(S.baby.birth+'T00:00:00').getTime(); return isNaN(b)?null:Math.floor((dayStart(at)-b)/DAY) }
 function ageText(at){
-  const b=new Date(S.baby.birth+'T00:00:00').getTime(); if(isNaN(b)) return '';
-  const days=Math.floor((dayStart(at)-b)/DAY); const w=Math.floor(days/7);
-  let s='생후 '+w+'주 · D+'+(days+1);
+  const days=ageDays(at); if(days===null) return '';
+  let s='생후 '+Math.floor(days/7)+'주 · D+'+(days+1);
   if(S.baby.preterm&&S.baby.due){const due=new Date(S.baby.due+'T00:00:00').getTime(); const cw=Math.floor((dayStart(at)-due)/DAY/7); s+=' · 교정 '+(cw<0?'예정일 전':cw+'주')}
   return s;
 }
@@ -234,21 +299,22 @@ function evOfDay(d){const e=d+DAY, now=Date.now();
   return S.events.filter(x=> x.type==='sleep' ? (x.start<e && (x.end??now)>d) : (x.start>=d&&x.start<e)).sort((a,b)=>a.start-b.start)}
 function dayStats(d){
   const e=d+DAY, now=Date.now(), list=evOfDay(d);
-  let ml=0,feeds=0,sleep=0,pee=0,poo=0,longest=0;
+  let ml=0,feeds=0,sleep=0,pee=0,poo=0,longest=0,etc=0;
   list.forEach(x=>{
     if(x.type==='feed'){feeds++; ml+=(x.ml||0)}
-    if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,e); sleep+=Math.max(0,b-a); longest=Math.max(longest,(x.end??now)-x.start)}
-    if(x.type==='diaper'){ if(x.sub!=='poo') pee++; if(x.sub!=='pee') poo++ }
+    else if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,e); sleep+=Math.max(0,b-a); longest=Math.max(longest,(x.end??now)-x.start)}
+    else if(x.type==='diaper'){ if(x.sub!=='poo') pee++; if(x.sub!=='pee') poo++ }
+    else etc++;
   });
-  return {ml,feeds,sleep,pee,poo,longest,list};
+  return {ml,feeds,sleep,pee,poo,longest,etc,list};
 }
 // 기록 공백: 켜 둔 항목의 기록 사이가 4시간 넘게 비면 공백
 function gapsOfDay(d){
   const e=d+DAY, now=Date.now(), end=Math.min(e,now);
   const iv=[];
-  S.events.forEach(x=>{ if(!S.items[x.type]) return;
+  for(const x of S.events){ if(!S.items[x.type]) continue;
     const a=x.start, b=x.type==='sleep'?(x.end??now):x.start;
-    if(b>=d-6*H && a<end) iv.push([a,b]) });
+    if(b>=d-6*H && a<end) iv.push([a,b]) }
   iv.sort((p,q)=>p[0]-q[0]);
   const out=[]; let cur=null;
   for(const [a,b] of iv){ if(cur===null){cur=b;continue}
@@ -260,17 +326,41 @@ function gapsOfDay(d){
 }
 function completeness(d){
   const end=Math.min(d+DAY,Date.now()), span=end-d; if(span<=0) return 1;
+  if(!S.events.some(x=>S.items[x.type]&&x.start<end&&(x.type==='sleep'?(x.end??Date.now()):x.start)>=d-6*H)) return 0;
   const miss=gapsOfDay(d).filter(g=>g.state!=='slept'&&g.state!=='none').reduce((s,g)=>s+(g.end-g.start),0);
   return Math.max(0,1-miss/span);
 }
 function liveSleep(){return S.events.find(x=>x.type==='sleep'&&x.end===null)}
-function lastFeed(){return S.events.filter(x=>x.type==='feed').sort((a,b)=>b.start-a.start)[0]}
+function lastOf(f){ let best=null; for(const x of S.events) if(f(x)&&(!best||x.start>best.start)) best=x; return best }
+// 같은 기록이 두 기기에서 5분 안에 들어오면 묻기
+function dupPairs(d){
+  const list=evOfDay(d).filter(x=>x.by&&x.type!=='growth'), out=[];
+  for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++){ const a=list[i], b=list[j];
+    if(b.start-a.start>5*MIN) break;
+    if(a.by!==b.by&&a.type===b.type&&(a.sub||'')===(b.sub||'')){ const k=[a.id,b.id].sort().join('|'); if(!S.dups[k]) out.push({a,b,k}) } }
+  return out;
+}
 
-// ---------- 화면 ----------
+// ---------- WHO 성장 기준 ----------
+const GLAB={wfa:['몸무게','kg','kg'],lhfa:['키','cm','cm'],hcfa:['머리둘레','cm','head']};
+function lmsAt(ind,sex,months){ const T=window.WHO_LMS&&WHO_LMS[ind]&&WHO_LMS[ind][sex]; if(!T) return null;
+  const m=Math.max(0,Math.min(24,months)), i=Math.min(23,Math.floor(m)), f=m-i, a=T[i], b=T[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f] }
+function zOf(x,[L,M,Sg]){ return Math.abs(L)<1e-6?Math.log(x/M)/Sg:(Math.pow(x/M,L)-1)/(L*Sg) }
+function xAtZ(z,[L,M,Sg]){ return Math.abs(L)<1e-6?M*Math.exp(Sg*z):M*Math.pow(1+L*Sg*z,1/L) }
+function pctOfZ(z){ // 정규분포 누적 (Abramowitz-Stegun)
+  const t=1/(1+0.2316419*Math.abs(z)), d=0.3989423*Math.exp(-z*z/2);
+  let p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); p=z>0?1-p:p; return p*100 }
+function pctText(ind,v,at){ const sex=S.baby.sex, days=ageDays(at); if(!sex||days===null||days<0||days>730||!v) return '';
+  const l=lmsAt(ind,sex,days/MONTH_D); if(!l) return ''; const p=pctOfZ(zOf(v,l));
+  return p<3?'3백분위 미만':p>97?'97백분위 초과':Math.round(p)+'백분위' }
+function growthPoints(key){ const bd=S.baby.birth?new Date(S.baby.birth+'T00:00').getTime()-DAY:0; return S.events.filter(e=>e.type==='growth'&&e[key]&&e.start>=bd).sort((a,b)=>a.start-b.start) }
+
+// ---------- 공통 조각 ----------
 const ICON={prev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
   next:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'};
 function sampleBanner(){ return S.sample?`<div class="sample"><span>지금 보이는 기록은 <b>예시 데이터</b>예요.</span><button class="linkbtn" type="button" data-act="clear">비우고 내 기록 시작</button></div>`:'' }
-let installHidden=false; try{installHidden=localStorage.getItem(KEY+'-install-hide')==='1'}catch(_){}
+let installHidden=pref('install-hide')==='1';
 function installBanner(){
   if(!isIOS||standalone||!topLevel||installHidden) return '';
   return `<div class="install"><b>아이폰 홈 화면에 앱으로 추가하기</b>
@@ -278,15 +368,23 @@ function installBanner(){
   <span class="small muted">홈 화면으로 열어야 기록이 오래 안전하게 남아요.</span>
   <button class="linkbtn" style="align-self:flex-start" type="button" data-act="hideInstall">다음에 할게요</button></div>`;
 }
-
-function itemHTML(x){
+function evColor(x){ if(x.type==='feed') return 'var(--feed)'; if(x.type==='sleep') return 'var(--sleep)';
+  if(x.type==='diaper') return x.sub==='pee'?'var(--pee)':'var(--poo)'; if(x.type==='growth') return 'var(--accent)';
+  return 'var('+((ETC[x.sub]||ETC.memo).color)+')' }
+function evTitle(x){
   const now=Date.now();
-  if(x.type==='feed'){const names={formula:'분유',breastL:'모유 왼쪽',breastR:'모유 오른쪽',pump:'유축 수유'};
-    return `<button class="item" type="button" data-ev="${x.id}"><span class="sw" style="background:var(--feed)"></span><span class="t"><b>${names[x.sub]||'수유'}${x.ml?' '+x.ml+'ml':''}${x.min?' '+x.min+'분':''}</b><span class="small muted">${hm(x.start)}${x.note?' · '+esc(x.note):''}</span></span></button>`}
-  if(x.type==='sleep'){const live=x.end===null, len=(x.end??now)-x.start, night=new Date(x.start).getHours()>=19||new Date(x.start).getHours()<5;
-    return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="background:var(--sleep)"></span><span class="t"><b>${live?(night?'밤잠':'낮잠')+' 중 · '+dur(len)+'째':(night?'밤잠 ':'낮잠 ')+dur(len)}</b><span class="small muted">${hm(x.start)}${live?' 시작':' – '+hm(x.end)}</span></span></button>`}
-  const n={pee:'소변',poo:'대변',both:'소변+대변'}[x.sub];
-  return `<button class="item" type="button" data-ev="${x.id}"><span class="sw" style="background:${x.sub==='pee'?'var(--pee)':'var(--poo)'}"></span><span class="t"><b>기저귀 · ${n}</b><span class="small muted">${hm(x.start)}${x.note?' · '+esc(x.note):''}</span></span></button>`;
+  if(x.type==='feed') return (FEEDN[x.sub]||'수유')+(x.ml?' '+x.ml+'ml':'')+(x.min?' '+x.min+'분':'');
+  if(x.type==='sleep'){ const live=x.end===null, len=(x.end??now)-x.start, h=new Date(x.start).getHours(), night=h>=19||h<5;
+    return live?(night?'밤잠':'낮잠')+' 중 · '+dur(len)+'째':(night?'밤잠 ':'낮잠 ')+dur(len) }
+  if(x.type==='diaper') return '기저귀 · '+({pee:'소변',poo:'대변',both:'소변+대변'}[x.sub]);
+  if(x.type==='growth') return [x.kg&&x.kg+'kg',x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' · ')||'성장 기록';
+  const t=ETC[x.sub]||ETC.memo; return t.label+(x.val!=null&&x.val!==''?' '+x.val+(t.unit||''):'');
+}
+function itemHTML(x){
+  const live=x.type==='sleep'&&x.end===null;
+  const sub=x.type==='sleep'?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
+  const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
+  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="background:${evColor(x)}"></span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
 }
 function gapHTML(g){
   const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
@@ -296,67 +394,204 @@ function gapHTML(g){
   <span class="small">이 시간에 켜 둔 항목의 기록이 하나도 없어요. 어떻게 된 건가요?</span>
   <div class="row"><button class="btn ghost" style="flex:1;font-size:14px;white-space:nowrap;padding:0 8px" type="button" data-gap="${g.key}" data-st="slept" data-s="${g.start}" data-e="${g.end}">쭉 잤어요</button><button class="btn ghost" style="flex:1;font-size:14px;white-space:nowrap;padding:0 8px" type="button" data-gap="${g.key}" data-st="missed">기록 못 했어요</button></div></div>`;
 }
+function dupHTML(p){
+  return `<div class="dup"><b>같은 기록인가요?</b>
+  <div class="small" style="display:flex;flex-direction:column;gap:2px"><span class="row between"><span>${esc(evTitle(p.a))}</span><span class="muted">${hm(p.a.start)}</span></span><span class="row between"><span>${esc(evTitle(p.b))}</span><span class="muted">${hm(p.b.start)}</span></span></div>
+  <span class="small muted">두 휴대폰에서 5분 안에 같은 종류가 기록됐어요.</span>
+  <div class="row"><button class="btn" style="flex:1" type="button" data-dup="${p.k}" data-keep="${p.a.id}" data-drop="${p.b.id}">하나로 합치기</button><button class="btn ghost" style="flex:1" type="button" data-dup="${p.k}">둘 다 두기</button></div></div>`;
+}
+
+// ---------- 원형 24시간 ----------
+function pol(cx,cy,r,f){ const a=f*2*Math.PI; return [cx+r*Math.sin(a),cy-r*Math.cos(a)] }
+function arcPath(cx,cy,r1,r2,f0,f1){
+  if(f1-f0>=0.9999) f1=f0+0.9999;
+  const big=f1-f0>0.5?1:0, [x0,y0]=pol(cx,cy,r2,f0), [x1,y1]=pol(cx,cy,r2,f1), [x2,y2]=pol(cx,cy,r1,f1), [x3,y3]=pol(cx,cy,r1,f0);
+  return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r2} ${r2} 0 ${big} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}A${r1} ${r1} 0 ${big} 0 ${x3.toFixed(1)} ${y3.toFixed(1)}Z`;
+}
+// big: 오늘 화면용 (시각 눈금·지금 바늘·가운데 글씨), 작은 것: 주간 원형 달력
+function ringSVG(d,opt={}){
+  const big=!!opt.big, W=big?300:92, c=W/2, now=Date.now();
+  const rS2=big?122:40, rS1=big?98:30, rF1=big?126:41, rF2=big?140:46, rD=big?86:24;
+  const fr=t=>(t-d)/DAY;
+  let s=`<svg viewBox="0 0 ${W} ${W}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
+  s+=`<circle cx="${c}" cy="${c}" r="${(rS1+rS2)/2}" fill="none" style="stroke:${opt.alert?'var(--warn-soft)':'var(--soft)'}" stroke-width="${rS2-rS1}"/>`;
+  gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rS1,rS2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".25"/>` });
+  const list=evOfDay(d);
+  list.forEach(x=>{
+    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1,rS2,fr(a),fr(b))}" style="fill:var(--sleep)"${x.end===null?' opacity=".6"':''}/>` }
+    else if(x.type==='feed'){ const [x1,y1]=pol(c,c,rF1,fr(x.start)), [x2,y2]=pol(c,c,rF2,fr(x.start)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--feed)" stroke-width="${big?5:3}" stroke-linecap="round"/>` }
+    else if(x.type==='diaper'&&big){ const [px,py]=pol(c,c,rD,fr(x.start)); s+=x.sub==='pee'?`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" style="fill:var(--pee)"/>`:`<rect x="${(px-4.5).toFixed(1)}" y="${(py-4.5).toFixed(1)}" width="9" height="9" rx="2" style="fill:var(--poo)"/>` }
+    else if(big){ const [px,py]=pol(c,c,rD-14,fr(x.start)); s+=`<rect x="${(px-3.5).toFixed(1)}" y="${(py-3.5).toFixed(1)}" width="7" height="7" rx="1" transform="rotate(45 ${px.toFixed(1)} ${py.toFixed(1)})" style="fill:${evColor(x)}"/>` }
+  });
+  if(big){
+    [[0,'0시'],[0.25,'6'],[0.5,'12'],[0.75,'18']].forEach(([f,t])=>{ const [px,py]=pol(c,c,rD-34,f); s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${t}</text>` });
+    if(d===dayStart(now)){ const [x1,y1]=pol(c,c,rS1-6,fr(now)), [x2,y2]=pol(c,c,rF2+4,fr(now)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--fg)" stroke-width="2"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="4" style="fill:var(--fg)"/>` }
+    const [l1,l2,l3]=opt.center||['','',''];
+    s+=`<text x="${c}" y="${c-12}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+12}" text-anchor="middle" font-size="22" font-weight="700" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+32}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l3)}</text>`;
+  } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="600" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
+  return s+'</svg>';
+}
+
+// ---------- 화면: 시작 안내 ----------
 function renderWelcome(){
-  return `<div class="welcome"><img src="icons/icon-192.png" alt="" onerror="this.remove()">
+  const st=view.ob, b=S.baby, steps=`<div class="steps" aria-hidden="true">${[1,2,3].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>`;
+  if(st===0) return `<div class="welcome"><img src="icons/icon-192.png" alt="" onerror="this.remove()">
   <h1>아기로그</h1>
   <p style="margin:0">수유·수면·기저귀를 버튼 한 번으로 기록하고, 모은 기록을 ChatGPT나 Claude에 붙여넣어 물어볼 수 있게 정리해 줘요.</p>
   <p class="small muted" style="margin:0">기록은 이 휴대폰에만 저장돼요. 회원가입이 없어요.</p>
   ${installBanner()}
-  <button class="btn full" style="height:52px" type="button" data-act="start">내 아기 기록 시작하기</button>
-  <button class="btn ghost full" type="button" data-act="sample">예시 데이터로 둘러보기</button>
-  <button class="linkbtn" type="button" data-act="import">백업 파일 불러오기</button>
+  <button class="btn full" style="height:52px" type="button" data-act="obNext">내 아기 기록 시작하기</button>
+  <button class="btn ghost full" type="button" data-act="import">백업·삐요로그 파일 불러오기</button>
+  <button class="linkbtn" type="button" data-act="sample">예시 데이터로 둘러보기</button>
   <p class="small muted" style="margin:0">이 앱은 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p></div>`;
+  if(st===1) return `<div class="welcome">${steps}<span class="small muted">1/3</span><h1>아기 정보</h1>
+  <p class="small muted" style="margin:0">성장곡선과 "정상 범위" 질문에 쓰여요. 비워 두고 나중에 넣어도 돼요.</p>
+  <div class="card panel">
+    <label class="field" for="sName">이름 또는 애칭<input type="text" id="sName" value="${esc(b.name)}" style="width:150px"></label>
+    <label class="field" for="sBirth">태어난 날<input type="date" id="sBirth" value="${esc(b.birth)}"></label>
+    <div class="field"><span>성별</span><div class="chips">${[['m','남아'],['f','여아']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${b.sex===k}" data-sex="${k}">${n}</button>`).join('')}</div></div>
+    <label class="field" for="sBkg">출생 체중 (kg)<input type="number" inputmode="decimal" step="0.01" id="sBkg" value="${b.birthKg??''}" style="width:90px"></label>
+  </div>
+  <h2 class="sec">주로 어떻게 먹나요</h2><div class="chips">${['모유','분유','혼합'].map(f=>`<button class="chip" type="button" aria-pressed="${b.feeding===f}" data-feeding="${f}">${f}</button>`).join('')}</div>
+  <button class="btn full" style="height:52px" type="button" data-act="obNext">다음</button></div>`;
+  if(st===2) return `<div class="welcome">${steps}<span class="small muted">2/3</span><h1>매일 기록할 항목</h1>
+  <p class="small muted" style="margin:0">켠 항목은 4시간 넘게 기록이 없으면 "기록 공백"으로 알려 줘요. 이유식·체온·목욕 같은 다른 기록은 "더보기"에서 언제든 남길 수 있어요.</p>
+  <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
+  <button class="btn full" style="height:52px" type="button" data-act="obNext">다음</button></div>`;
+  return `<div class="welcome">${steps}<span class="small muted">3/3</span><h1>배우자와 함께 기록</h1>
+  <p style="margin:0">설정 > 가족 공유에서 초대코드를 만들어 배우자 휴대폰에 입력하면 두 사람의 기록이 합쳐져요. 아이폰과 갤럭시끼리도 돼요.</p>
+  <p class="small muted" style="margin:0">${window.FIREBASE_CONFIG?'지금 바로 설정에서 켤 수 있어요.':'가족 공유는 무료 서버 연결을 마친 뒤 켜져요. 그 전까지는 각자 휴대폰에 따로 저장돼요.'}</p>
+  ${installBanner()}
+  <button class="btn full" style="height:52px" type="button" data-act="obDone">기록 시작하기</button></div>`;
+}
+
+// ---------- 화면: 오늘 ----------
+function feedCheckCard(d){
+  const today=dayStart(Date.now()), target=d===today?today-DAY:d; // 오늘은 하루가 안 끝났으니 어제 기준
+  const st=dayStats(target); let sum=0,n=0;
+  for(let i=1;i<=7;i++){const s=dayStats(target-i*DAY); if(s.feeds&&completeness(target-i*DAY)>=0.6){sum+=s.ml;n++}}
+  if(n<3||!st.ml||completeness(target)<0.8||st.ml>=0.7*sum/n) return '';
+  const pct=Math.round((1-st.ml/(sum/n))*100);
+  return `<div class="alertline warn"><b>${d===today?'어제':'이날'} 분유량이 평소보다 ${pct}% 적어요</b><br><span class="small">${st.ml}ml · 최근 평균 ${Math.round(sum/n)}ml</span><br><button class="linkbtn" type="button" data-act="check" data-day="${target}" data-pct="${pct}">몇 가지 확인하기</button></div>`;
+}
+function feverCard(){
+  const t=lastOf(x=>x.type==='etc'&&x.sub==='temp'&&x.val); if(!t||Date.now()-t.start>12*H||t.val<38) return '';
+  const days=ageDays(Date.now()), young=days!==null&&days<91;
+  return `<div class="alertline urgent"><b>${hm(t.start)} 체온 ${t.val}℃</b><br><span class="small">${young?'생후 3개월 미만 아기의 38℃ 이상 발열은 바로 진료가 필요한 신호예요. 소아과나 응급실에 연락하세요.':'열이 계속되거나 처지면 소아과 진료를 받으세요.'} 참고 정보이며 진단이 아니에요.</span></div>`;
 }
 function renderToday(){
   const d=view.day, today=dayStart(Date.now()), st=dayStats(d), gaps=gapsOfDay(d), now=Date.now();
-  const lf=lastFeed();
+  const lf=lastOf(x=>x.type==='feed'), ls=liveSleep();
   const top=d===today&&lf?`<div class="alertline">마지막 수유 <b>${dur(now-lf.start)} 전</b> · ${lf.ml?lf.ml+'ml ':''}${hm(lf.start)}</div>`:'';
-  // 규칙 기반 알림: 하루 분유량이 지난 7일 평균의 70% 미만 (기록 완성도 80% 이상인 날만)
-  let warn='';
-  if(d<today){ let sum=0,n=0; for(let i=1;i<=7;i++){const s=dayStats(d-i*DAY); if(s.feeds){sum+=s.ml;n++}}
-    if(n>=3&&st.ml&&completeness(d)>=0.8&&st.ml<0.7*sum/n) warn=`<div class="alertline warn">이날 분유량이 지난 평균보다 ${Math.round((1-st.ml/(sum/n))*100)}% 적어요. 이어지면 소아과 상담을 권해요. 참고 정보이며 진단이 아니에요.</div>` }
-  const span=480, y=t=>((t-d)/DAY*span);
-  let bar='';
-  for(let h=0;h<=24;h+=3) bar+=`<span class="tick" style="top:${h/24*span}px">${h}</span>`;
-  bar+='<div class="bg"></div>';
-  st.list.forEach(x=>{
-    if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${x.end===null?' live':''}" style="top:${y(a)}px;height:${Math.max(3,y(b)-y(a))}px"></div>`}
-    else if(x.type==='feed') bar+=`<div class="f" style="top:${y(x.start)}px"></div>`;
-    else bar+=`<div class="d${x.sub!=='pee'?' poo':''}" style="top:${y(x.start)}px"></div>`;
-  });
-  gaps.filter(g=>g.state!=='slept').forEach(g=>bar+=`<div class="g" style="top:${y(g.start)}px;height:${y(g.end)-y(g.start)}px"></div>`);
-  if(d===today) bar+=`<div class="now" style="top:${y(now)}px"></div>`;
+  const dups=dupPairs(d);
   const rows=[...st.list.map(x=>({t:x.start,h:itemHTML(x)})),...gaps.map(g=>({t:g.end-1,h:gapHTML(g)}))].sort((a,b)=>b.t-a.t);
+  const listHTML=rows.length?rows.map(r=>r.h).join(''):'<div class="card empty">아직 기록이 없어요. 아래 버튼으로 첫 기록을 남겨 보세요.</div>';
+  let body;
+  if(view.todayMode==='ring'){
+    const center=d===today?(ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?['수면',durS(st.sleep),'수유 '+st.feeds+'회 · '+st.ml+'ml']:['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
+    body=`<div class="card ring">${ringSVG(d,{big:true,center,label:`${md(d)} 24시간 원형 기록: 수면 ${durS(st.sleep)}, 수유 ${st.feeds}회, 기저귀 ${st.pee+st.poo}회`})}
+    <div class="legend"><span><i style="background:var(--sleep)"></i>수면</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
+    <div class="list">${listHTML}</div>`;
+  } else {
+    const span=480, y=t=>((t-d)/DAY*span);
+    let bar='';
+    for(let h=0;h<=24;h+=3) bar+=`<span class="tick" style="top:${h/24*span}px">${h}</span>`;
+    bar+='<div class="bg"></div>';
+    st.list.forEach(x=>{
+      if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${x.end===null?' live':''}" style="top:${y(a)}px;height:${Math.max(3,y(b)-y(a))}px"></div>`}
+      else if(x.type==='feed') bar+=`<div class="f" style="top:${y(x.start)}px"></div>`;
+      else if(x.type==='diaper') bar+=`<div class="d${x.sub!=='pee'?' poo':''}" style="top:${y(x.start)}px"></div>`;
+      else bar+=`<div class="o" style="top:${y(x.start)}px;background:${evColor(x)}"></div>`;
+    });
+    gaps.filter(g=>g.state!=='slept').forEach(g=>bar+=`<div class="g" style="top:${y(g.start)}px;height:${y(g.end)-y(g.start)}px"></div>`);
+    if(d===today) bar+=`<div class="now" style="top:${y(now)}px"></div>`;
+    body=`<div class="day"><div class="card bar" role="img" aria-label="하루 24시간 세로 타임라인"><div class="track">${bar}</div></div><div class="list">${listHTML}</div></div>`;
+  }
   const comp=Math.round(completeness(d)*100);
   return `${sampleBanner()}${d===today?installBanner():''}
   <header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${esc(S.baby.name)}${S.baby.name&&ageText(d)?' · ':''}${ageText(d)}</span><h1>${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일</h1></div>
   <div class="row"><button class="iconbtn" type="button" aria-label="이전 날" data-act="prev">${ICON.prev}</button><button class="iconbtn" type="button" aria-label="다음 날" data-act="next" ${d>=today?'disabled':''}>${ICON.next}</button></div></header>
-  ${top}${warn}
+  ${d===today?feverCard():''}${top}${feedCheckCard(d)}${dups.map(dupHTML).join('')}
   <div class="stats">
     ${S.items.feed?`<div class="card"><span class="small muted">수유 ${st.feeds}회</span><b style="color:var(--feed-text)">${st.ml}ml</b></div>`:''}
-    ${S.items.sleep?`<div class="card"><span class="small muted">수면</span><b style="color:var(--sleep-text)">${durS(st.sleep)}</b></div>`:''}
+    ${S.items.sleep?`<div class="card"><span class="small muted">수면</span><b style="color:var(--sleep-text)">${st.list.some(x=>x.type==='sleep')||d===today?durS(st.sleep):'기록 없음'}</b></div>`:''}
     ${S.items.diaper?`<div class="card"><span class="small muted">기저귀</span><b style="color:var(--pee-text)">소${st.pee} · 대${st.poo}</b></div>`:''}
   </div>
-  <div class="row between small"><span class="muted">기록 완성도</span><span><b>${comp}%</b></span></div>
-  <div class="day"><div class="card bar" role="img" aria-label="하루 24시간 세로 타임라인"><div class="track">${bar}</div></div>
-  <div class="list">${rows.length?rows.map(r=>r.h).join(''):'<div class="card empty">아직 기록이 없어요. 아래 버튼으로 첫 기록을 남겨 보세요.</div>'}</div></div>`;
+  <div class="row between"><span class="small muted">기록 완성도 <b style="color:var(--fg)">${comp}%</b></span><div class="seg" role="group" aria-label="보기 방식"><button type="button" aria-pressed="${view.todayMode==='ring'}" data-mode="ring">원형</button><button type="button" aria-pressed="${view.todayMode==='bars'}" data-mode="bars">세로</button></div></div>
+  ${body}`;
 }
+
+// ---------- 화면: 주간 ----------
 function renderWeek(){
-  const today=dayStart(Date.now()), days=[...Array(7)].map((_,i)=>today-(6-i)*DAY), now=Date.now(), hgt=300;
-  let cols='<div class="axis">'+[0,6,12,18,24].map(h=>`<span style="top:${h/24*hgt}px">${h}</span>`).join('')+'</div>';
-  days.forEach(d=>{const st=dayStats(d); let c='';
-    st.list.forEach(x=>{ if(x.type==='sleep'){const a=Math.max(x.start,d),b=Math.min(x.end??now,d+DAY); c+=`<div class="s" style="top:${(a-d)/DAY*hgt}px;height:${Math.max(2,(b-a)/DAY*hgt)}px"></div>`}
-      else if(x.type==='feed') c+=`<div class="f" style="top:${(x.start-d)/DAY*hgt}px"></div>`});
-    gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>c+=`<div class="g" style="top:${(g.start-d)/DAY*hgt}px;height:${(g.end-g.start)/DAY*hgt}px"></div>`);
-    cols+=`<div class="col" role="img" aria-label="${md(d)} 하루 패턴">${c}</div>`});
-  let lbl='<span></span>'+days.map(d=>`<span class="lbl">${dow(d)}<br>${md(d)}</span>`).join('');
-  const rows=days.slice().reverse().map(d=>{const s=dayStats(d);return `<tr><td>${md(d)} ${dow(d)}</td><td>${durS(s.sleep)}</td><td>${s.ml}ml · ${s.feeds}회</td><td>${s.pee}/${s.poo}</td><td>${Math.round(completeness(d)*100)}%</td></tr>`}).join('');
-  return `${sampleBanner()}<header><span class="small muted">이전 기록</span><h1>최근 7일 패턴</h1></header>
-  <div class="card"><div class="week">${cols}${lbl}</div><div class="row small muted" style="padding:0 12px 12px;gap:14px;flex-wrap:wrap"><span class="row" style="gap:4px"><i style="width:10px;height:10px;background:var(--sleep);border-radius:2px;display:inline-block"></i>수면</span><span class="row" style="gap:4px"><i style="width:10px;height:3px;background:var(--feed);display:inline-block"></i>수유</span><span class="row" style="gap:4px"><i style="width:10px;height:10px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 4px);display:inline-block"></i>기록 공백</span></div></div>
+  const today=dayStart(Date.now()), off=view.weekOff||0, last=today-off*7*DAY, days=[...Array(7)].map((_,i)=>last-(6-i)*DAY), now=Date.now(), hgt=300;
+  const sts=days.map(dayStats);
+  let main;
+  if(view.weekMode==='ring'){
+    const sl=sts.map(s=>s.sleep), avg=sl.reduce((a,b)=>a+b,0)/7;
+    main=`<div class="card"><div class="wring">${days.map((d,i)=>{ const frag=sts[i].list.filter(x=>x.type==='sleep').length, alert=frag>=9||(sts[i].sleep&&sts[i].sleep<avg*0.75);
+      return `<button type="button" data-goday="${d}" aria-label="${md(d)} 보기">${ringSVG(d,{center:d===today?'오늘':String(new Date(d).getDate()),alert,label:md(d)+' '+dow(d)+'요일'})}<span style="${alert?'color:var(--warn);font-weight:600':''}">${dow(d)} · ${sts[i].list.some(x=>x.type==='sleep')?(sts[i].sleep/H).toFixed(1)+'h':sts[i].ml+'ml'}</span></button>` }).join('')}</div>
+    <div class="row small muted" style="padding:0 14px 12px;gap:12px;flex-wrap:wrap"><span><i style="display:inline-block;width:10px;height:10px;background:var(--sleep);border-radius:2px"></i> 수면</span><span><i style="display:inline-block;width:10px;height:4px;background:var(--feed)"></i> 수유</span><span>0시가 위, 시계 방향 · 탭하면 그날 보기</span></div></div>`;
+  } else {
+    let cols='<div class="axis">'+[0,6,12,18,24].map(h=>`<span style="top:${h/24*hgt}px">${h}</span>`).join('')+'</div>';
+    days.forEach((d,i)=>{let c='';
+      sts[i].list.forEach(x=>{ if(x.type==='sleep'){const a=Math.max(x.start,d),b=Math.min(x.end??now,d+DAY); c+=`<div class="s" style="top:${(a-d)/DAY*hgt}px;height:${Math.max(2,(b-a)/DAY*hgt)}px"></div>`}
+        else if(x.type==='feed') c+=`<div class="f" style="top:${(x.start-d)/DAY*hgt}px"></div>`});
+      gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>c+=`<div class="g" style="top:${(g.start-d)/DAY*hgt}px;height:${(g.end-g.start)/DAY*hgt}px"></div>`);
+      cols+=`<div class="col" role="img" aria-label="${md(d)} 하루 패턴">${c}</div>`});
+    const lbl='<span></span>'+days.map(d=>`<span class="lbl">${dow(d)}<br>${md(d)}</span>`).join('');
+    main=`<div class="card"><div class="week">${cols}${lbl}</div><div class="row small muted" style="padding:0 12px 12px;gap:14px;flex-wrap:wrap"><span class="row" style="gap:4px"><i style="width:10px;height:10px;background:var(--sleep);border-radius:2px;display:inline-block"></i>수면</span><span class="row" style="gap:4px"><i style="width:10px;height:3px;background:var(--feed);display:inline-block"></i>수유</span><span class="row" style="gap:4px"><i style="width:10px;height:10px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 4px);display:inline-block"></i>기록 공백</span></div></div>`;
+  }
+  const rows=days.slice().reverse().map((d,ri)=>{const s=sts[6-ri];return `<tr><td><button class="linkbtn" style="padding:0;min-height:0" type="button" data-goday="${d}">${md(d)} ${dow(d)}</button></td><td>${durS(s.sleep)}</td><td>${s.ml}ml · ${s.feeds}회</td><td>${s.pee}/${s.poo}</td><td>${Math.round(completeness(d)*100)}%</td></tr>`}).join('');
+  const fd=sts.filter(s=>s.feeds), avgMl=fd.length?Math.round(fd.reduce((a,s)=>a+s.ml,0)/fd.length):0;
+  return `${sampleBanner()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">이전 기록</span><h1>${md(days[0])} – ${md(days[6])}</h1></div>
+  <div class="row"><button class="iconbtn" type="button" aria-label="이전 주" data-act="wprev">${ICON.prev}</button><button class="iconbtn" type="button" aria-label="다음 주" data-act="wnext" ${off<=0?'disabled':''}>${ICON.next}</button></div></header>
+  <div class="row between"><span class="small">평균 분유 <b>${avgMl}ml</b> · 수면 <b>${(sts.reduce((a,s)=>a+s.sleep,0)/7/H).toFixed(1)}h</b></span><div class="seg" role="group" aria-label="보기 방식"><button type="button" aria-pressed="${view.weekMode==='bars'}" data-wmode="bars">세로</button><button type="button" aria-pressed="${view.weekMode==='ring'}" data-wmode="ring">원형</button></div></div>
+  ${main}
   <div class="card" style="overflow-x:auto;padding:4px 10px"><table><thead><tr><th>날짜</th><th>수면</th><th>분유</th><th>소/대</th><th>완성도</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
+
+// ---------- 화면: 성장 ----------
+function growthChart(ind){
+  const sex=S.baby.sex, [name,unit,key]=GLAB[ind], pts=growthPoints(key), birth=new Date(S.baby.birth+'T00:00:00').getTime();
+  const lastAge=pts.length&&!isNaN(birth)?(pts[pts.length-1].start-birth)/DAY/MONTH_D:0;
+  const xMax=lastAge>10?24:12;
+  const W=340,Hh=240,L=34,R=10,T=10,B=26, pw=W-L-R, ph=Hh-T-B;
+  const curves=[-1.881,-1.036,0,1.036,1.881].map(z=>[...Array(xMax*2+1)].map((_,i)=>{const m=i/2,l=lmsAt(ind,sex,m);return [m,xAtZ(z,l)]}));
+  let vals=curves.flat().map(p=>p[1]); pts.forEach(p=>vals.push(p[key]));
+  let yMin=Math.floor(Math.min(...vals)), yMax=Math.ceil(Math.max(...vals));
+  const stepY=ind==='wfa'?(yMax-yMin>10?2:1):5; yMin=Math.floor(yMin/stepY)*stepY; yMax=Math.ceil(yMax/stepY)*stepY;
+  const X=m=>L+m/xMax*pw, Y=v=>T+(1-(v-yMin)/(yMax-yMin))*ph;
+  const band=(lo,hi)=>'M'+lo.map(([m,v])=>X(m).toFixed(1)+' '+Y(v).toFixed(1)).join('L')+'L'+hi.slice().reverse().map(([m,v])=>X(m).toFixed(1)+' '+Y(v).toFixed(1)).join('L')+'Z';
+  let s=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${name} 성장곡선, WHO 기준">`;
+  for(let v=yMin;v<=yMax;v+=stepY) s+=`<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" style="stroke:var(--soft)"/><text x="${L-4}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${v}</text>`;
+  for(let m=0;m<=xMax;m+=xMax>12?3:1) s+=`<text x="${X(m).toFixed(1)}" y="${Hh-10}" text-anchor="middle">${m}</text>`;
+  s+=`<text x="${W-R}" y="${Hh-1}" text-anchor="end">개월</text><text x="${L}" y="${T-1}" text-anchor="start">${unit}</text>`;
+  s+=`<path d="${band(curves[0],curves[4])}" style="fill:var(--band1)"/><path d="${band(curves[1],curves[3])}" style="fill:var(--band2)"/>`;
+  s+=`<path d="M${curves[2].map(([m,v])=>X(m).toFixed(1)+' '+Y(v).toFixed(1)).join('L')}" fill="none" style="stroke:var(--median)" stroke-width="1.5"/>`;
+  const pp=pts.filter(p=>!isNaN(birth)).map(p=>[(p.start-birth)/DAY/MONTH_D,p[key]]).filter(([m])=>m>=0&&m<=xMax);
+  if(pp.length>1) s+=`<path d="M${pp.map(([m,v])=>X(m).toFixed(1)+' '+Y(v).toFixed(1)).join('L')}" fill="none" style="stroke:var(--pt)" stroke-width="2"/>`;
+  pp.forEach(([m,v])=>s+=`<circle cx="${X(m).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.5" style="fill:var(--pt);stroke:var(--card)" stroke-width="1.5"/>`);
+  return s+'</svg>';
+}
+function renderGrowth(){
+  const b=S.baby, ind=view.growth, [name,unit,key]=GLAB[ind];
+  if(!b.birth||!b.sex) return `${sampleBanner()}<header><span class="small muted">성장</span><h1>성장곡선</h1></header>
+  <div class="card panel" style="padding:14px;display:flex;flex-direction:column;gap:12px"><span>WHO 기준 곡선과 비교하려면 태어난 날과 성별이 필요해요.</span>
+  <label class="field" for="sBirth">태어난 날<input type="date" id="sBirth" value="${esc(b.birth)}"></label>
+  <div class="field"><span>성별</span><div class="chips">${[['m','남아'],['f','여아']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${b.sex===k}" data-sex="${k}">${n}</button>`).join('')}</div></div></div>`;
+  const pts=growthPoints(key), last=pts[pts.length-1];
+  const rows=S.events.filter(e=>e.type==='growth').sort((a,c)=>c.start-a.start).map(e=>`<tr><td><button class="linkbtn" style="padding:0;min-height:0" type="button" data-ev="${e.id}">${md(e.start)}</button></td><td>${e.kg?e.kg+'kg':'–'}</td><td>${e.cm?e.cm+'cm':'–'}</td><td>${e.head?e.head+'cm':'–'}</td></tr>`).join('');
+  return `${sampleBanner()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${b.sex==='m'?'남아':'여아'} · ${ageText(Date.now())}</span><h1>성장곡선</h1></div><button class="btn" type="button" data-act="addGrowth">측정 기록</button></header>
+  <div class="chips">${Object.entries(GLAB).map(([k,v])=>`<button class="chip" type="button" aria-pressed="${ind===k}" data-gind="${k}">${v[0]}</button>`).join('')}</div>
+  ${last?`<div class="alertline">최근 ${name} <b>${last[key]}${unit}</b> · ${md(last.start)} · ${pctText(ind,last[key],last.start)||'백분위 계산 불가'}</div>`:`<div class="alertline">${name} 기록이 아직 없어요. "측정 기록"으로 넣어 보세요.</div>`}
+  <div class="card chart">${growthChart(ind)}</div>
+  <div class="legend"><span><i style="background:var(--band1)"></i>3~97백분위</span><span><i style="background:var(--band2)"></i>15~85백분위</span><span><i style="background:var(--median);height:2px"></i>50백분위</span><span><i style="background:var(--pt);border-radius:5px"></i>우리 아기</span></div>
+  <p class="small muted" style="margin:0">WHO 아동 성장 기준(2006). 한국 소아청소년 성장도표도 만 3세 미만은 이 기준을 써요. 백분위는 참고용이에요. 곡선을 크게 벗어나거나 갑자기 꺾이면 소아과에 물어보세요.</p>
+  ${rows?`<div class="card" style="overflow-x:auto;padding:4px 10px"><table><thead><tr><th>날짜</th><th>몸무게</th><th>키</th><th>머리둘레</th></tr></thead><tbody>${rows}</tbody></table></div>`:''}`;
+}
+
 // ---------- 내보내기 ----------
-const QS={normal:['정상 범위인지','생후 {age} 기준으로 수유·수면·배변이 일반적인 범위인지 알려줘.'],sleep:['수면 패턴','수면 패턴에서 눈에 띄는 변화가 있는지, 이 시기에 흔한 일인지 알려줘.'],feed:['수유 간격','수유량과 간격이 이 시기에 일반적인 범위인지 알려줘.'],custom:['직접 쓰기','']};
+const QS={normal:['정상 범위인지','생후 {age} 기준으로 수유·수면·배변이 일반적인 범위인지 알려줘.'],sleep:['수면 패턴','수면 패턴에서 눈에 띄는 변화가 있는지, 이 시기에 흔한 일인지 알려줘.'],feed:['수유 간격','수유량과 간격이 이 시기에 일반적인 범위인지 알려줘.'],growth:['성장','몸무게·키 변화가 이 시기에 일반적인 범위인지 알려줘.'],custom:['직접 쓰기','']};
 function exportText(){
   const ex=view.exp, today=dayStart(Date.now());
   // 기록이 하나도 없는 날은 평균에서 빼고 따로 알림 (0으로 계산하면 AI가 잘못 판단함)
@@ -371,27 +606,36 @@ function exportText(){
   const longestNight=Math.max(0,...days.map(d=>Math.max(0,...S.events.filter(x=>x.type==='sleep'&&x.end&&x.start>=d-5*H&&x.start<d+DAY).map(x=>x.end-x.start))));
   const comps=days.map(completeness), comp=Math.round(comps.reduce((a,c)=>a+c,0)/n*100);
   const missed=days.flatMap(d=>gapsOfDay(d).filter(g=>g.state!=='slept'&&g.state!=='none').map(g=>`${md(g.start)} ${hm(g.start)}–${g.open?'지금':hm(g.end)}${g.state==='missed'?' (기록 못 함)':' (확인 안 됨)'}`));
+  const lw=growthPoints('kg').slice(-1)[0], lc=growthPoints('cm').slice(-1)[0];
   const lines=[];
-  lines.push(`[${nm} 정보] 생후 ${age}, 출생 ${b.birthKg||'?'}kg → 현재 ${b.nowKg||'?'}kg, ${b.preterm?'조산'+(b.due?' (예정일 '+b.due+', '+ageText(Date.now()).split(' · ').slice(-1)[0]+')':''):'만삭'}, ${b.feeding}수유`);
+  lines.push(`[${nm} 정보] 생후 ${age}, ${b.sex==='m'?'남아':b.sex==='f'?'여아':'성별 미입력'}, 출생 ${b.birthKg||'?'}kg → 현재 ${lw?lw.kg:(b.nowKg||'?')}kg${lc?', 키 '+lc.cm+'cm':''}, ${b.preterm?'조산'+(b.due?' (예정일 '+b.due+', '+ageText(Date.now()).split(' · ').slice(-1)[0]+')':''):'만삭'}, ${b.feeding}수유`);
   lines.push(days[0]===today&&n===1?`[기간] 오늘 ${md(days[0])} (지금까지)`:`[기간] ${md(days[0])}–${md(days[n-1])} (기록 있는 ${n}일, 오늘 제외)`);
   if(ex.days>1&&emptyDays.length) lines.push(`[기록 없는 날] ${emptyDays.length===ex.days?'선택한 기간 전체 (대신 오늘 기록을 보냄)':emptyDays.map(md).join(', ')+' (평균에서 뺌)'}`);
   lines.push(`[${n===1?'오늘':'최근 '+n+'일'} 요약 · 앱이 계산함]`);
-  if(S.items.feed) lines.push(`분유 평균 ${Math.round(avg(s=>s.ml))}ml/일 (${avg(s=>s.feeds).toFixed(1)}회), 수유 간격 평균 ${gapAvg.toFixed(1)}h`);
-  if(S.items.sleep) lines.push(`수면 평균 ${(avg(s=>s.sleep)/H).toFixed(1)}h/일, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h`);
-  if(S.items.diaper) lines.push(`소변 ${avg(s=>s.pee).toFixed(1)}회 · 대변 ${avg(s=>s.poo).toFixed(1)}회/일`);
-  lines.push(`[기록 완성도] ${comp}%${missed.length?' · 빈 시간: '+missed.join(', '):''}`);
+  // 항목별로 그 항목을 기록한 날만 평균 (삐요로그에서 옮긴 기록처럼 수유만 적은 날이 많으면 수면 0시간으로 잘못 보이지 않게)
+  const has=t=>sts.filter(x=>x.list.some(e=>e.type===t)), avgOf=(arr,f)=>arr.reduce((a,x)=>a+f(x),0)/arr.length;
+  const partial=(arr)=>arr.length<n?` · ${n}일 중 ${arr.length}일만 기록함`:'';
+  const fd=has('feed'), sl=has('sleep'), dp=has('diaper');
+  if(S.items.feed) lines.push(fd.length?`분유 평균 ${Math.round(avgOf(fd,s=>s.ml))}ml/일 (${avgOf(fd,s=>s.feeds).toFixed(1)}회), 수유 간격 평균 ${gapAvg.toFixed(1)}h${partial(fd)}`:'수유 기록 없음');
+  if(S.items.sleep) lines.push(sl.length?`수면 평균 ${(avgOf(sl,s=>s.sleep)/H).toFixed(1)}h/일, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h${partial(sl)}`:'수면 기록 없음 (기록을 안 한 것이며 실제로 안 잔 게 아님)');
+  if(S.items.diaper) lines.push(dp.length?`소변 ${avgOf(dp,s=>s.pee).toFixed(1)}회 · 대변 ${avgOf(dp,s=>s.poo).toFixed(1)}회/일${partial(dp)}`:'기저귀 기록 없음');
+  lines.push(`[기록 완성도] ${comp}%${missed.length?' · 빈 시간: '+missed.slice(0,6).join(', ')+(missed.length>6?` 외 ${missed.length-6}건 (빈 시간은 통계에서 빠짐)`:''):''}`);
   lines.push(`[기록하지 않는 항목] ${['feed','sleep','diaper'].filter(k=>!S.items[k]).map(k=>({feed:'수유',sleep:'수면',diaper:'기저귀'}[k])).join(', ')||'없음'}`);
-  days.forEach((d,i)=>{const s=sts[i]; lines.push(`[상세 · ${md(d)} ${dow(d)}] 분유 ${s.ml}ml/${s.feeds}회, 수면 ${durS(s.sleep)}, 소${s.pee} 대${s.poo}`);
+  const from=days[0], to=days[n-1]+DAY, etc=S.events.filter(x=>x.type==='etc'&&x.start>=from&&x.start<to&&x.sub!=='memo').sort((a,c)=>a.start-c.start);
+  if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+x.note+')':''}`).join(', ')}`);
+  const gr=S.events.filter(x=>x.type==='growth').sort((a,c)=>a.start-c.start).slice(-4);
+  if(gr.length&&(ex.q==='growth'||ex.q==='normal')) lines.push(`[성장 측정] ${gr.map(x=>`${md(x.start)} ${[x.kg&&x.kg+'kg'+(pctText('wfa',x.kg,x.start)?'('+pctText('wfa',x.kg,x.start)+')':''),x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' ')}`).join(', ')} · WHO 기준`);
+  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 분유 ${hs('feed')?s.ml+'ml/'+s.feeds+'회':'기록 없음'}, 수면 ${hs('sleep')?durS(s.sleep):'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
     if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} 수유 ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}`);
       else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} 수면`);
-      else lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}`) })});
+      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}`) })});
   const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
   lines.push(`[요청] ${q}`);
   lines.push('단정하지 말고, 소아과 상담이 필요한 신호가 있으면 따로 표시해줘. 기록 완성도가 낮은 날은 그 점을 감안해줘.');
   return lines.join('\n');
 }
 function renderExport(){
-  const ex=view.exp, b=S.baby, miss=[]; if(!b.birth)miss.push('태어난 날'); if(!b.birthKg)miss.push('출생 체중'); if(!b.nowKg)miss.push('현재 체중');
+  const ex=view.exp, b=S.baby, miss=[]; if(!b.birth)miss.push('태어난 날'); if(!b.sex)miss.push('성별'); if(!b.birthKg)miss.push('출생 체중'); if(!growthPoints('kg').length&&!b.nowKg)miss.push('현재 체중');
   return `${sampleBanner()}<header><span class="small muted">무료</span><h1>AI에게 물어볼 자료 만들기</h1></header>
   ${miss.length?`<div class="warnbox">${miss.join(', ')}이(가) 비어 있어요. 이 정보가 없으면 AI가 "일반적인 범위"를 판단하기 어려워요. <button class="linkbtn" type="button" data-tabgo="settings">설정에서 입력</button></div>`:''}
   <h2 class="sec">기간</h2><div class="chips">${[1,3,7].map(n=>`<button class="chip" type="button" aria-pressed="${ex.days===n}" data-days="${n}">${n===1?'오늘':n+'일'}</button>`).join('')}</div>
@@ -402,6 +646,8 @@ function renderExport(){
   <div class="row"><button class="btn" style="flex:1;height:52px" type="button" data-act="copy">복사하기</button></div>
   <p class="small muted" style="margin:0">복사한 뒤 ChatGPT나 Claude 앱에 붙여넣으세요. 앱은 AI를 직접 부르지 않아서 운영비가 들지 않아요.</p>`;
 }
+
+// ---------- 화면: 설정 ----------
 function familyHTML(){
   const sy=window.BabySync;
   if(!window.FIREBASE_CONFIG) return `<div class="card panel"><div class="field"><span class="small muted">가족 공유는 아직 꺼져 있어요. 무료 서버 연결을 마치면 여기서 초대코드로 배우자와 기록을 함께 볼 수 있어요.</span></div></div>`;
@@ -425,27 +671,29 @@ function renderSettings(){
   <div class="card panel">
     <label class="field" for="sName">이름 또는 애칭<input type="text" id="sName" value="${esc(b.name)}" style="width:150px"></label>
     <label class="field" for="sBirth">태어난 날<input type="date" id="sBirth" value="${esc(b.birth)}"></label>
-    <label class="field" for="sBkg">출생 체중 (kg)<input type="number" inputmode="decimal" step="0.1" id="sBkg" value="${b.birthKg??''}" style="width:90px"></label>
-    <label class="field" for="sNkg">현재 체중 (kg)<input type="number" inputmode="decimal" step="0.1" id="sNkg" value="${b.nowKg??''}" style="width:90px"></label>
+    <div class="field"><span>성별</span><div class="chips">${[['m','남아'],['f','여아']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${b.sex===k}" data-sex="${k}">${n}</button>`).join('')}</div></div>
+    <label class="field" for="sBkg">출생 체중 (kg)<input type="number" inputmode="decimal" step="0.01" id="sBkg" value="${b.birthKg??''}" style="width:90px"></label>
     <label class="field" for="sPre">37주 전에 태어남 (조산)<input type="checkbox" id="sPre" ${b.preterm?'checked':''}></label>
     ${b.preterm?`<label class="field" for="sDue">출산 예정일<input type="date" id="sDue" value="${esc(b.due)}"></label>`:''}
   </div>
+  <p class="small muted" style="margin:0 4px">현재 몸무게와 키는 성장 탭의 "측정 기록"으로 넣어요.</p>
   <h2 class="sec">주로 어떻게 먹나요</h2><div class="chips">${['모유','분유','혼합'].map(f=>`<button class="chip" type="button" aria-pressed="${b.feeding===f}" data-feeding="${f}">${f}</button>`).join('')}</div>
-  <h2 class="sec">기록 항목 (끈 항목은 기록 공백 판정과 내보내기에서 빠져요)</h2>
+  <h2 class="sec">매일 기록할 항목 (끈 항목은 기록 공백 판정과 내보내기에서 빠져요)</h2>
   <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
   <h2 class="sec">가족 공유</h2>${familyHTML()}
   <h2 class="sec">백업</h2>
-  <div class="card panel"><div class="field"><span class="small muted">기록은 이 휴대폰에만 저장돼요. 휴대폰을 바꾸거나 앱을 지우기 전에 백업 파일을 저장해 두세요.</span></div></div>
-  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="backup">백업 파일 저장</button><button class="btn ghost" style="flex:1" type="button" data-act="import">백업 불러오기</button></div>
+  <div class="card panel"><div class="field"><span class="small muted">기록은 이 휴대폰에만 저장돼요. 휴대폰을 바꾸거나 앱을 지우기 전에 백업 파일을 저장해 두세요. 삐요로그에서 옮긴 파일도 "불러오기"로 넣어요.</span></div></div>
+  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="backup">백업 파일 저장</button><button class="btn ghost" style="flex:1" type="button" data-act="import">불러오기</button></div>
   <h2 class="sec">데이터</h2>
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
-  <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p>`;
+  <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 기록 ${S.events.length}개 · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p>`;
 }
 function render(){
   const app=$('#app');
   document.body.classList.toggle('nodock',!S.onboarded);
   if(!S.onboarded){ app.innerHTML=renderWelcome(); return }
-  app.innerHTML=view.tab==='today'?renderToday():view.tab==='week'?renderWeek():view.tab==='export'?renderExport():renderSettings();
+  const R={today:renderToday,week:renderWeek,growth:renderGrowth,export:renderExport,settings:renderSettings}[view.tab]||renderToday;
+  app.innerHTML=R();
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
   const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요 · '+dur(Date.now()-ls.start):'수면';
   $('#bFeed').hidden=!S.items.feed; $('#bSleep').hidden=!S.items.sleep; $('#bDiaper').hidden=!S.items.diaper;
@@ -459,10 +707,10 @@ function openSheet(html,onReady){ $('#sheetRoot').innerHTML=`<div class="sheetwr
 function closeSheet(){ $('#sheetRoot').innerHTML='' }
 function feedSheet(){
   let sub=S.baby.feeding==='모유'?'breastL':'formula', ml=120, min=15;
-  const last=S.events.filter(x=>x.type==='feed'&&x.ml).sort((a,b)=>b.start-a.start)[0]; if(last) ml=last.ml;
+  const last=lastOf(x=>x.type==='feed'&&x.ml); if(last) ml=last.ml;
   const draw=()=>{ const breast=sub==='breastL'||sub==='breastR';
     openSheet(`<h2>수유 기록</h2>
-    <div class="chips">${[['formula','분유'],['breastL','모유 왼쪽'],['breastR','모유 오른쪽'],['pump','유축 수유']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${sub===k}" data-sub="${k}">${n}</button>`).join('')}</div>
+    <div class="chips">${Object.entries(FEEDN).map(([k,n])=>`<button class="chip" type="button" aria-pressed="${sub===k}" data-sub="${k}">${n}</button>`).join('')}</div>
     <div class="stepper" style="justify-content:center"><button type="button" data-step="-1" aria-label="줄이기">−</button><output id="amt">${breast?min+'분':ml+'ml'}</output><button type="button" data-step="1" aria-label="늘리기">+</button></div>
     <label class="field" for="fTime">시각<input type="time" id="fTime" value="${timeDefault()}"></label>
     <label class="field" for="fNote">메모<input type="text" id="fNote" placeholder="예: 남김, 토함" style="width:180px"></label>
@@ -475,7 +723,7 @@ function feedSheet(){
 }
 function diaperSheet(){
   openSheet(`<h2>기저귀 기록</h2>
-  <div class="rec"><button type="button" style="background:var(--pee)" data-d="pee">소변</button><button type="button" style="background:var(--poo)" data-d="poo">대변</button><button type="button" style="background:var(--ink);color:var(--on-ink)" data-d="both">둘 다</button></div>
+  <div class="dtypes"><button type="button" style="background:var(--pee)" data-d="pee">소변</button><button type="button" style="background:var(--poo)" data-d="poo">대변</button><button type="button" style="background:var(--ink);color:var(--on-ink)" data-d="both">둘 다</button></div>
   <label class="field" for="dTime">시각<input type="time" id="dTime" value="${timeDefault()}"></label>
   <label class="field" for="dNote">메모<input type="text" id="dNote" placeholder="예: 노란색, 묽음" style="width:180px"></label>`,()=>{
     $('#sw').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>add({id:uid(),type:'diaper',sub:b.dataset.d,start:timeToMs($('#dTime').value),note:$('#dNote').value.trim()},'기저귀를 기록했어요'));
@@ -492,78 +740,170 @@ function sleepAction(){
     $('#past').onclick=()=>{ if(!$('#s2').value){toast('깬 시각을 넣어 주세요');return} let a=timeToMs($('#s1').value), b=timeToMs($('#s2').value); if(b<=a) a-=DAY; add({id:uid(),type:'sleep',start:a,end:b},'수면을 기록했어요') };
   });
 }
+function moreSheet(){
+  const groups={}; Object.entries(ETC).forEach(([k,t])=>(groups[t.grp]=groups[t.grp]||[]).push([k,t]));
+  openSheet(`<h2>다른 기록</h2>${Object.entries(groups).map(([g,list])=>`<h2 class="sec">${g}</h2><div class="grid3">${list.map(([k,t])=>`<button class="tile" type="button" data-etc="${k}"><i style="background:var(${t.color})"></i>${t.label}</button>`).join('')}${g==='건강'?'':''}</div>`).join('')}
+  <h2 class="sec">성장</h2><div class="grid3"><button class="tile" type="button" data-etc="growth"><i style="background:var(--accent)"></i>키·몸무게</button></div>`,()=>{
+    $('#sw').querySelectorAll('[data-etc]').forEach(b=>b.onclick=()=>b.dataset.etc==='growth'?growthSheet():etcSheet(b.dataset.etc));
+  });
+}
+function etcSheet(sub,ex){
+  const t=ETC[sub]; let val=ex?ex.val:t.def;
+  const prev=!ex&&t.unit?lastOf(x=>x.type==='etc'&&x.sub===sub&&x.val!=null):null; if(prev) val=prev.val;
+  const fmt=v=>t.step<1?Number(v).toFixed(1):v;
+  openSheet(`<h2>${ex?'기록 수정 · ':''}${t.label}</h2>
+  ${t.unit?`<div class="stepper" style="justify-content:center"><button type="button" data-step="-1" aria-label="줄이기">−</button><output id="amt">${fmt(val)}${t.unit}</output><button type="button" data-step="1" aria-label="늘리기">+</button></div>`:''}
+  ${sub==='temp'?'<p class="small muted" style="margin:0;text-align:center">38.0℃ 이상이면 오늘 화면에 알려 드려요</p>':''}
+  <label class="field" for="eTime">시각<input type="time" id="eTime" value="${ex?hm(ex.start):timeDefault()}"></label>
+  <label class="field" for="eNote">${t.text||'메모'}<input type="text" id="eNote" value="${esc(ex?ex.note:'')}" style="width:180px"></label>
+  <div class="row"><button class="btn" style="flex:1;height:52px" type="button" id="eSave">저장</button>${ex?'<button class="btn ghost" style="flex:1;height:52px" type="button" id="eDel">삭제</button>':''}</div>`,()=>{
+    $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ val=Math.max(0,Math.round((Number(val)+(+b.dataset.step)*t.step)*10)/10); $('#amt').textContent=fmt(val)+t.unit });
+    $('#eSave').onclick=()=>{ const note=$('#eNote').value.trim();
+      if(ex){ ex.start=withTime(ex.start,$('#eTime').value); if(t.unit) ex.val=Number(fmt(val)); ex.note=note; commit('수정했어요') }
+      else { const e={id:uid(),type:'etc',sub,start:timeToMs($('#eTime').value),note}; if(t.unit) e.val=Number(fmt(val)); add(e,t.label+' 기록했어요') } };
+    if(ex) bindDelete(ex.id);
+  });
+}
+function growthSheet(ex){
+  const lw=growthPoints('kg').slice(-1)[0], lc=growthPoints('cm').slice(-1)[0], lh=growthPoints('head').slice(-1)[0];
+  const today=new Date(); const dstr=ex?new Date(ex.start).toISOString().slice(0,10):`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  openSheet(`<h2>${ex?'측정 기록 수정':'키·몸무게 측정'}</h2>
+  <div class="card panel" style="background:var(--bg)">
+  <label class="field" for="gDate">날짜<input type="date" id="gDate" value="${dstr}"></label>
+  <label class="field" for="gKg">몸무게 (kg)<input type="number" inputmode="decimal" step="0.01" id="gKg" value="${ex?ex.kg??'':''}" placeholder="${lw?lw.kg:''}" style="width:100px"></label>
+  <label class="field" for="gCm">키 (cm)<input type="number" inputmode="decimal" step="0.1" id="gCm" value="${ex?ex.cm??'':''}" placeholder="${lc?lc.cm:''}" style="width:100px"></label>
+  <label class="field" for="gHead">머리둘레 (cm)<input type="number" inputmode="decimal" step="0.1" id="gHead" value="${ex?ex.head??'':''}" placeholder="${lh?lh.head:''}" style="width:100px"></label></div>
+  <span class="small muted">잰 것만 넣어도 돼요.</span>
+  <div class="row"><button class="btn" style="flex:1;height:52px" type="button" id="gSave">저장</button>${ex?'<button class="btn ghost" style="flex:1;height:52px" type="button" id="eDel">삭제</button>':''}</div>`,()=>{
+    $('#gSave').onclick=()=>{ const num=id=>{const v=parseFloat($(id).value); return isNaN(v)||v<=0?null:v};
+      const kg=num('#gKg'), cm=num('#gCm'), head=num('#gHead'); if(!kg&&!cm&&!head){toast('하나 이상 넣어 주세요');return}
+      const [y,m,d]=$('#gDate').value.split('-').map(Number); const start=new Date(y,m-1,d,12).getTime();
+      const e=ex||{id:uid(),type:'growth'}; e.start=start; ['kg','cm','head'].forEach(k=>{ const v={kg,cm,head}[k]; if(v) e[k]=v; else delete e[k] });
+      if(kg&&(!lw||start>=lw.start)) S.baby.nowKg=kg;
+      if(ex) commit('수정했어요'); else add(e,'측정값을 기록했어요') };
+    if(ex) bindDelete(ex.id);
+  });
+}
+function withTime(t,v){ const [h,m]=v.split(':').map(Number), d=new Date(t); d.setHours(h,m,0,0); return d.getTime() }
+function bindDelete(id){ const b=$('#eDel'); if(!b) return; b.onclick=()=>{ if(b.dataset.ok){ S.events=S.events.filter(e=>e.id!==id); commit('삭제했어요') } else { b.dataset.ok=1; b.textContent='한 번 더 누르면 삭제'; b.style.borderColor='var(--warn)' } } }
 function evSheet(id){
   const x=S.events.find(e=>e.id===id); if(!x) return;
+  if(x.type==='etc') return etcSheet(ETC[x.sub]?x.sub:'memo',x);
+  if(x.type==='growth') return growthSheet(x);
   openSheet(`<h2>기록 수정</h2><div class="card panel" style="background:var(--bg)">${itemHTML(x).replace('<button','<div').replace(/<\/button>$/,'</div>')}</div>
   <label class="field" for="eTime">${x.type==='sleep'?'시작 시각':'시각'}<input type="time" id="eTime" value="${hm(x.start)}"></label>
   ${x.type==='sleep'&&x.end?`<label class="field" for="eEnd">깬 시각<input type="time" id="eEnd" value="${hm(x.end)}"></label>`:''}
-  ${x.type==='feed'&&x.ml?`<label class="field" for="eMl">양 (ml)<input type="number" inputmode="numeric" id="eMl" value="${x.ml}" style="width:90px"></label>`:''}
+  ${x.type==='feed'&&x.sub!=='breastL'&&x.sub!=='breastR'?`<label class="field" for="eMl">양 (ml)<input type="number" inputmode="numeric" id="eMl" value="${x.ml??''}" style="width:90px"></label>`:''}
+  ${x.type==='diaper'?`<div class="chips">${[['pee','소변'],['poo','대변'],['both','둘 다']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${x.sub===k}" data-dsub="${k}">${n}</button>`).join('')}</div>`:''}
   <div class="row"><button class="btn" style="flex:1" type="button" id="eSave">저장</button><button class="btn ghost" style="flex:1" type="button" id="eDel">삭제</button></div>`,()=>{
-    $('#eSave').onclick=()=>{ const t=$('#eTime').value.split(':').map(Number), dd=new Date(x.start); dd.setHours(t[0],t[1]); x.start=dd.getTime();
-      if($('#eEnd')){ const e=$('#eEnd').value.split(':').map(Number), de=new Date(x.start); de.setHours(e[0],e[1],0,0); let end=de.getTime(); if(end<=x.start) end+=DAY; x.end=end }
-      if($('#eMl')) x.ml=Math.max(0,+$('#eMl').value||0); commit('수정했어요') };
-    $('#eDel').onclick=()=>{ const b=$('#eDel'); if(b.dataset.ok){ S.events=S.events.filter(e=>e.id!==id); commit('삭제했어요') } else { b.dataset.ok=1; b.textContent='한 번 더 누르면 삭제'; b.style.borderColor='var(--warn)' } };
+    let dsub=x.sub; $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
+    $('#eSave').onclick=()=>{ x.start=withTime(x.start,$('#eTime').value);
+      if($('#eEnd')){ let end=withTime(x.start,$('#eEnd').value); if(end<=x.start) end+=DAY; x.end=end }
+      if($('#eMl')){ const v=+$('#eMl').value; if(v>0) x.ml=v; else delete x.ml }
+      if(x.type==='diaper') x.sub=dsub;
+      commit('수정했어요') };
+    bindDelete(id);
   });
 }
-function add(ev,msg){ S.events.push(ev); commit(msg) }
+// 분유량이 줄었을 때 묻는 3가지 (규칙 기반, AI 아님)
+function checkSheet(day,pct){
+  const ans={};
+  const Q=[['refuse','먹다가 거부하거나 자주 끊었나요?',[['yes','네, 조금'],['no','아니요'],['unk','잘 모르겠어요']]],
+    ['fever','열이 있나요?',[['lt38','38℃ 미만'],['ge38','38℃ 이상'],['unk','안 쟀어요']]],
+    ['pee','소변 기저귀는 평소와 비슷한가요?',[['same','비슷해요'],['less','눈에 띄게 줄었어요']]]];
+  const result=()=>{ if(Object.keys(ans).length<3) return '';
+    const young=(ageDays(Date.now())??999)<91;
+    let msg, urgent=false;
+    if(ans.fever==='ge38'&&young){ msg='생후 3개월 미만에 38℃ 이상 열이 있으면 바로 진료가 필요해요. 소아과나 응급실에 연락하세요.'; urgent=true }
+    else if(ans.pee==='less'){ msg='먹는 양과 소변이 함께 줄면 탈수 신호일 수 있어요. 오늘 안에 소아과에 문의하세요.'; urgent=true }
+    else if(ans.fever==='ge38'){ msg='열이 있으면서 덜 먹고 있어요. 열이 이어지거나 처지면 소아과 진료를 받으세요.'; urgent=true }
+    else if(ans.refuse==='yes'){ msg='위험 신호는 없지만 먹다 거부했다면 컨디션을 하루 더 지켜보세요. 이틀 넘게 이어지면 소아과 상담을 권해요.' }
+    else msg='지금 답해 주신 내용에는 위험 신호가 없어요. 이 시기엔 하루씩 먹는 양이 들쭉날쭉한 일이 흔해요. 이틀 넘게 이어지거나 소변이 줄면 소아과 상담을 권해요.';
+    return `<div class="alertline${urgent?' urgent':''}"><span class="small" style="font-weight:700">확인 결과</span><br>${msg}</div>`;
+  };
+  const draw=()=>openSheet(`<h2>몇 가지만 확인할게요</h2><span class="small muted">${md(day)} 분유량이 평소보다 ${pct}% 적었어요. 3번만 누르면 돼요.</span>
+    ${Q.map(([k,q,opts])=>`<div style="display:flex;flex-direction:column;gap:6px"><span>${q}</span><div class="chips">${opts.map(([v,n])=>`<button class="chip" type="button" aria-pressed="${ans[k]===v}" data-q="${k}" data-v="${v}">${n}</button>`).join('')}</div></div>`).join('')}
+    ${result()}
+    <div class="redflag"><b>이럴 땐 바로 진료받으세요</b><span>생후 3개월 미만 38℃ 이상 발열 · 축 처지거나 깨우기 어려움 · 반복되는 구토 · 기저귀가 확연히 마름</span></div>
+    <span class="small muted" style="text-align:center">참고 정보이며 의학적 진단이 아니에요</span>
+    <button class="btn ghost full" type="button" id="cClose">닫기</button>`,()=>{
+      $('#sw').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ ans[b.dataset.q]=b.dataset.v; draw() });
+      $('#cClose').onclick=closeSheet;
+    });
+  draw();
+}
+function add(ev,msg){ ev.by=DEVICE; S.events.push(ev); commit(msg) }
 function commit(msg){ save(); closeSheet(); render(); if(msg) toast(msg) }
 let tt; function toast(m){ const t=$('#toast'); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2200) }
 
 // ---------- 백업 ----------
 async function backup(){
   const name='babylog-backup-'+new Date().toISOString().slice(0,10)+'.json';
-  const blob=new Blob([JSON.stringify({app:'babylog',v:1,exportedAt:new Date().toISOString(),state:S})],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'babylog',v:2,exportedAt:new Date().toISOString(),state:S})],{type:'application/json'});
   try{ const f=new File([blob],name,{type:'application/json'});
     if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:name}); return } }catch(e){ if(e&&e.name==='AbortError') return }
   // 미리보기 창 안에서는 파일 저장이 막히므로 텍스트로 보여 주고 복사하게 함
   if(!topLevel){ const txt=await blob.text();
-    openSheet(`<h2>백업 텍스트</h2><p class="small muted" style="margin:0">이 화면에서는 파일 저장이 막혀 있어요. 아래 내용을 복사해 메모 앱 등에 보관하세요. 홈 화면에 설치한 앱에서는 파일로 저장돼요.</p><pre class="out" id="bk">${esc(txt)}</pre><button class="btn full" type="button" id="bkCopy">복사하기</button>`,()=>{
+    openSheet(`<h2>백업 텍스트</h2><p class="small muted" style="margin:0">이 화면에서는 파일 저장이 막혀 있어요. 아래 내용을 복사해 메모 앱 등에 보관하세요. 홈 화면에 설치한 앱에서는 파일로 저장돼요.</p><pre class="out" id="bk">${esc(txt.slice(0,20000))}${txt.length>20000?'…':''}</pre><button class="btn full" type="button" id="bkCopy">복사하기</button>`,()=>{
       $('#bkCopy').onclick=()=>{ try{ navigator.clipboard.writeText(txt).then(()=>toast('복사했어요'),()=>toast('텍스트를 길게 눌러 복사하세요')) }catch(_){ toast('텍스트를 길게 눌러 복사하세요') } } }); return }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   toast('백업 파일을 저장했어요. "파일" 앱에 보관하세요');
 }
 $('#importFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  try{ const j=JSON.parse(await f.text()); const st=j.state||j;
-    if(!Array.isArray(st.events)||!st.baby) throw new Error('형식');
-    const merge=S.onboarded&&!S.sample&&S.events.length;
-    if(merge){ const ids=new Set(S.events.map(x=>x.id)); let n=0; st.events.forEach(x=>{if(!ids.has(x.id)){S.events.push(x);n++}}); S.gaps={...(st.gaps||{}),...S.gaps};
-      if(!S.baby.birth) S.baby=st.baby; commit('백업에서 기록 '+n+'개를 합쳤어요') }
-    else { S={...emptyState(),...st,onboarded:true,sample:false}; S.gaps=S.gaps||{}; view.tab='today'; view.day=dayStart(Date.now()); commit('백업을 불러왔어요 · 기록 '+S.events.length+'개') }
-  }catch(err){ toast('백업 파일을 읽지 못했어요') }
+  try{ const j=JSON.parse(await f.text()); const st=normalize(j.state||j);
+    if(!Array.isArray(st.events)) throw new Error('형식');
+    if(S.onboarded&&!S.sample&&(S.events.length||S.baby.birth)){
+      // 기존 기록이 있으면 합치기 (같은 id는 건너뜀), 비어 있는 아기 정보만 채움
+      const ids=new Set(S.events.map(x=>x.id)); let n=0; st.events.forEach(x=>{if(!ids.has(x.id)){S.events.push(x);n++}}); S.gaps={...st.gaps,...S.gaps};
+      Object.keys(st.baby).forEach(k=>{ if((S.baby[k]===''||S.baby[k]==null)&&st.baby[k]!==''&&st.baby[k]!=null) S.baby[k]=st.baby[k] });
+      commit('기록 '+n+'개를 합쳤어요'+(st.events.length-n?' (이미 있던 '+(st.events.length-n)+'개는 건너뜀)':'')) }
+    else { S={...emptyState(),...st,onboarded:true,sample:false}; view.tab='today'; view.day=dayStart(Date.now()); commit('불러왔어요 · 기록 '+S.events.length+'개') }
+    if(!S.baby.sex) setTimeout(()=>toast('성장곡선을 보려면 성장 탭에서 성별을 골라 주세요'),2400);
+  }catch(err){ toast('파일을 읽지 못했어요') }
 });
 
 // ---------- 이벤트 ----------
-$('#bFeed').onclick=feedSheet; $('#bDiaper').onclick=diaperSheet; $('#bSleep').onclick=sleepAction;
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today') view.day=dayStart(Date.now());
-  try{localStorage.setItem(KEY+'-tab',JSON.stringify({tab:view.tab}))}catch(_){} render(); window.scrollTo(0,0)});
+$('#bFeed').onclick=feedSheet; $('#bDiaper').onclick=diaperSheet; $('#bSleep').onclick=sleepAction; $('#bMore').onclick=moreSheet;
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today') view.day=dayStart(Date.now()); if(view.tab==='week') view.weekOff=0;
+  pref('tab',JSON.stringify({tab:view.tab})); render(); window.scrollTo(0,0)});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
 $('#app').addEventListener('click',async e=>{
   const t=e.target.closest('button'); if(!t) return;
   if(t.dataset.ev) return evSheet(t.dataset.ev);
   if(t.dataset.tabgo){view.tab=t.dataset.tabgo;return render()}
+  if(t.dataset.goday){ view.tab='today'; view.day=+t.dataset.goday; render(); window.scrollTo(0,0); return }
+  if(t.dataset.mode){ view.todayMode=t.dataset.mode; pref('todayMode',view.todayMode); return render() }
+  if(t.dataset.wmode){ view.weekMode=t.dataset.wmode; pref('weekMode',view.weekMode); return render() }
+  if(t.dataset.gind){ view.growth=t.dataset.gind; return render() }
+  if(t.dataset.sex){ S.baby.sex=t.dataset.sex; save(); return render() }
+  if(t.dataset.dup){ S.dups[t.dataset.dup]=1; if(t.dataset.drop){ S.events=S.events.filter(x=>x.id!==t.dataset.drop) } return commit(t.dataset.drop?'하나로 합쳤어요':'') }
   if(t.dataset.gap!==undefined){ const k=t.dataset.gap, st=t.dataset.st;
-    if(!st) delete S.gaps[k]; else { S.gaps[k]=st; if(st==='slept') S.events.push({id:uid(),type:'sleep',start:+t.dataset.s,end:+t.dataset.e,fromGap:k}) }
+    if(!st) delete S.gaps[k]; else { S.gaps[k]=st; if(st==='slept') S.events.push({id:uid(),type:'sleep',start:+t.dataset.s,end:+t.dataset.e,fromGap:k,by:DEVICE}) }
     if(!st) S.events=S.events.filter(x=>x.fromGap!==k);
     return commit(st==='missed'?'이 시간은 분석에서 빼고 "기록 누락"으로 전달할게요':st==='slept'?'수면으로 채웠어요':'') }
   if(t.dataset.days){view.exp.days=+t.dataset.days;return render()}
   if(t.dataset.q){view.exp.q=t.dataset.q;return render()}
   if(t.dataset.feeding){S.baby.feeding=t.dataset.feeding;save();return render()}
   const a=t.dataset.act;
-  if(a==='start'){ S=emptyState(); S.onboarded=true; save(); view.tab='settings'; render(); toast('아기 정보를 넣어 주세요. 비워 둬도 기록은 할 수 있어요') }
-  if(a==='hideInstall'){ installHidden=true; try{localStorage.setItem(KEY+'-install-hide','1')}catch(_){} render() }
+  if(a==='obNext'){ if(view.ob===0){ S=emptyState(); } view.ob++; render(); window.scrollTo(0,0) }
+  if(a==='obDone'){ S.onboarded=true; view.ob=0; view.tab='today'; save(); render(); toast('아래 버튼으로 첫 기록을 남겨 보세요') }
+  if(a==='hideInstall'){ installHidden=true; pref('install-hide','1'); render() }
   if(a==='prev'){view.day-=DAY;render()}
   if(a==='next'){view.day=Math.min(dayStart(Date.now()),view.day+DAY);render()}
+  if(a==='wprev'){view.weekOff=(view.weekOff||0)+1;render()}
+  if(a==='wnext'){view.weekOff=Math.max(0,(view.weekOff||0)-1);render()}
+  if(a==='check') checkSheet(+t.dataset.day,+t.dataset.pct);
+  if(a==='addGrowth') growthSheet();
   if(a==='backup') backup();
   if(a==='import') $('#importFile').click();
   if(a==='copy'){const txt=exportText(); const ok=()=>toast('복사했어요. AI 앱에 붙여넣으세요');
     const fallback=()=>{const r=document.createRange(); r.selectNodeContents($('#out')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('텍스트를 선택해 두었어요. 길게 눌러 복사하세요')};
     try{ navigator.clipboard.writeText(txt).then(ok,fallback) }catch(_){ fallback() } }
-  if(a==='clear'){ if(t.dataset.ok){ const wasSample=S.sample; S={...emptyState(),onboarded:true,items:S.items,baby:wasSample?emptyState().baby:S.baby}; save(); view.tab='settings'; render(); toast(wasSample?'비웠어요. 아기 정보부터 넣어 주세요':'모든 기록을 지웠어요') }
+  if(a==='clear'){ if(t.dataset.ok){ const wasSample=S.sample; S={...emptyState(),onboarded:true,items:S.items,baby:wasSample?emptyBaby():S.baby}; save(); view.tab='settings'; render(); toast(wasSample?'비웠어요. 아기 정보부터 넣어 주세요':'모든 기록을 지웠어요') }
     else { t.dataset.ok=1; t.textContent='한 번 더 누르면 모두 지워요' } }
   if(a==='sample'){ if(S.onboarded&&!S.sample&&S.events.length&&!t.dataset.ok){ t.dataset.ok=1; t.textContent='내 기록이 지워져요. 한 번 더 누르기'; return }
     S=sampleData(); save(); view.day=dayStart(Date.now()); view.tab='today'; render(); toast('예시 데이터를 넣었어요') }
-  // 가족 공유
   const sy=window.BabySync;
   if(a==='famCreate'&&sy){ await sy.create(); render() }
   if(a==='famJoin'&&sy){ const c=($('#famCode').value||'').trim(); if(!c){toast('초대코드를 넣어 주세요');return} await sy.join(c); render() }
@@ -576,8 +916,8 @@ $('#app').addEventListener('change',e=>{
   const t=e.target, b=S.baby;
   if(t.id==='anon'){view.exp.anon=t.checked;return render()}
   if(t.dataset.item){S.items[t.dataset.item]=t.checked;save();return render()}
-  const map={sName:v=>b.name=v,sBirth:v=>b.birth=v,sBkg:v=>b.birthKg=v?+v:null,sNkg:v=>b.nowKg=v?+v:null,sDue:v=>b.due=v};
-  if(map[t.id]){map[t.id](t.value);save()}
+  const map={sName:v=>b.name=v,sBirth:v=>b.birth=v,sBkg:v=>b.birthKg=v?+v:null,sDue:v=>b.due=v};
+  if(map[t.id]){map[t.id](t.value);save(); if(t.id==='sBirth'&&view.tab==='growth') render()}
   if(t.id==='sPre'){b.preterm=t.checked;save();render()}
 });
 $('#app').addEventListener('input',e=>{ if(e.target.id==='customQ'){view.exp.custom=e.target.value; const o=$('#out'); if(o) o.textContent=exportText()} });
@@ -585,7 +925,6 @@ $('#app').addEventListener('input',e=>{ if(e.target.id==='customQ'){view.exp.cus
 // 가족 공유 모듈이 쓰는 연결점
 window.BabyApp={
   get state(){return S},
-  // 원격 변경을 반영: fn이 S를 바꾼 뒤 저장·다시 그리기 (입력 중이면 그리기를 미룸)
   applyRemote(fn){ fn(S); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){} if(!$('#sw')&&!(document.activeElement&&/INPUT/.test(document.activeElement.tagName))) render() },
   refresh(){ if(!$('#sw')) render() },
   toast
@@ -594,9 +933,7 @@ render();
 setInterval(()=>{ if(!$('#sw')&&view.tab==='today'&&!(document.activeElement&&document.activeElement.tagName==='INPUT')) render() },60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!$('#sw')) render() });
 
-// 오프라인 실행 (홈 화면 앱). 미리보기 창 안에서는 건너뜀
 if('serviceWorker' in navigator && topLevel && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
-// 가족 공유: firebase-config.js에 설정이 있을 때만 불러옴
 if(window.FIREBASE_CONFIG) import('./sync.js').then(()=>{ if(view.tab==='settings') render() }).catch(e=>{console.warn('sync load failed',e)});
 })();
 </script>
