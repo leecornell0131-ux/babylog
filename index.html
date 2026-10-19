@@ -48,7 +48,9 @@
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
   --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}
 *{box-sizing:border-box}
-html,body{min-height:100%;margin:0}
+html,body{min-height:100%;margin:0;touch-action:manipulation}
+button,a,label,input,select,.tile,.chip,.item{touch-action:manipulation}
+select{font-size:16px}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;
   padding-top:env(safe-area-inset-top,0px);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -212,7 +214,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.4';
+const VERSION='0.3.5';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -661,7 +663,30 @@ function renderGrowth(){
 }
 
 // ---------- 내보내기 ----------
-const QS={normal:['정상 범위인지','생후 {age} 기준으로 수유·수면·배변이 일반적인 범위인지 알려줘.'],sleep:['수면 패턴','수면 패턴에서 눈에 띄는 변화가 있는지, 이 시기에 흔한 일인지 알려줘.'],feed:['수유 간격','수유량과 간격이 이 시기에 일반적인 범위인지 알려줘.'],growth:['성장','몸무게·키 변화가 이 시기에 일반적인 범위인지 알려줘.'],custom:['직접 쓰기','']};
+// 상황별 질문. "정상입니다" 같은 단정을 끌어내지 않도록 "흔한 범위와 비교"로 묻고, 답 형식은 공통 지시(EXP_RULES)로 고정
+const QS={
+  normal:['전체 점검','생후 {age} 아기의 수유·수면·배변 기록을 이 시기에 흔한 범위와 비교해 줘. 눈에 띄는 점이 있으면 무엇이 어떻게 다른지 알려줘.'],
+  sleep:['수면 패턴','밤잠·낮잠·깨어 있는 시간을 생후 {age}에 흔한 범위와 비교하고, 기간 안에서 달라진 점이 있는지 알려줘. 수면 습관을 바꿔 볼 만한 점이 있으면 한두 가지만 제안해 줘.'],
+  feed:['수유량·간격','하루 수유량·횟수·간격을 생후 {age}, 현재 몸무게 기준으로 흔한 범위와 비교하고, 기간 안에서 늘거나 줄어든 흐름이 있는지 알려줘.'],
+  growth:['성장','몸무게·키 측정값과 백분위 흐름을 보고, 백분위 선을 따라가고 있는지 크게 벗어나는지 알려줘. 수유량 기록과 함께 봐 줘.'],
+  sick:['아플 때','체온·토함·기침·약 같은 기록과 수유량·소변 횟수 변화를 보고, 지금 집에서 지켜볼 때 확인할 것과 바로 진료를 받아야 하는 신호를 나눠서 알려줘.'],
+  custom:['직접 쓰기','']};
+const EXP_RULES=['[답변 방식]',
+  '- 한국어로, 부모가 읽기 쉽게 짧게 답해 줘. 순서: 한 줄 요약 → 눈에 띄는 점 → 집에서 해 볼 것·지켜볼 것 → 소아과에 물어볼 신호.',
+  '- "정상입니다", "문제없어요"처럼 단정하지 말고 "이 시기에 흔한 범위 안/밖" 식으로 근거와 함께 말해 줘. 너는 아기를 직접 보지 못했고 이 기록은 부모가 손으로 남긴 거야.',
+  '- [앱 위험신호 점검]에 걸린 항목이 있으면 맨 앞에 두고 진료를 권해 줘. 그 밖에도 숨쉬기 힘듦, 축 처짐·잘 안 깸, 먹기를 계속 거부, 6시간 넘게 소변 없음, 피 섞인 변·흰 변, 초록색 토, 경련이 있으면 바로 진료가 필요하다고 함께 적어 줘.',
+  '- 기록이 빠진 날이나 기록 완성도가 낮은 날은 실제로 안 한 게 아니라 안 적은 것일 수 있으니 감안해 줘. 판단에 꼭 필요한 정보가 없으면 추측하지 말고 물어봐 줘.'];
+// 앱 쪽 고정 규칙 (AI 판단에 맡기지 않음). 출시 전 소아과 전문의 검수 필요
+function redFlags(days){
+  const out=[], b=S.baby, birth=new Date(b.birth+'T00:00:00').getTime(), from=days[0], to=days[days.length-1]+DAY;
+  const ev=S.events.filter(x=>x.start>=from&&x.start<to);
+  ev.filter(x=>x.type==='etc'&&x.sub==='temp'&&x.val>=38).forEach(x=>{ const ad=(x.start-birth)/DAY;
+    out.push(`${md(x.start)} ${hm(x.start)} 체온 ${x.val}℃${!isNaN(ad)&&ad<91?' (생후 3개월 미만 38℃ 이상: 바로 진료 권고 기준)':' (38℃ 이상)'}`) });
+  // 소변: 생후 6일 이후, 기록 완성도 80% 이상인 지난 날만 (덜 적은 날을 위험신호로 오인하지 않게)
+  days.forEach(d=>{ const st=dayStats(d), ad=(d-birth)/DAY; if(st.list.some(e=>e.type==='diaper')&&d<dayStart(Date.now())&&!(ad<6)&&completeness(d)>=0.8&&st.pee<4) out.push(`${md(d)} 소변 기저귀 ${st.pee}회 (하루 4회 미만, 기록 기준)`) });
+  const vom=ev.filter(x=>x.type==='etc'&&x.sub==='vomit'); if(vom.length>=3) out.push(`토함 ${vom.length}회 기록`);
+  return out;
+}
 function exportText(){
   const ex=view.exp, today=dayStart(Date.now());
   // 기록이 하나도 없는 날은 평균에서 빼고 따로 알림 (0으로 계산하면 AI가 잘못 판단함)
@@ -686,7 +711,7 @@ function exportText(){
   const has=t=>sts.filter(x=>x.list.some(e=>e.type===t)), avgOf=(arr,f)=>arr.reduce((a,x)=>a+f(x),0)/arr.length;
   const partial=(arr)=>arr.length<n?` · ${n}일 중 ${arr.length}일만 기록함`:'';
   const fd=has('feed'), sl=has('sleep'), dp=has('diaper');
-  if(S.items.feed) lines.push(fd.length?`분유 평균 ${Math.round(avgOf(fd,s=>s.ml))}ml/일 (${avgOf(fd,s=>s.feeds).toFixed(1)}회), 수유 간격 평균 ${gapAvg.toFixed(1)}h${partial(fd)}`:'수유 기록 없음');
+  if(S.items.feed) lines.push(fd.length?`수유 평균 ${avgOf(fd,s=>s.feeds).toFixed(1)}회/일${avgOf(fd,s=>s.ml)>0?`, 분유·유축 ${Math.round(avgOf(fd,s=>s.ml))}ml/일`:''}, 수유 간격 평균 ${gapAvg.toFixed(1)}h${partial(fd)}`:'수유 기록 없음');
   if(S.items.sleep){ const sd=days.map(sleepSummary).filter(x=>x.has), av=f=>sd.reduce((a,x)=>a+f(x),0)/sd.length, wk=sd.flatMap(x=>x.wakes);
     lines.push(sd.length?`수면 평균 ${(avgOf(sl.length?sl:sts,s=>s.sleep)/H).toFixed(1)}h/일 (밤잠 ${(av(x=>x.night)/H).toFixed(1)}h, 낮잠 ${av(x=>x.naps).toFixed(1)}회 ${(av(x=>x.nap)/H).toFixed(1)}h), 깨어 있는 시간 평균 ${wk.length?dur(wk.reduce((a,b)=>a+b,0)/wk.length):'?'}, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h${partial(sl)} · 밤잠은 ${nightWin().from}~${nightWin().to}시에 절반 이상 걸친 잠으로 앱이 자동 구분하며, 날짜별 밤잠은 전날 밤~그날 아침 합계`:'수면 기록 없음 (기록을 안 한 것이며 실제로 안 잔 게 아님)'); }
   if(S.items.diaper) lines.push(dp.length?`소변 ${avgOf(dp,s=>s.pee).toFixed(1)}회 · 대변 ${avgOf(dp,s=>s.poo).toFixed(1)}회/일${partial(dp)}`:'기저귀 기록 없음');
@@ -696,20 +721,21 @@ function exportText(){
   if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+x.note+')':''}`).join(', ')}`);
   const gr=S.events.filter(x=>x.type==='growth').sort((a,c)=>a.start-c.start).slice(-4);
   if(gr.length&&(ex.q==='growth'||ex.q==='normal')) lines.push(`[성장 측정] ${gr.map(x=>`${md(x.start)} ${[x.kg&&x.kg+'kg'+(pctText('wfa',x.kg,x.start)?'('+pctText('wfa',x.kg,x.start)+')':''),x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' ')}`).join(', ')} · WHO 기준`);
-  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 분유 ${hs('feed')?s.ml+'ml/'+s.feeds+'회':'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
-    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} 수유 ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}`);
+  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 수유 ${hs('feed')?s.feeds+'회'+(s.ml?' '+s.ml+'ml':''):'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
+    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} ${FEEDN[x.sub]||'수유'} ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}`);
       else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} ${sleepKind(x)==='night'?'밤잠':'낮잠'}`);
       else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}`) })});
+  const rf=redFlags(days); lines.push(`[앱 위험신호 점검 · 고정 규칙] ${rf.length?rf.join(', '):'걸린 항목 없음 (기록된 것만 확인함)'}`);
   const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
-  lines.push(`[요청] ${q}`);
-  lines.push('단정하지 말고, 소아과 상담이 필요한 신호가 있으면 따로 표시해줘. 기록 완성도가 낮은 날은 그 점을 감안해줘.');
+  lines.push(`[질문] ${q}`);
+  lines.push(...EXP_RULES);
   return lines.join('\n');
 }
 function renderExport(){
   const ex=view.exp, b=S.baby, miss=[]; if(!b.birth)miss.push('태어난 날'); if(!b.sex)miss.push('성별'); if(!b.birthKg)miss.push('출생 체중'); if(!growthPoints('kg').length&&!b.nowKg)miss.push('현재 체중');
   return `${sampleBanner()}<header><span class="small muted">무료</span><h1>AI에게 물어볼 자료 만들기</h1></header>
   ${miss.length?`<div class="warnbox">${miss.join(', ')}이(가) 비어 있어요. 이 정보가 없으면 AI가 "일반적인 범위"를 판단하기 어려워요. <button class="linkbtn" type="button" data-tabgo="settings">설정에서 입력</button></div>`:''}
-  <h2 class="sec">기간</h2><div class="chips">${[1,3,7].map(n=>`<button class="chip" type="button" aria-pressed="${ex.days===n}" data-days="${n}">${n===1?'오늘':n+'일'}</button>`).join('')}</div>
+  <h2 class="sec">기간</h2><div class="chips">${[1,3,7,14].map(n=>`<button class="chip" type="button" aria-pressed="${ex.days===n}" data-days="${n}">${n===1?'오늘':n+'일'}</button>`).join('')}</div>
   <h2 class="sec">무엇을 물어볼까요</h2><div class="chips">${Object.entries(QS).map(([k,v])=>`<button class="chip" type="button" aria-pressed="${ex.q===k}" data-q="${k}">${v[0]}</button>`).join('')}</div>
   ${ex.q==='custom'?`<input type="text" id="customQ" placeholder="예: 요즘 밤에 자주 깨는데 괜찮을까?" value="${esc(ex.custom)}">`:''}
   <div class="card panel"><label class="field" for="anon">이름 대신 "아기"로 표시<input type="checkbox" id="anon" ${ex.anon?'checked':''}></label></div>
