@@ -93,8 +93,7 @@ class MainActivity : Activity() {
                 if (Uri.parse(url).host != HOST) return
                 view.evaluateJavascript(assets.open("bridge.js").bufferedReader().readText(), null)
                 // 앱이 꺼져 있을 때 잠금화면에서 누른 "깼어요"·"끝"도 누른 시각으로 넣음
-                val stops = StopReceiver.take(this@MainActivity)
-                for (i in 0 until stops.length()) stops.optJSONObject(i)?.let { pending.add(it.optString("a") to it.optLong("at")) }
+                flushStops()
                 val todo = pending.toList()
                 pending.clear()
                 todo.forEach { (a, at) -> runAction(a, at) }
@@ -157,7 +156,18 @@ class MainActivity : Activity() {
         runAction(a, at)
     }
 
-    fun quick(a: String, at: Long) = runOnUiThread { runAction(a, at) }
+    // 잠금화면에서 누른 "깼어요"·"끝"을 웹앱에 넣고, 들어간 것만 저장 목록에서 지움
+    fun flushStops() = runOnUiThread {
+        val stops = StopReceiver.pending(this)
+        for (i in 0 until stops.length()) {
+            val o = stops.optJSONObject(i) ?: continue
+            val a = o.optString("a")
+            val at = o.optLong("at")
+            web.evaluateJavascript("window.__babyQuick?__babyQuick('$a',$at):'notready'") { r ->
+                if (r?.contains("ok") == true) StopReceiver.done(this, a, at)
+            }
+        }
+    }
 
     private fun runAction(a: String, at: Long) {
         web.evaluateJavascript("window.__babyQuick?__babyQuick('$a',$at):'notready'") { r ->
