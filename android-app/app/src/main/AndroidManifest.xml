@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <application
+        android:name=".BabylogApp"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
@@ -44,6 +45,19 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/quick_widget_info" />
         </receiver>
+
+        <service
+            android:name=".PushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".PollJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <!-- 백업 파일 공유용 (웹앱의 "백업 파일 저장"이 공유 창으로 열림) -->
         <provider

@@ -16,7 +16,10 @@
       var last = function (t) { var r = null; ev.forEach(function (e) { if (e.type === t && e.start <= now && (!r || e.start > r.start)) r = e; }); return r; };
       var names = { formula: '분유', breastL: '모유 왼쪽', breastR: '모유 오른쪽', pump: '유축 수유' };
       var ls = live('sleep'), lf = live('feed'), f = last('feed');
+      var fid = null;
+      try { fid = (JSON.parse(localStorage.getItem('babylog-sync-v1') || '{}') || {}).fid || null; } catch (e) {}
       N.update(JSON.stringify({
+        fid: fid,
         name: (S.baby && S.baby.name) || '아기',
         sleep: ls ? ls.start : null,
         feed: lf ? lf.start : null,
@@ -30,6 +33,8 @@
   Storage.prototype.setItem = function (k, v) {
     setItem.apply(this, arguments);
     if (this === localStorage && k === KEY) send(v);
+    // 가족 공유를 켜거나 끄면(가족코드가 바뀌면) 바로 알림 서버 등록을 바꿈
+    else if (this === localStorage && k === 'babylog-sync-v1') send();
   };
   send();
 

@@ -1,0 +1,10 @@
+# 아기로그 알림 서버 설정. 배포는 .github/workflows/push-server.yml이 함.
+name = "babylog-push"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# KV id는 배포 때 워크플로가 채움 (처음이면 새로 만듦)
+[[kv_namespaces]]
+binding = "KV"
+id = "KV_ID_PLACEHOLDER"
