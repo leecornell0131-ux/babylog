@@ -16,12 +16,13 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <script src="firebase-config.js"></script>
 <script src="who_lms.js"></script>
+<script src="sleep_rules.js"></script>
 <style>
 /* 레이아웃: 폰 폭 한 열 앱. 위 날짜·요약, 가운데 원형 또는 세로 24시간 + 기록 목록, 아래 큰 기록 버튼과 탭 */
 :root{
   --bg:#F3F5F8; --card:#FFFFFF; --fg:#1B2430; --muted:#5B6472; --line:#E2E6EC; --soft:#EEF0F4;
   --ink:#1B2430; --on-ink:#FFFFFF; --accent:#3B49B8; --accent-soft:#E8EBFB;
-  --sleep:#4C5BD4; --feed:#D9731F; --pee:#1F8A7E; --poo:#7A4E22; --etc:#8A6FB0; --care:#2F7FA8; --health:#C2410C;
+  --sleep:#4C5BD4; --nap:#97A1EC; --feed:#D9731F; --pee:#1F8A7E; --poo:#7A4E22; --etc:#8A6FB0; --care:#2F7FA8; --health:#C2410C;
   --warn:#B3261E; --ok:#1F7A3A; --warn-soft:#FBEAE8;
   --feed-text:#A85210; --sleep-text:#3B49B8; --pee-text:#1A6F66;
   --band1:#DDE7F7; --band2:#B9CCEF; --median:#3B49B8; --pt:#D9731F;
@@ -33,7 +34,7 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
-  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
+  --sleep:#7A86E8; --nap:#4A5499; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
@@ -41,7 +42,7 @@
 :root[data-theme="dark"]{
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
-  --sleep:#7A86E8; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
+  --sleep:#7A86E8; --nap:#4A5499; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
@@ -81,7 +82,8 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .bar .track{position:relative;height:480px}
 .bar .tick{position:absolute;left:6px;font-size:10px;color:var(--muted);transform:translateY(-50%);font-variant-numeric:tabular-nums}
 .bar .bg{position:absolute;left:28px;top:0;width:18px;height:100%;background:var(--soft);border-radius:4px}
-.bar .s{position:absolute;left:28px;width:18px;background:var(--sleep);border-radius:4px;min-height:3px}
+.bar .s{position:absolute;left:28px;width:18px;background:var(--sleep);border-radius:4px;min-height:3px}.bar .s.nap,.week .col .s.nap{background:var(--nap)}
+.sleepsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sleepsum>div{display:flex;flex-direction:column;gap:2px}.sleepsum b{font-size:19px;color:var(--sleep-text)}
 .bar .s.live{opacity:.6}
 .bar .g{position:absolute;left:28px;width:18px;border-radius:4px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 6px);opacity:.6}
 .bar .f{position:absolute;left:52px;width:12px;height:6px;border-radius:3px;background:var(--feed);transform:translateY(-50%)}
@@ -207,7 +209,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.2.0';
+const VERSION='0.3.0';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -249,7 +251,7 @@ const ETC={
 const FEEDN={formula:'분유',breastL:'모유 왼쪽',breastR:'모유 오른쪽',pump:'유축 수유'};
 
 // ---------- 상태 ----------
-function emptyBaby(){ return {name:'',birth:'',sex:'',birthKg:null,nowKg:null,preterm:false,due:'',feeding:'분유'} }
+function emptyBaby(){ return {name:'',birth:'',sex:'',birthKg:null,nowKg:null,preterm:false,due:'',feeding:'분유',nightFrom:null,nightTo:null} }
 function emptyState(){ return {v:2,onboarded:false,sample:false,baby:emptyBaby(),items:{feed:true,sleep:true,diaper:true},events:[],gaps:{},dups:{}} }
 function sampleData(){
   const today=dayStart(Date.now()), now=Date.now(), ev=[];
@@ -294,6 +296,56 @@ function ageText(at){
   let s='생후 '+Math.floor(days/7)+'주 · D+'+(days+1);
   if(S.baby.preterm&&S.baby.due){const due=new Date(S.baby.due+'T00:00:00').getTime(); const cw=Math.floor((dayStart(at)-due)/DAY/7); s+=' · 교정 '+(cw<0?'예정일 전':cw+'주')}
   return s;
+}
+// ---------- 낮잠·밤잠 (규칙과 숫자: sleep_rules.js = 프로젝트 공용 sleep_rules.json, 갤럭시 앱과 같은 규칙) ----------
+const SR=window.SLEEP_RULES||{nightWindowDefault:{from:19,to:7},nightShareMin:.5,newbornNoRhythmMonths:2,byAgeMonths:[],sources:{}};
+function nightWin(){ const b=S.baby; return {from:b.nightFrom??SR.nightWindowDefault.from, to:b.nightTo??SR.nightWindowDefault.to} }
+function nightOverlap(a,b){ const {from,to}=nightWin(); let s=0; for(let d=dayStart(a)-DAY; d<b; d+=DAY) s+=Math.max(0,Math.min(b,d+DAY+to*H)-Math.max(a,d+from*H)); return s }
+// 직접 고른 값이 있으면 그것, 없으면 밤 시간대(기본 19~7시)에 절반 이상 걸치면 밤잠
+function autoKind(x){ const {from,to}=nightWin();
+  if(x.end==null){ const h=new Date(x.start).getHours(); return (h>=from||h<to)?'night':'nap' }
+  const len=x.end-x.start; return len>0&&nightOverlap(x.start,x.end)/len>=SR.nightShareMin?'night':'nap' }
+function sleepKind(x){ return x.kind==='night'||x.kind==='nap'?x.kind:autoKind(x) }
+// 밤잠은 아침이 오는 날짜, 낮잠은 잠든 날짜에 셈
+function sleepDate(x){ if(sleepKind(x)==='nap') return dayStart(x.start);
+  const mid=x.end==null?x.start:(x.start+x.end)/2; return dayStart(mid+(24-nightWin().from)*H) }
+function sleepSummary(d){
+  const now=Date.now(), sl=S.events.filter(x=>x.type==='sleep'&&x.start<d+2*DAY&&(x.end??now)>d-2*DAY).sort((a,b)=>a.start-b.start);
+  let night=0,nap=0,naps=0,nightN=0,has=false;
+  sl.forEach(x=>{ if(sleepDate(x)!==d) return; has=true; const len=Math.max(0,(x.end??now)-x.start); if(sleepKind(x)==='night'){night+=len;nightN++} else {nap+=len;naps++} });
+  // 깨어 있는 시간: 깬 시각이 이 날짜인 구간. 밤잠 사이 수유로 깬 것과 8시간 넘는 빈칸(기록 누락일 가능성)은 뺌
+  const wakes=[];
+  for(let i=0;i<sl.length-1;i++){ const a=sl[i], b=sl[i+1]; if(a.end==null||a.end<d||a.end>=d+DAY) continue;
+    if(sleepKind(a)==='night'&&sleepKind(b)==='night'&&sleepDate(a)===sleepDate(b)) continue;
+    const g=b.start-a.end; if(g>0&&g<=8*H) wakes.push(g) }
+  const ended=sl.filter(x=>x.end!=null&&x.end<=now), last=ended.length?Math.max(...ended.map(x=>x.end)):0;
+  const awakeNow=d===dayStart(now)&&!sl.some(x=>x.end==null)&&last&&now-last<8*H?now-last:null;
+  return {night,nap,naps,nightN,has,wakes,awakeNow,live:sl.find(x=>x.end==null)||null} }
+function sleepRef(at){ const b=S.baby, base=b.preterm&&b.due?b.due:b.birth, t=new Date(base+'T00:00:00').getTime(); if(isNaN(t)) return null;
+  const m=(dayStart(at)-t)/DAY/30.4375; if(m<0) return null; const r=SR.byAgeMonths.find(r=>m>=r.from&&m<r.to); return r?{...r,months:m}:null }
+const rng=(a,u='')=>a[0]===a[1]?a[0]+u:a[0]+'~'+a[1]+u;
+const minR=a=>a.map(m=>m<60?m+'분':(m%60?Math.floor(m/60)+'시간 '+m%60+'분':m/60+'시간'));
+function refText(r){ return `${Math.floor(r.from)===0?'0~2':r.from+'~'+(r.to-1)}개월에 흔한 범위: 낮잠 ${rng(r.napCount,'회')} · 합계 ${rng(r.napH,'시간')}, 깨어 있는 시간 ${minR(r.wakeMin).join('~')}, 하루 총 수면 ${rng(r.totalH,'시간')}` }
+function sleepCard(d){
+  const today=dayStart(Date.now()), ss=sleepSummary(d), r=sleepRef(d);
+  const wAvg=ss.wakes.length?ss.wakes.reduce((a,b)=>a+b,0)/ss.wakes.length:0, wMax=ss.wakes.length?Math.max(...ss.wakes):0;
+  const young=r&&r.months<SR.newbornNoRhythmMonths;
+  return `<div class="card panel" style="gap:10px"><div class="row between"><b>수면</b><button class="linkbtn" type="button" data-act="sleepInfo">기준 보기</button></div>
+  <div class="sleepsum">
+    <div><span class="small muted">${d===today?'지난밤':'전날 밤~아침'} 밤잠</span><b>${ss.night?durS(ss.night):'–'}</b><span class="small muted">${ss.nightN>1?ss.nightN+'번 나눠 잠':ss.nightN?'한 번에 잠':'기록 없음'}</span></div>
+    <div><span class="small muted">낮잠 ${ss.naps}회</span><b>${ss.nap?durS(ss.nap):'–'}</b><span class="small muted">${ss.live&&sleepKind(ss.live)==='nap'&&sleepDate(ss.live)===d?'지금 낮잠 중':ss.night+ss.nap?'합계 '+durS(ss.night+ss.nap):''}</span></div>
+    <div><span class="small muted">깨어 있는 시간</span><b>${ss.awakeNow!=null?dur(ss.awakeNow):wAvg?dur(wAvg):'–'}</b><span class="small muted">${ss.awakeNow!=null?'지금 깬 지'+(wAvg?' · 평균 '+dur(wAvg):''):wAvg?'평균 · 최장 '+dur(wMax):''}</span></div>
+  </div>
+  ${r?`<p class="small muted" style="margin:0">${refText(r)}. 아기마다 차이가 커요.${young?' 생후 2개월 전에는 아직 낮밤 리듬이 생기기 전이라 낮잠·밤잠 구분이 덜 정확해요.':''}</p>`:`<p class="small muted" style="margin:0">태어난 날을 넣으면 월령에 흔한 낮잠·깨어 있는 시간 범위를 같이 보여 줘요.</p>`}</div>`;
+}
+function sleepInfoSheet(){
+  const r=sleepRef(Date.now()), {from,to}=nightWin();
+  openSheet(`<h2>낮잠·밤잠 기준</h2>
+  <p class="small" style="margin:0">수면 버튼 하나로 기록하면, 밤 시간대(<b>${from}시~다음 날 ${to}시</b>)에 절반 이상 걸친 잠은 밤잠, 나머지는 낮잠으로 나눠요. 밤잠은 아침이 오는 날짜에 셈해요. 틀리게 나뉜 기록은 눌러서 직접 바꿀 수 있고, 밤 시간대는 설정에서 바꿀 수 있어요.</p>
+  <div class="card" style="overflow-x:auto;padding:4px 10px;flex-shrink:0"><table><thead><tr><th>월령</th><th>낮잠</th><th>낮잠 합계</th><th>깨어 있는 시간</th><th>하루 총</th></tr></thead><tbody>${SR.byAgeMonths.map(x=>`<tr${r&&r.from===x.from?' style="font-weight:700"':''}><td>${x.from===0?'0~2':x.from+'~'+(x.to-1)}개월</td><td>${rng(x.napCount,'회')}</td><td>${rng(x.napH,'h')}</td><td>${minR(x.wakeMin).join('~')}</td><td>${rng(x.totalH,'h')}</td></tr>`).join('')}</tbody></table></div>
+  <p class="small muted" style="margin:0">하루 총 수면: 0~3개월은 미국 수면재단(NSF, 2015), 4개월 이후는 미국수면의학회(AASM) 합의·미국소아과학회(AAP) 지지(2016) 권고예요. 낮잠 횟수·합계·깨어 있는 시간은 공식 기준이 없어서 소아 수면 안내서에서 흔히 쓰는 대략적인 참고치예요. 조산이면 예정일 기준 월령을 써요.</p>
+  <p class="small muted" style="margin:0">범위를 벗어나도 이상하다는 뜻은 아니에요. 아기마다 차이가 크고, 걱정되면 소아과에 물어보세요. 참고 정보이며 진단이 아니에요.</p>
+  <button class="btn ghost full" type="button" data-close>닫기</button>`,()=>{ const c=$('#sw [data-close]'); if(c) c.onclick=closeSheet });
 }
 function evOfDay(d){const e=d+DAY, now=Date.now();
   return S.events.filter(x=> x.type==='sleep' ? (x.start<e && (x.end??now)>d) : (x.start>=d&&x.start<e)).sort((a,b)=>a.start-b.start)}
@@ -374,7 +426,7 @@ function evColor(x){ if(x.type==='feed') return 'var(--feed)'; if(x.type==='slee
 function evTitle(x){
   const now=Date.now();
   if(x.type==='feed') return (FEEDN[x.sub]||'수유')+(x.ml?' '+x.ml+'ml':'')+(x.min?' '+x.min+'분':'');
-  if(x.type==='sleep'){ const live=x.end===null, len=(x.end??now)-x.start, h=new Date(x.start).getHours(), night=h>=19||h<5;
+  if(x.type==='sleep'){ const live=x.end===null, len=(x.end??now)-x.start, night=sleepKind(x)==='night';
     return live?(night?'밤잠':'낮잠')+' 중 · '+dur(len)+'째':(night?'밤잠 ':'낮잠 ')+dur(len) }
   if(x.type==='diaper') return '기저귀 · '+({pee:'소변',poo:'대변',both:'소변+대변'}[x.sub]);
   if(x.type==='growth') return [x.kg&&x.kg+'kg',x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' · ')||'성장 기록';
@@ -418,7 +470,7 @@ function ringSVG(d,opt={}){
   gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rS1,rS2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".25"/>` });
   const list=evOfDay(d);
   list.forEach(x=>{
-    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1,rS2,fr(a),fr(b))}" style="fill:var(--sleep)"${x.end===null?' opacity=".6"':''}/>` }
+    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1,rS2,fr(a),fr(b))}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"${x.end===null?' opacity=".6"':''}/>` }
     else if(x.type==='feed'){ const [x1,y1]=pol(c,c,rF1,fr(x.start)), [x2,y2]=pol(c,c,rF2,fr(x.start)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--feed)" stroke-width="${big?5:3}" stroke-linecap="round"/>` }
     else if(x.type==='diaper'&&big){ const [px,py]=pol(c,c,rD,fr(x.start)); s+=x.sub==='pee'?`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" style="fill:var(--pee)"/>`:`<rect x="${(px-4.5).toFixed(1)}" y="${(py-4.5).toFixed(1)}" width="9" height="9" rx="2" style="fill:var(--poo)"/>` }
     else if(big){ const [px,py]=pol(c,c,rD-14,fr(x.start)); s+=`<rect x="${(px-3.5).toFixed(1)}" y="${(py-3.5).toFixed(1)}" width="7" height="7" rx="1" transform="rotate(45 ${px.toFixed(1)} ${py.toFixed(1)})" style="fill:${evColor(x)}"/>` }
@@ -490,7 +542,7 @@ function renderToday(){
   if(view.todayMode==='ring'){
     const center=d===today?(ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?['수면',durS(st.sleep),'수유 '+st.feeds+'회 · '+st.ml+'ml']:['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
     body=`<div class="card ring">${ringSVG(d,{big:true,center,label:`${md(d)} 24시간 원형 기록: 수면 ${durS(st.sleep)}, 수유 ${st.feeds}회, 기저귀 ${st.pee+st.poo}회`})}
-    <div class="legend"><span><i style="background:var(--sleep)"></i>수면</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
+    <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
     <div class="list">${listHTML}</div>`;
   } else {
     const span=480, y=t=>((t-d)/DAY*span);
@@ -498,7 +550,7 @@ function renderToday(){
     for(let h=0;h<=24;h+=3) bar+=`<span class="tick" style="top:${h/24*span}px">${h}</span>`;
     bar+='<div class="bg"></div>';
     st.list.forEach(x=>{
-      if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${x.end===null?' live':''}" style="top:${y(a)}px;height:${Math.max(3,y(b)-y(a))}px"></div>`}
+      if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${sleepKind(x)==='nap'?' nap':''}${x.end===null?' live':''}" style="top:${y(a)}px;height:${Math.max(3,y(b)-y(a))}px"></div>`}
       else if(x.type==='feed') bar+=`<div class="f" style="top:${y(x.start)}px"></div>`;
       else if(x.type==='diaper') bar+=`<div class="d${x.sub!=='pee'?' poo':''}" style="top:${y(x.start)}px"></div>`;
       else bar+=`<div class="o" style="top:${y(x.start)}px;background:${evColor(x)}"></div>`;
@@ -514,9 +566,9 @@ function renderToday(){
   ${d===today?feverCard():''}${top}${feedCheckCard(d)}${dups.map(dupHTML).join('')}
   <div class="stats">
     ${S.items.feed?`<div class="card"><span class="small muted">수유 ${st.feeds}회</span><b style="color:var(--feed-text)">${st.ml}ml</b></div>`:''}
-    ${S.items.sleep?`<div class="card"><span class="small muted">수면</span><b style="color:var(--sleep-text)">${st.list.some(x=>x.type==='sleep')||d===today?durS(st.sleep):'기록 없음'}</b></div>`:''}
     ${S.items.diaper?`<div class="card"><span class="small muted">기저귀</span><b style="color:var(--pee-text)">소${st.pee} · 대${st.poo}</b></div>`:''}
   </div>
+  ${S.items.sleep?sleepCard(d):''}
   <div class="row between"><span class="small muted">기록 완성도 <b style="color:var(--fg)">${comp}%</b></span><div class="seg" role="group" aria-label="보기 방식"><button type="button" aria-pressed="${view.todayMode==='ring'}" data-mode="ring">원형</button><button type="button" aria-pressed="${view.todayMode==='bars'}" data-mode="bars">세로</button></div></div>
   ${body}`;
 }
@@ -534,7 +586,7 @@ function renderWeek(){
   } else {
     let cols='<div class="axis">'+[0,6,12,18,24].map(h=>`<span style="top:${h/24*hgt}px">${h}</span>`).join('')+'</div>';
     days.forEach((d,i)=>{let c='';
-      sts[i].list.forEach(x=>{ if(x.type==='sleep'){const a=Math.max(x.start,d),b=Math.min(x.end??now,d+DAY); c+=`<div class="s" style="top:${(a-d)/DAY*hgt}px;height:${Math.max(2,(b-a)/DAY*hgt)}px"></div>`}
+      sts[i].list.forEach(x=>{ if(x.type==='sleep'){const a=Math.max(x.start,d),b=Math.min(x.end??now,d+DAY); c+=`<div class="s${sleepKind(x)==='nap'?' nap':''}" style="top:${(a-d)/DAY*hgt}px;height:${Math.max(2,(b-a)/DAY*hgt)}px"></div>`}
         else if(x.type==='feed') c+=`<div class="f" style="top:${(x.start-d)/DAY*hgt}px"></div>`});
       gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>c+=`<div class="g" style="top:${(g.start-d)/DAY*hgt}px;height:${(g.end-g.start)/DAY*hgt}px"></div>`);
       cols+=`<div class="col" role="img" aria-label="${md(d)} 하루 패턴">${c}</div>`});
@@ -617,7 +669,8 @@ function exportText(){
   const partial=(arr)=>arr.length<n?` · ${n}일 중 ${arr.length}일만 기록함`:'';
   const fd=has('feed'), sl=has('sleep'), dp=has('diaper');
   if(S.items.feed) lines.push(fd.length?`분유 평균 ${Math.round(avgOf(fd,s=>s.ml))}ml/일 (${avgOf(fd,s=>s.feeds).toFixed(1)}회), 수유 간격 평균 ${gapAvg.toFixed(1)}h${partial(fd)}`:'수유 기록 없음');
-  if(S.items.sleep) lines.push(sl.length?`수면 평균 ${(avgOf(sl,s=>s.sleep)/H).toFixed(1)}h/일, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h${partial(sl)}`:'수면 기록 없음 (기록을 안 한 것이며 실제로 안 잔 게 아님)');
+  if(S.items.sleep){ const sd=days.map(sleepSummary).filter(x=>x.has), av=f=>sd.reduce((a,x)=>a+f(x),0)/sd.length, wk=sd.flatMap(x=>x.wakes);
+    lines.push(sd.length?`수면 평균 ${(avgOf(sl.length?sl:sts,s=>s.sleep)/H).toFixed(1)}h/일 (밤잠 ${(av(x=>x.night)/H).toFixed(1)}h, 낮잠 ${av(x=>x.naps).toFixed(1)}회 ${(av(x=>x.nap)/H).toFixed(1)}h), 깨어 있는 시간 평균 ${wk.length?dur(wk.reduce((a,b)=>a+b,0)/wk.length):'?'}, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h${partial(sl)} · 밤잠은 ${nightWin().from}~${nightWin().to}시에 절반 이상 걸친 잠으로 앱이 자동 구분하며, 날짜별 밤잠은 전날 밤~그날 아침 합계`:'수면 기록 없음 (기록을 안 한 것이며 실제로 안 잔 게 아님)'); }
   if(S.items.diaper) lines.push(dp.length?`소변 ${avgOf(dp,s=>s.pee).toFixed(1)}회 · 대변 ${avgOf(dp,s=>s.poo).toFixed(1)}회/일${partial(dp)}`:'기저귀 기록 없음');
   lines.push(`[기록 완성도] ${comp}%${missed.length?' · 빈 시간: '+missed.slice(0,6).join(', ')+(missed.length>6?` 외 ${missed.length-6}건 (빈 시간은 통계에서 빠짐)`:''):''}`);
   lines.push(`[기록하지 않는 항목] ${['feed','sleep','diaper'].filter(k=>!S.items[k]).map(k=>({feed:'수유',sleep:'수면',diaper:'기저귀'}[k])).join(', ')||'없음'}`);
@@ -625,9 +678,9 @@ function exportText(){
   if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+x.note+')':''}`).join(', ')}`);
   const gr=S.events.filter(x=>x.type==='growth').sort((a,c)=>a.start-c.start).slice(-4);
   if(gr.length&&(ex.q==='growth'||ex.q==='normal')) lines.push(`[성장 측정] ${gr.map(x=>`${md(x.start)} ${[x.kg&&x.kg+'kg'+(pctText('wfa',x.kg,x.start)?'('+pctText('wfa',x.kg,x.start)+')':''),x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' ')}`).join(', ')} · WHO 기준`);
-  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 분유 ${hs('feed')?s.ml+'ml/'+s.feeds+'회':'기록 없음'}, 수면 ${hs('sleep')?durS(s.sleep):'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
+  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 분유 ${hs('feed')?s.ml+'ml/'+s.feeds+'회':'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
     if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} 수유 ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}`);
-      else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} 수면`);
+      else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} ${sleepKind(x)==='night'?'밤잠':'낮잠'}`);
       else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}`) })});
   const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
   lines.push(`[요청] ${q}`);
@@ -677,6 +730,10 @@ function renderSettings(){
     ${b.preterm?`<label class="field" for="sDue">출산 예정일<input type="date" id="sDue" value="${esc(b.due)}"></label>`:''}
   </div>
   <p class="small muted" style="margin:0 4px">현재 몸무게와 키는 성장 탭의 "측정 기록"으로 넣어요.</p>
+  <h2 class="sec">밤잠 시간대 (낮잠·밤잠 자동 구분 기준)</h2>
+  <div class="card panel"><label class="field" for="sNf">밤잠 시작<select id="sNf">${[17,18,19,20,21,22,23].map(h=>`<option value="${h}" ${nightWin().from===h?'selected':''}>${h}시</option>`).join('')}</select></label>
+  <label class="field" for="sNt">아침 기상<select id="sNt">${[4,5,6,7,8,9,10].map(h=>`<option value="${h}" ${nightWin().to===h?'selected':''}>${h}시</option>`).join('')}</select></label></div>
+  <p class="small muted" style="margin:0 4px">이 시간대에 절반 이상 걸친 잠을 밤잠으로 봐요. 바꾸면 지난 기록도 다시 계산돼요. 직접 고친 기록은 그대로예요.</p>
   <h2 class="sec">주로 어떻게 먹나요</h2><div class="chips">${['모유','분유','혼합'].map(f=>`<button class="chip" type="button" aria-pressed="${b.feeding===f}" data-feeding="${f}">${f}</button>`).join('')}</div>
   <h2 class="sec">매일 기록할 항목 (끈 항목은 기록 공백 판정과 내보내기에서 빠져요)</h2>
   <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
@@ -794,13 +851,16 @@ function evSheet(id){
   <label class="field" for="eTime">${x.type==='sleep'?'시작 시각':'시각'}<input type="time" id="eTime" value="${hm(x.start)}"></label>
   ${x.type==='sleep'&&x.end?`<label class="field" for="eEnd">깬 시각<input type="time" id="eEnd" value="${hm(x.end)}"></label>`:''}
   ${x.type==='feed'&&x.sub!=='breastL'&&x.sub!=='breastR'?`<label class="field" for="eMl">양 (ml)<input type="number" inputmode="numeric" id="eMl" value="${x.ml??''}" style="width:90px"></label>`:''}
+  ${x.type==='sleep'?`<div class="field"><span>구분</span><div class="chips">${[['auto','자동 ('+(autoKind(x)==='night'?'밤잠':'낮잠')+')'],['night','밤잠'],['nap','낮잠']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${(x.kind||'auto')===k}" data-kind="${k}">${n}</button>`).join('')}</div></div>`:''}
   ${x.type==='diaper'?`<div class="chips">${[['pee','소변'],['poo','대변'],['both','둘 다']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${x.sub===k}" data-dsub="${k}">${n}</button>`).join('')}</div>`:''}
   <div class="row"><button class="btn" style="flex:1" type="button" id="eSave">저장</button><button class="btn ghost" style="flex:1" type="button" id="eDel">삭제</button></div>`,()=>{
-    let dsub=x.sub; $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
+    let dsub=x.sub, kind=x.kind||'auto'; $('#sw').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ kind=b.dataset.kind; $('#sw').querySelectorAll('[data-kind]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
+    $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
     $('#eSave').onclick=()=>{ x.start=withTime(x.start,$('#eTime').value);
       if($('#eEnd')){ let end=withTime(x.start,$('#eEnd').value); if(end<=x.start) end+=DAY; x.end=end }
       if($('#eMl')){ const v=+$('#eMl').value; if(v>0) x.ml=v; else delete x.ml }
       if(x.type==='diaper') x.sub=dsub;
+      if(x.type==='sleep'){ if(kind==='auto') delete x.kind; else x.kind=kind }
       commit('수정했어요') };
     bindDelete(id);
   });
@@ -894,6 +954,7 @@ $('#app').addEventListener('click',async e=>{
   if(a==='wprev'){view.weekOff=(view.weekOff||0)+1;render()}
   if(a==='wnext'){view.weekOff=Math.max(0,(view.weekOff||0)-1);render()}
   if(a==='check') checkSheet(+t.dataset.day,+t.dataset.pct);
+  if(a==='sleepInfo') sleepInfoSheet();
   if(a==='addGrowth') growthSheet();
   if(a==='backup') backup();
   if(a==='import') $('#importFile').click();
@@ -919,6 +980,7 @@ $('#app').addEventListener('change',e=>{
   const map={sName:v=>b.name=v,sBirth:v=>b.birth=v,sBkg:v=>b.birthKg=v?+v:null,sDue:v=>b.due=v};
   if(map[t.id]){map[t.id](t.value);save(); if(t.id==='sBirth'&&view.tab==='growth') render()}
   if(t.id==='sPre'){b.preterm=t.checked;save();render()}
+  if(t.id==='sNf'||t.id==='sNt'){ b[t.id==='sNf'?'nightFrom':'nightTo']=+t.value; save() }
 });
 $('#app').addEventListener('input',e=>{ if(e.target.id==='customQ'){view.exp.custom=e.target.value; const o=$('#out'); if(o) o.textContent=exportText()} });
 
