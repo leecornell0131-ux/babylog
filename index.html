@@ -14,6 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
+<script>try{var t=localStorage.getItem('babylog-v1-theme');if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(_){}</script>
 <script src="firebase-config.js"></script>
 <script src="who_lms.js"></script>
 <script src="sleep_rules.js"></script>
@@ -214,7 +215,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.5';
+const VERSION='0.3.6';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -290,7 +291,7 @@ load();
 
 let view={tab:'today',day:dayStart(Date.now()),exp:{days:7,q:'normal',anon:true,custom:''},growth:'wfa',ob:0};
 try{const v=JSON.parse(pref('tab')||'null'); if(v&&v.tab) view.tab=v.tab}catch(e){}
-view.todayMode=pref('todayMode')||'ring'; view.weekMode=pref('weekMode')||'bars';
+view.todayMode=pref('todayMode')||'ring'; view.order=pref('order')||'asc'; view.scrollLatest=true; try{history.scrollRestoration='manual'}catch(_){} view.weekMode=pref('weekMode')||'bars';
 
 try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist() }catch(_){}
 
@@ -556,7 +557,7 @@ function renderToday(){
   const lf=lastOf(x=>x.type==='feed'), ls=liveSleep();
   const top=d===today&&lf?`<div class="alertline">마지막 수유 <b>${dur(now-lf.start)} 전</b> · ${lf.ml?lf.ml+'ml ':''}${hm(lf.start)}</div>`:'';
   const dups=dupPairs(d);
-  const rows=[...st.list.map(x=>({t:x.start,h:itemHTML(x)})),...gaps.map(g=>({t:g.end-1,h:gapHTML(g)}))].sort((a,b)=>b.t-a.t);
+  const rows=[...st.list.map(x=>({t:x.start,h:itemHTML(x)})),...gaps.map(g=>({t:g.end-1,h:gapHTML(g)}))].sort((a,b)=>view.order==='asc'?a.t-b.t:b.t-a.t);
   const listHTML=rows.length?rows.map(r=>r.h).join(''):'<div class="card empty">아직 기록이 없어요. 아래 버튼으로 첫 기록을 남겨 보세요.</div>';
   let body;
   if(view.todayMode==='ring'){
@@ -778,6 +779,10 @@ function renderSettings(){
   <div class="card panel"><label class="field" for="sNf">밤잠 시작<select id="sNf">${[17,18,19,20,21,22,23].map(h=>`<option value="${h}" ${nightWin().from===h?'selected':''}>${h}시</option>`).join('')}</select></label>
   <label class="field" for="sNt">아침 기상<select id="sNt">${[4,5,6,7,8,9,10].map(h=>`<option value="${h}" ${nightWin().to===h?'selected':''}>${h}시</option>`).join('')}</select></label></div>
   <p class="small muted" style="margin:0 4px">이 시간대에 절반 이상 걸친 잠을 밤잠으로 봐요. 바꾸면 지난 기록도 다시 계산돼요. 직접 고친 기록은 그대로예요.</p>
+  <h2 class="sec">화면 (이 휴대폰에만 적용)</h2>
+  <div class="card panel"><div class="field"><span>화면 모드</span><div class="chips">${[['auto','자동'],['light','라이트'],['dark','다크']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${(pref('theme')||'auto')===k}" data-theme-set="${k}">${n}</button>`).join('')}</div></div>
+  <div class="field"><span>오늘 기록 순서</span><div class="chips">${[['asc','최신이 아래'],['desc','최신이 위']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${view.order===k}" data-order="${k}">${n}</button>`).join('')}</div></div></div>
+  <p class="small muted" style="margin:0 4px">자동은 휴대폰의 라이트·다크 설정을 따라가요. "최신이 아래"는 세로 차트처럼 위에서 아래로 시간이 흘러요.</p>
   <h2 class="sec">주로 어떻게 먹나요</h2><div class="chips">${['모유','분유','혼합'].map(f=>`<button class="chip" type="button" aria-pressed="${b.feeding===f}" data-feeding="${f}">${f}</button>`).join('')}</div>
   <h2 class="sec">매일 기록할 항목 (끈 항목은 기록 공백 판정과 내보내기에서 빠져요)</h2>
   <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
@@ -798,6 +803,8 @@ function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
   const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요':'수면'; $('#bSleep').classList.toggle('awake',!!ls);
   $('#bFeed').hidden=!S.items.feed; $('#bSleep').hidden=!S.items.sleep; $('#bDiaper').hidden=!S.items.diaper;
+  // 최신이 아래일 때: 앱을 열거나 오늘 탭으로 올 때 한 번만 최신 기록이 보이게 내림
+  if(view.scrollLatest&&view.tab==='today'){ view.scrollLatest=false; const it=view.order==='asc'&&view.day===dayStart(Date.now())&&$('#app .list>*:last-child'); if(it) requestAnimationFrame(()=>{ const dk=$('.dock'), gap=innerHeight-(dk&&!document.body.classList.contains('nodock')?dk.offsetHeight:0)-12, r=it.getBoundingClientRect(); if(r.bottom>gap) scrollBy(0,r.bottom-gap) }) }
 }
 
 // ---------- 시트 (기록 입력) ----------
@@ -969,7 +976,7 @@ $('#importFile').addEventListener('change',async e=>{
 
 // ---------- 이벤트 ----------
 $('#bFeed').onclick=feedSheet; $('#bDiaper').onclick=diaperSheet; $('#bSleep').onclick=sleepAction; $('#bMore').onclick=moreSheet;
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today') view.day=dayStart(Date.now()); if(view.tab==='week') view.weekOff=0;
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today'){ view.day=dayStart(Date.now()); view.scrollLatest=true } if(view.tab==='week') view.weekOff=0;
   pref('tab',JSON.stringify({tab:view.tab})); render(); window.scrollTo(0,0)});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
 $('#app').addEventListener('click',async e=>{
@@ -977,6 +984,8 @@ $('#app').addEventListener('click',async e=>{
   if(t.dataset.ev) return evSheet(t.dataset.ev);
   if(t.dataset.tabgo){view.tab=t.dataset.tabgo;return render()}
   if(t.dataset.goday){ view.tab='today'; view.day=+t.dataset.goday; render(); window.scrollTo(0,0); return }
+  if(t.dataset.themeSet){ const k=t.dataset.themeSet; pref('theme',k); if(k==='auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=k; return render() }
+  if(t.dataset.order){ view.order=t.dataset.order; pref('order',view.order); return render() }
   if(t.dataset.mode){ view.todayMode=t.dataset.mode; pref('todayMode',view.todayMode); return render() }
   if(t.dataset.wmode){ view.weekMode=t.dataset.wmode; pref('weekMode',view.weekMode); return render() }
   if(t.dataset.gind){ view.growth=t.dataset.gind; return render() }
