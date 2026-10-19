@@ -1,0 +1,9 @@
+{
+  "worker": "https://babylog-push.leecornell0131.workers.dev",
+  "firebase": {
+    "apiKey": "AIzaSyCHLztjzcN80tjoVLx-VTAbVq4v4guBLIc",
+    "appId": "1:778202114708:android:65862d580b264d9b49a281",
+    "projectId": "babylog-6ae5a",
+    "senderId": "778202114708"
+  }
+}
