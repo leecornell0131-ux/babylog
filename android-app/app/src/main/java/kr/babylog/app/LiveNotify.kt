@@ -15,9 +15,9 @@ import java.util.Locale
 // 진행 중인 수면·수유를 잠금화면과 알림창에 시간이 흘러가는 알림으로 보여 줌.
 // Android 16 이상(One UI 8)에서는 "실시간 정보"로 올려 달라고 요청함 (기기 설정에 따라 다름).
 object LiveNotify {
-    private const val CH = "live_timer"
-    private const val ID_SLEEP = 1
-    private const val ID_FEED = 2
+    const val CH = "live_timer"
+    const val ID_SLEEP = 1
+    const val ID_FEED = 2
 
     fun ensureChannel(ctx: Context) {
         val ch = NotificationChannel(CH, "진행 중 타이머", NotificationManager.IMPORTANCE_DEFAULT).apply {
@@ -38,7 +38,8 @@ object LiveNotify {
     }
 
     private fun show(ctx: Context, id: Int, start: Long?, title: String, actLabel: String, act: String) {
-        if (start == null) {
+        // 잠금화면에서 이미 끝냈는데 아직 앱에 반영 안 된 것은 다시 띄우지 않음
+        if (start == null || StopReceiver.stopped(ctx, act, start)) {
             nm(ctx).cancel(id)
             return
         }
@@ -54,8 +55,9 @@ object LiveNotify {
             .setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setCategory(Notification.CATEGORY_STOPWATCH)
-            .setContentIntent(open(ctx, null, id))
-            .addAction(Notification.Action.Builder(null, actLabel, open(ctx, act, id + 10)).build())
+            .setContentIntent(openApp(ctx))
+            // 화면을 열지 않는 방송이라 잠금화면에서 지문 확인 없이 바로 눌림
+            .addAction(Notification.Action.Builder(null, actLabel, stop(ctx, act, id + 10)).build())
             // Android 16 실시간 정보(Live Updates) 요청. 그 아래 버전에서는 무시됨
             .addExtras(Bundle().apply { putBoolean("android.requestPromotedOngoing", true) })
         try {
@@ -65,10 +67,12 @@ object LiveNotify {
         }
     }
 
-    private fun open(ctx: Context, action: String?, req: Int): PendingIntent {
-        val i = Intent(ctx, if (action != null) ActionActivity::class.java else MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        if (action != null) i.putExtra(MainActivity.EXTRA_ACTION, action)
-        return PendingIntent.getActivity(ctx, req, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    fun openApp(ctx: Context): PendingIntent =
+        PendingIntent.getActivity(ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    private fun stop(ctx: Context, action: String, req: Int): PendingIntent {
+        val i = Intent(ctx, StopReceiver::class.java).putExtra(MainActivity.EXTRA_ACTION, action)
+        return PendingIntent.getBroadcast(ctx, req, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     private fun nm(ctx: Context) = ctx.getSystemService(NotificationManager::class.java)

@@ -34,6 +34,11 @@
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- 잠금화면 알림의 "깼어요"·"끝" (잠금 해제 없이 기록) -->
+        <receiver
+            android:name=".StopReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".QuickWidget"
             android:label="@string/widget_name"

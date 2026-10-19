@@ -28,10 +28,18 @@ class QuickWidget : AppWidgetProvider() {
             if (ids.isNotEmpty()) render(ctx, m, ids)
         }
 
+        // 잠금화면에서 "깼어요"를 누르면 위젯의 수면 시간도 바로 내림
+        fun clearSleep(ctx: Context) {
+            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putLong("sleep", 0).apply()
+            val m = AppWidgetManager.getInstance(ctx)
+            val ids = m.getAppWidgetIds(ComponentName(ctx, QuickWidget::class.java))
+            if (ids.isNotEmpty()) render(ctx, m, ids)
+        }
+
         private fun render(ctx: Context, m: AppWidgetManager, ids: IntArray) {
             val p = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
             val lastFeed = p.getLong("lastFeed", 0)
-            val sleep = p.getLong("sleep", 0)
+            val sleep = p.getLong("sleep", 0).let { if (it > 0 && StopReceiver.stopped(ctx, "stop_sleep", it)) 0L else it }
             val v = RemoteViews(ctx.packageName, R.layout.widget_quick)
             val now = System.currentTimeMillis()
             val el = SystemClock.elapsedRealtime()

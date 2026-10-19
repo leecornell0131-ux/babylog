@@ -39,12 +39,13 @@
   send();
 
   // 위젯·알림 버튼으로 들어온 동작
-  window.__babyQuick = function (a) {
+  // at: 버튼을 누른 시각 (잠금화면에서 누르고 나중에 앱을 연 경우 그 시각으로 기록)
+  window.__babyQuick = function (a, at) {
     var A = window.BabyApp;
     if (!A) return 'notready';
     if (A.state.sample || A.state.onboarded === false) { A.toast('먼저 앱에서 아기 정보를 넣어 주세요'); return 'ok'; }
     if (a === 'feed') { var b = document.getElementById('bFeed'); if (b) b.click(); return 'ok'; }
-    var now = Date.now(), msg = '';
+    var now = at || Date.now(), msg = '';
     var id = now.toString(36) + Math.random().toString(36).slice(2, 7);
     A.applyRemote(function (S) {
       var live = function (t) { var r = null; S.events.forEach(function (e) { if (e.type === t && e.end === null && (!r || e.start > r.start)) r = e; }); return r; };
@@ -53,11 +54,13 @@
         msg = '기저귀를 기록했어요';
       } else if (a === 'sleep' || a === 'stop_sleep') {
         var ls = live('sleep');
+        if (ls && a === 'stop_sleep' && ls.start > now) ls = null; // 누른 뒤에 새로 시작한 수면은 끝내지 않음
         if (ls) { ls.end = Math.max(now, ls.start + 60000); msg = '수면 ' + Math.round((ls.end - ls.start) / 60000) + '분 기록했어요'; }
         else if (a === 'sleep') { S.events.push({ id: id, type: 'sleep', start: now, end: null }); msg = '수면 시작을 기록했어요'; }
       } else if (a === 'stop_feed') {
         // 진행 중 수유(end가 null인 feed)를 웹앱이 지원하게 되면 그대로 끝냄
         var lf = live('feed');
+        if (lf && lf.start > now) lf = null;
         if (lf) { lf.end = Math.max(now, lf.start + 60000); if (!lf.ml) lf.min = Math.round((lf.end - lf.start) / 60000); msg = '수유를 기록했어요'; }
       }
     });
