@@ -37,6 +37,8 @@ class MainActivity : Activity() {
         const val EXTRA_AT = "babylog_at"
         private const val REQ_FILE = 41
         private const val REQ_NOTIFY = 42
+        // 같은 기록을 다시 저장해서 bridge.js가 잠금화면 알림·위젯을 새로 그리게 함
+        private const val RESEND = "(function(){var v=localStorage.getItem('babylog-v1');if(v)localStorage.setItem('babylog-v1',v)})()"
     }
 
     private lateinit var web: WebView
@@ -131,6 +133,8 @@ class MainActivity : Activity() {
         super.onResume()
         // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리)
         web.evaluateJavascript("window.BabyApp&&BabyApp.refresh()", null)
+        // 휴대폰 설정에서 알림을 막 켜고 돌아왔을 때도 진행 중 타이머 알림이 바로 뜨게 다시 보냄
+        web.evaluateJavascript(RESEND, null)
     }
 
     // 위젯·알림 버튼은 ActionActivity를 거쳐 누른 시각(EXTRA_AT)과 함께 들어옴.
@@ -193,7 +197,7 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_NOTIFY) web.evaluateJavascript("localStorage.setItem('babylog-v1',localStorage.getItem('babylog-v1'))", null)
+        if (requestCode == REQ_NOTIFY) web.evaluateJavascript(RESEND, null)
     }
 
     // 웹앱에서 부르는 안드로이드 기능 (window.BabyNative)
