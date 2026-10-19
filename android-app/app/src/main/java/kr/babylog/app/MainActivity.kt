@@ -21,6 +21,7 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import android.widget.Toast
 import org.json.JSONObject
 import java.io.File
@@ -48,9 +49,13 @@ class MainActivity : Activity() {
         LiveNotify.ensureChannel(this)
 
         web = WebView(this)
-        setContentView(web)
+        // 웹뷰는 자기 padding을 무시하고 그려서, 바깥 틀에 여백을 줌.
+        // Android 15부터 앱이 상태 표시줄·내비게이션 바 밑까지 그려지므로 그만큼 비워 둬야 시계와 겹치지 않고 하단 탭이 눌림
+        val root = FrameLayout(this)
+        root.addView(web, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        setContentView(root)
         // 상태 표시줄·내비게이션 바·키보드 아래로 화면이 들어가지 않게
-        web.setOnApplyWindowInsetsListener { v, insets ->
+        root.setOnApplyWindowInsetsListener { v, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
                 v.setPadding(i.left, i.top, i.right, i.bottom)
@@ -58,7 +63,8 @@ class MainActivity : Activity() {
                 @Suppress("DEPRECATION")
                 v.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
             }
-            insets
+            // 여백은 여기서 다 줬으니 웹뷰가 같은 여백을 또 넣지 않게 막음
+            if (Build.VERSION.SDK_INT >= 30) WindowInsets.CONSUMED else insets
         }
 
         with(web.settings) {
