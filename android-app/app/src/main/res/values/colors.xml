@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#FFFFFF</color>
+    <color name="bg">#F3F5F8</color>
     <color name="widget_bg">#F7F5FF</color>
     <color name="widget_ink">#1F2340</color>
     <color name="widget_sub">#5A5F7A</color>
