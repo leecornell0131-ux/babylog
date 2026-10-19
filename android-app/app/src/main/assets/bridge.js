@@ -37,8 +37,8 @@
   window.__babyQuick = function (a) {
     var A = window.BabyApp;
     if (!A) return 'notready';
-    if (a === 'feed') { var b = document.getElementById('bFeed'); if (b) b.click(); return 'ok'; }
     if (A.state.sample || A.state.onboarded === false) { A.toast('먼저 앱에서 아기 정보를 넣어 주세요'); return 'ok'; }
+    if (a === 'feed') { var b = document.getElementById('bFeed'); if (b) b.click(); return 'ok'; }
     var now = Date.now(), msg = '';
     var id = now.toString(36) + Math.random().toString(36).slice(2, 7);
     A.applyRemote(function (S) {

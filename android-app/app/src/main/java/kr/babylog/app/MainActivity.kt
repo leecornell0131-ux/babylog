@@ -33,6 +33,7 @@ class MainActivity : Activity() {
         const val START_URL = "https://leecornell0131-ux.github.io/babylog/"
         const val HOST = "leecornell0131-ux.github.io"
         const val EXTRA_ACTION = "babylog_action"
+        const val EXTRA_AT = "babylog_at"
         private const val REQ_FILE = 41
         private const val REQ_NOTIFY = 42
     }
@@ -103,7 +104,7 @@ class MainActivity : Activity() {
         }
 
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) web.loadUrl(START_URL)
-        if (savedInstanceState == null) takeAction(intent)
+        takeAction(intent)
 
         Updater.check(this)
         offerWidgetOnce()
@@ -125,10 +126,15 @@ class MainActivity : Activity() {
         web.evaluateJavascript("window.BabyApp&&BabyApp.refresh()", null)
     }
 
+    // 위젯·알림 버튼은 ActionActivity를 거쳐 누른 시각(EXTRA_AT)과 함께 들어옴.
+    // 이미 처리한 시각 이후의 것만 실행해서, 앱이 다시 만들어지거나 최근 앱 목록에서 열릴 때 같은 기록이 또 생기지 않게 함
     private fun takeAction(i: Intent?) {
         val a = i?.getStringExtra(EXTRA_ACTION) ?: return
+        val at = i.getLongExtra(EXTRA_AT, 0)
         i.removeExtra(EXTRA_ACTION)
-        if (i.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return // 최근 앱 목록에서 다시 연 경우
+        val p = getSharedPreferences("babylog", MODE_PRIVATE)
+        if (at <= p.getLong("lastActionAt", 0) || System.currentTimeMillis() - at > 60_000) return
+        p.edit().putLong("lastActionAt", at).apply()
         runAction(a)
     }
 

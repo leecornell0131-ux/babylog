@@ -66,7 +66,7 @@ object LiveNotify {
     }
 
     private fun open(ctx: Context, action: String?, req: Int): PendingIntent {
-        val i = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val i = Intent(ctx, if (action != null) ActionActivity::class.java else MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         if (action != null) i.putExtra(MainActivity.EXTRA_ACTION, action)
         return PendingIntent.getActivity(ctx, req, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }

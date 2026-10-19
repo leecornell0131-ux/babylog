@@ -37,7 +37,16 @@ jobs:
           ./gradlew --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk babylog.apk
 
+      # 다른 브랜치에서 만든 APK는 내려받기용으로만 남기고, 설치 주소(최신 릴리스)에는 main만 올림
+      - name: Keep APK (branch build)
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: babylog-apk
+          path: android-app/babylog.apk
+
       - name: Publish release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
