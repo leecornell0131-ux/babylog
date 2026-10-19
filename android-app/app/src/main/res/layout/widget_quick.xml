@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/feed_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="마지막 수유 후"
+                android:textColor="@color/widget_sub"
+                android:textSize="12sp" />
+
+            <Chronometer
+                android:id="@+id/feed_timer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/widget_ink"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/feed_none"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="앱을 한 번 열어 주세요"
+                android:textColor="@color/widget_ink"
+                android:textSize="15sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/sleep_box"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="수면 중"
+                android:textColor="@color/widget_sub"
+                android:textSize="12sp" />
+
+            <Chronometer
+                android:id="@+id/sleep_timer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/widget_ink"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/b_feed"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_feed"
+            android:text="수유" />
+
+        <TextView
+            android:id="@+id/b_pee"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_diaper"
+            android:text="소변" />
+
+        <TextView
+            android:id="@+id/b_poo"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_diaper"
+            android:text="대변" />
+
+        <TextView
+            android:id="@+id/b_sleep"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_sleep"
+            android:text="잠듦" />
+    </LinearLayout>
+</LinearLayout>

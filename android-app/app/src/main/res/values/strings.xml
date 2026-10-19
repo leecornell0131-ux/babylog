@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">아기로그</string>
+    <string name="widget_name">아기로그 빠른 기록</string>
+    <string name="widget_desc">마지막 수유 후 지난 시간과 소변·대변·수면 버튼</string>
+</resources>
