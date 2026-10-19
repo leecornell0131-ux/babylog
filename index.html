@@ -215,7 +215,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.7';
+const VERSION='0.3.8';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -506,6 +506,15 @@ function ringSVG(d,opt={}){
 }
 
 // ---------- 화면: 시작 안내 ----------
+// 첫 화면: 배우자가 이미 가족을 만들었으면 아기 정보 입력 없이 초대코드로 바로 참여
+function welcomeJoinHTML(){
+  const sy=window.BabySync; if(!window.FIREBASE_CONFIG) return '';
+  const st=sy?sy.status():{busy:true,error:''};
+  return `<div class="card panel" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;text-align:left;width:100%">
+    <b>초대코드를 받았나요?</b><span class="small muted">배우자가 먼저 가족을 만들었다면 코드만 넣으세요. 아기 정보와 기록을 그대로 받아 와요.</span>
+    <div class="row"><input type="text" id="famCode" placeholder="초대코드 10자리" autocapitalize="characters" autocomplete="off" value="${esc(view.joinCode||'')}" style="flex:1"><button class="btn" type="button" data-act="famJoin" ${st.busy?'disabled':''}>${sy?(st.busy?'참여 중…':'참여'):'준비 중…'}</button></div>
+    ${st.error?`<span class="small" style="color:var(--warn)">${esc(st.error)}</span>`:''}</div>`;
+}
 function renderWelcome(){
   const st=view.ob, b=S.baby, steps=`<div class="steps" aria-hidden="true">${[1,2,3].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>`;
   if(st===0) return `<div class="welcome"><img src="icons/icon-192.png" alt="" onerror="this.remove()">
@@ -516,6 +525,7 @@ function renderWelcome(){
   <button class="btn full" style="height:52px" type="button" data-act="obNext">내 아기 기록 시작하기</button>
   <button class="btn ghost full" type="button" data-act="import">백업·삐요로그 파일 불러오기</button>
   <button class="linkbtn" type="button" data-act="sample">예시 데이터로 둘러보기</button>
+  ${welcomeJoinHTML()}
   <p class="small muted" style="margin:0">이 앱은 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p></div>`;
   if(st===1) return `<div class="welcome">${steps}<span class="small muted">1/3</span><h1>아기 정보</h1>
   <p class="small muted" style="margin:0">성장곡선과 "정상 범위" 질문에 쓰여요. 비워 두고 나중에 넣어도 돼요.</p>
@@ -1026,7 +1036,9 @@ $('#app').addEventListener('click',async e=>{
     S=sampleData(); save(); view.day=dayStart(Date.now()); view.tab='today'; render(); toast('예시 데이터를 넣었어요') }
   const sy=window.BabySync;
   if(a==='famCreate'&&sy){ await sy.create(); render() }
-  if(a==='famJoin'&&sy){ const c=($('#famCode').value||'').trim(); if(!c){toast('초대코드를 넣어 주세요');return} await sy.join(c); render() }
+  if(a==='famJoin'&&sy){ const c=($('#famCode').value||'').trim(); if(!c){toast('초대코드를 넣어 주세요');return} await sy.join(c);
+    if(sy.status().fid&&!S.onboarded){ S.onboarded=true; S.sample=false; view.ob=0; view.tab='today'; view.joinCode=''; view.scrollLatest=true; save() }
+    render() }
   if(a==='famShare'&&sy){ const c=sy.status().fid, txt='아기로그 가족 초대코드: '+c;
     try{ if(navigator.share){ await navigator.share({text:txt}); return } }catch(_){return}
     try{ await navigator.clipboard.writeText(c); toast('초대코드를 복사했어요') }catch(_){ toast('코드를 길게 눌러 복사하세요') } }
@@ -1041,7 +1053,7 @@ $('#app').addEventListener('change',e=>{
   if(t.id==='sPre'){b.preterm=t.checked;save();render()}
   if(t.id==='sNf'||t.id==='sNt'){ b[t.id==='sNf'?'nightFrom':'nightTo']=+t.value; save() }
 });
-$('#app').addEventListener('input',e=>{ if(e.target.id==='customQ'){view.exp.custom=e.target.value; const o=$('#out'); if(o) o.textContent=exportText()} });
+$('#app').addEventListener('input',e=>{ if(e.target.id==='famCode') view.joinCode=e.target.value; if(e.target.id==='customQ'){view.exp.custom=e.target.value; const o=$('#out'); if(o) o.textContent=exportText()} });
 
 // 가족 공유 모듈이 쓰는 연결점
 window.BabyApp={
