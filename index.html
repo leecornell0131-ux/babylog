@@ -22,9 +22,9 @@
 :root{
   --bg:#F3F5F8; --card:#FFFFFF; --fg:#1B2430; --muted:#5B6472; --line:#E2E6EC; --soft:#EEF0F4;
   --ink:#1B2430; --on-ink:#FFFFFF; --accent:#3B49B8; --accent-soft:#E8EBFB;
-  --sleep:#4C5BD4; --nap:#97A1EC; --feed:#D9731F; --pee:#1F8A7E; --poo:#7A4E22; --etc:#8A6FB0; --care:#2F7FA8; --health:#C2410C;
+  --sleep:#4C5BD4; --nap:#97A1EC; --feed:#D6457A; --pee:#1F8A7E; --poo:#7A4E22; --etc:#8A6FB0; --care:#2F7FA8; --health:#C2410C;
   --warn:#B3261E; --ok:#1F7A3A; --warn-soft:#FBEAE8;
-  --feed-text:#A85210; --sleep-text:#3B49B8; --pee-text:#1A6F66;
+  --feed-text:#B32F62; --sleep-text:#3B49B8; --pee-text:#1A6F66;
   --band1:#DDE7F7; --band2:#B9CCEF; --median:#3B49B8; --pt:#D9731F;
   --hatch1:#E4E8EE; --hatch2:#F3F5F8;
   --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
@@ -34,17 +34,17 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
-  --sleep:#7A86E8; --nap:#4A5499; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
+  --sleep:#7A86E8; --nap:#4A5499; --feed:#F07AA0; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
-  --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
+  --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
   --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
-  --sleep:#7A86E8; --nap:#4A5499; --feed:#E8904A; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
+  --sleep:#7A86E8; --nap:#4A5499; --feed:#F07AA0; --pee:#3FB3A5; --poo:#B88456; --etc:#B39DDB; --care:#5FB0D9; --health:#F08A5D;
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
-  --feed-text:#F0A566; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
+  --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
   --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}
 *{box-sizing:border-box}
@@ -84,7 +84,7 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .bar .bg{position:absolute;left:28px;top:0;width:18px;height:100%;background:var(--soft);border-radius:4px}
 .bar .s{position:absolute;left:28px;width:18px;background:var(--sleep);border-radius:4px;min-height:3px}.bar .s.nap,.week .col .s.nap{background:var(--nap)}
 .sleepsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sleepsum>div{display:flex;flex-direction:column;gap:2px}.sleepsum b{font-size:19px;color:var(--sleep-text)}
-.bar .s.live{opacity:.6}
+.bar .s.live{box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--sleep)}
 .bar .g{position:absolute;left:28px;width:18px;border-radius:4px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 6px);opacity:.6}
 .bar .f{position:absolute;left:52px;width:12px;height:6px;border-radius:3px;background:var(--feed);transform:translateY(-50%)}
 .bar .d{position:absolute;left:68px;width:7px;height:7px;border-radius:4px;background:var(--pee);transform:translateY(-50%)}
@@ -93,7 +93,8 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .bar .now{position:absolute;left:24px;right:4px;height:2px;background:var(--fg)}
 .list{flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .item{background:var(--card);border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:10px;border:0;text-align:left;width:100%}
-.item .sw{width:8px;height:28px;border-radius:4px;flex-shrink:0}
+.item .sw{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;font-size:18px;line-height:1;background:var(--bg);box-shadow:inset 3px 0 0 var(--c)}
+@supports (background:color-mix(in srgb,red 10%,transparent)){.item .sw{background:color-mix(in srgb,var(--c) 20%,transparent)}}
 .item .t{display:flex;flex-direction:column;min-width:0}
 .item .t b{font-size:14px;font-weight:600}
 .item.live{box-shadow:inset 0 0 0 2px var(--sleep)}
@@ -108,14 +109,15 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .empty{padding:16px;text-align:center;color:var(--muted);font-size:14px}
 .ring{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0}
 .ring svg{width:100%;max-width:320px;height:auto}
-.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted);max-width:100%;padding:0 8px;box-sizing:border-box}.legend span{white-space:nowrap}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
   padding:10px max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));z-index:5}
 .dock .inner{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
 .rec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.rec button{height:52px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
+.rec button{height:58px;line-height:1.15;white-space:nowrap;padding:0 2px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
 .rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
+.rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"🧷"}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}
 .rec .more{background:var(--card);color:var(--fg);border:1px solid var(--line)}
 :root[data-theme="dark"] .rec button:not(.more){color:#12161C}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button:not(.more){color:#12161C}}
@@ -132,7 +134,8 @@ nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
 .sheet h2{margin:0;font-size:18px}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .tile{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;padding:6px}
-.tile i{width:10px;height:10px;border-radius:3px;display:block}
+.tile{min-height:76px}.tile .ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:20px;line-height:1;background:var(--bg)}
+@supports (background:color-mix(in srgb,red 10%,transparent)){.tile .ic{background:color-mix(in srgb,var(--c) 22%,transparent)}}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card)}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
@@ -209,7 +212,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.1';
+const VERSION='0.3.4';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -232,21 +235,21 @@ let DEVICE=pref('device'); if(!DEVICE){ DEVICE=uid(); pref('device',DEVICE) }
 // ---------- 기록 종류 ----------
 // 수유·수면·기저귀 외 기록은 type:'etc' + sub
 const ETC={
-  solid:{label:'이유식',grp:'먹기',unit:'g',def:50,step:10,color:'--feed'},
-  snack:{label:'간식',grp:'먹기',unit:'g',def:20,step:5,color:'--feed'},
-  water:{label:'물·음료',grp:'먹기',unit:'ml',def:30,step:10,color:'--feed'},
-  pumping:{label:'유축하기',grp:'먹기',unit:'ml',def:80,step:10,color:'--feed'},
-  bath:{label:'목욕',grp:'돌보기',color:'--care'},
-  walk:{label:'산책',grp:'돌보기',unit:'분',def:30,step:10,color:'--care'},
-  tummy:{label:'터미타임',grp:'돌보기',unit:'분',def:5,step:1,color:'--care'},
-  temp:{label:'체온',grp:'건강',unit:'℃',def:36.8,step:0.1,color:'--health'},
-  med:{label:'약',grp:'건강',text:'약 이름과 양',color:'--health'},
-  vomit:{label:'토함',grp:'건강',text:'양이나 모양',color:'--health'},
-  cough:{label:'기침·콧물',grp:'건강',color:'--health'},
-  rash:{label:'발진·피부',grp:'건강',text:'부위',color:'--health'},
-  hospital:{label:'병원',grp:'건강',text:'진료 내용',color:'--health'},
-  vaccine:{label:'예방접종',grp:'건강',text:'접종 이름 (예: B형간염 2차)',color:'--health'},
-  memo:{label:'메모',grp:'기타',text:'내용',color:'--etc'},
+  solid:{label:'이유식',ic:'🥣',grp:'먹기',unit:'g',def:50,step:10,color:'--feed'},
+  snack:{label:'간식',ic:'🍪',grp:'먹기',unit:'g',def:20,step:5,color:'--feed'},
+  water:{label:'물·음료',ic:'🥤',grp:'먹기',unit:'ml',def:30,step:10,color:'--feed'},
+  pumping:{label:'유축하기',ic:'🍼',grp:'먹기',unit:'ml',def:80,step:10,color:'--feed'},
+  bath:{label:'목욕',ic:'🛁',grp:'돌보기',color:'--care'},
+  walk:{label:'산책',ic:'🚶',grp:'돌보기',unit:'분',def:30,step:10,color:'--care'},
+  tummy:{label:'터미타임',ic:'🤸',grp:'돌보기',unit:'분',def:5,step:1,color:'--care'},
+  temp:{label:'체온',ic:'🌡️',grp:'건강',unit:'℃',def:36.8,step:0.1,color:'--health'},
+  med:{label:'약',ic:'💊',grp:'건강',text:'약 이름과 양',color:'--health'},
+  vomit:{label:'토함',ic:'🤮',grp:'건강',text:'양이나 모양',color:'--health'},
+  cough:{label:'기침·콧물',ic:'🤧',grp:'건강',color:'--health'},
+  rash:{label:'발진·피부',ic:'🩹',grp:'건강',text:'부위',color:'--health'},
+  hospital:{label:'병원',ic:'🏥',grp:'건강',text:'진료 내용',color:'--health'},
+  vaccine:{label:'예방접종',ic:'💉',grp:'건강',text:'접종 이름 (예: B형간염 2차)',color:'--health'},
+  memo:{label:'메모',ic:'📝',grp:'기타',text:'내용',color:'--etc'},
 };
 const FEEDN={formula:'분유',breastL:'모유 왼쪽',breastR:'모유 오른쪽',pump:'유축 수유'};
 
@@ -431,6 +434,9 @@ function installBanner(){
 function evColor(x){ if(x.type==='feed') return 'var(--feed)'; if(x.type==='sleep') return 'var(--sleep)';
   if(x.type==='diaper') return x.sub==='pee'?'var(--pee)':'var(--poo)'; if(x.type==='growth') return 'var(--accent)';
   return 'var('+((ETC[x.sub]||ETC.memo).color)+')' }
+function evIcon(x){ if(x.type==='feed') return x.sub==='formula'?'🍼':x.sub==='pump'?'🍼':'🤱'; if(x.type==='sleep') return sleepKind(x)==='night'?'🌙':'😴';
+  if(x.type==='diaper') return x.sub==='pee'?'💧':x.sub==='poo'?'💩':'🧷'; if(x.type==='growth') return '📏';
+  return (ETC[x.sub]||ETC.memo).ic }
 function evTitle(x){
   const now=Date.now();
   if(x.type==='feed') return (FEEDN[x.sub]||'수유')+(x.ml?' '+x.ml+'ml':'')+(x.min?' '+x.min+'분':'');
@@ -444,7 +450,7 @@ function itemHTML(x){
   const live=x.type==='sleep'&&x.end===null;
   const sub=x.type==='sleep'?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
   const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
-  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="background:${evColor(x)}"></span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
+  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
 }
 function gapHTML(g){
   const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
@@ -470,24 +476,28 @@ function arcPath(cx,cy,r1,r2,f0,f1){
 }
 // big: 오늘 화면용 (시각 눈금·지금 바늘·가운데 글씨), 작은 것: 주간 원형 달력
 function ringSVG(d,opt={}){
-  const big=!!opt.big, W=big?300:92, c=W/2, now=Date.now();
-  const rS2=big?122:40, rS1=big?98:30, rF1=big?126:41, rF2=big?140:46, rD=big?86:24;
+  // 큰 원: 시각 숫자는 원 바깥, 가운데 글자는 안쪽 원 안에만 (겹치지 않게)
+  const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now();
+  const rS2=big?124:40, rS1=big?100:30, rF1=big?128:41, rF2=big?140:46, rD=big?90:24;
   const fr=t=>(t-d)/DAY;
-  let s=`<svg viewBox="0 0 ${W} ${W}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
+  let s=`<svg viewBox="${big?'-14 0 '+(W+28):'0 0 '+W} ${W}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
   s+=`<circle cx="${c}" cy="${c}" r="${(rS1+rS2)/2}" fill="none" style="stroke:${opt.alert?'var(--warn-soft)':'var(--soft)'}" stroke-width="${rS2-rS1}"/>`;
   gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rS1,rS2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".25"/>` });
   const list=evOfDay(d);
   list.forEach(x=>{
-    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1,rS2,fr(a),fr(b))}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"${x.end===null?' opacity=".6"':''}/>` }
+    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1,rS2,fr(a),fr(b))}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"/>` }
     else if(x.type==='feed'){ const [x1,y1]=pol(c,c,rF1,fr(x.start)), [x2,y2]=pol(c,c,rF2,fr(x.start)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--feed)" stroke-width="${big?5:3}" stroke-linecap="round"/>` }
     else if(x.type==='diaper'&&big){ const [px,py]=pol(c,c,rD,fr(x.start)); s+=x.sub==='pee'?`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" style="fill:var(--pee)"/>`:`<rect x="${(px-4.5).toFixed(1)}" y="${(py-4.5).toFixed(1)}" width="9" height="9" rx="2" style="fill:var(--poo)"/>` }
     else if(big){ const [px,py]=pol(c,c,rD-14,fr(x.start)); s+=`<rect x="${(px-3.5).toFixed(1)}" y="${(py-3.5).toFixed(1)}" width="7" height="7" rx="1" transform="rotate(45 ${px.toFixed(1)} ${py.toFixed(1)})" style="fill:${evColor(x)}"/>` }
   });
   if(big){
-    [[0,'0시'],[0.25,'6'],[0.5,'12'],[0.75,'18']].forEach(([f,t])=>{ const [px,py]=pol(c,c,rD-34,f); s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${t}</text>` });
+    for(let h=0;h<24;h+=3){ const f=h/24;
+      if(h%6===0){ const [px,py]=pol(c,c,151,f); s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--muted)">${h}시</text>` }
+      else { const [px,py]=pol(c,c,151,f); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.6" style="fill:var(--muted)" opacity=".6"/>` }
+      const [a1,b1]=pol(c,c,rS1,f), [a2,b2]=pol(c,c,rS1+5,f); s+=`<line x1="${a1.toFixed(1)}" y1="${b1.toFixed(1)}" x2="${a2.toFixed(1)}" y2="${b2.toFixed(1)}" style="stroke:var(--muted)" stroke-width="1" opacity=".5"/>` }
     if(d===dayStart(now)){ const [x1,y1]=pol(c,c,rS1-6,fr(now)), [x2,y2]=pol(c,c,rF2+4,fr(now)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--fg)" stroke-width="2"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="4" style="fill:var(--fg)"/>` }
     const [l1,l2,l3]=opt.center||['','',''];
-    s+=`<text x="${c}" y="${c-12}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+12}" text-anchor="middle" font-size="22" font-weight="700" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+32}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l3)}</text>`;
+    s+=`<text x="${c}" y="${c-18}" text-anchor="middle" font-size="13" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+9}" text-anchor="middle" font-size="${String(l2).length>7?20:24}" font-weight="700" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+32}" text-anchor="middle" font-size="13" style="fill:var(--muted)">${esc(l3)}</text>`;
   } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="600" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
   return s+'</svg>';
 }
@@ -548,7 +558,7 @@ function renderToday(){
   const listHTML=rows.length?rows.map(r=>r.h).join(''):'<div class="card empty">아직 기록이 없어요. 아래 버튼으로 첫 기록을 남겨 보세요.</div>';
   let body;
   if(view.todayMode==='ring'){
-    const center=d===today?(ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?['수면',durS(st.sleep),'수유 '+st.feeds+'회 · '+st.ml+'ml']:['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
+    const center=d===today?(ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?(()=>{const z=sleepSummary(d);return ['수면 합계',durS(st.sleep),'밤잠 '+durS(z.night)+' · 낮잠 '+z.naps+'회']})():['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
     body=`<div class="card ring">${ringSVG(d,{big:true,center,label:`${md(d)} 24시간 원형 기록: 수면 ${durS(st.sleep)}, 수유 ${st.feeds}회, 기저귀 ${st.pee+st.poo}회`})}
     <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
     <div class="list">${listHTML}</div>`;
@@ -760,7 +770,7 @@ function render(){
   const R={today:renderToday,week:renderWeek,growth:renderGrowth,export:renderExport,settings:renderSettings}[view.tab]||renderToday;
   app.innerHTML=R();
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
-  const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요 · '+dur(Date.now()-ls.start):'수면';
+  const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요':'수면'; $('#bSleep').classList.toggle('awake',!!ls);
   $('#bFeed').hidden=!S.items.feed; $('#bSleep').hidden=!S.items.sleep; $('#bDiaper').hidden=!S.items.diaper;
 }
 
@@ -788,7 +798,7 @@ function feedSheet(){
 }
 function diaperSheet(){
   openSheet(`<h2>기저귀 기록</h2>
-  <div class="dtypes"><button type="button" style="background:var(--pee)" data-d="pee">소변</button><button type="button" style="background:var(--poo)" data-d="poo">대변</button><button type="button" style="background:var(--ink);color:var(--on-ink)" data-d="both">둘 다</button></div>
+  <div class="dtypes"><button type="button" style="background:var(--pee)" data-d="pee">💧 소변</button><button type="button" style="background:var(--poo)" data-d="poo">💩 대변</button><button type="button" style="background:var(--ink);color:var(--on-ink)" data-d="both">💧💩 둘 다</button></div>
   <label class="field" for="dTime">시각<input type="time" id="dTime" value="${timeDefault()}"></label>
   <label class="field" for="dNote">메모<input type="text" id="dNote" placeholder="예: 노란색, 묽음" style="width:180px"></label>`,()=>{
     $('#sw').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>add({id:uid(),type:'diaper',sub:b.dataset.d,start:timeToMs($('#dTime').value),note:$('#dNote').value.trim()},'기저귀를 기록했어요'));
@@ -807,7 +817,7 @@ function sleepAction(){
 }
 function moreSheet(){
   const groups={}; Object.entries(ETC).forEach(([k,t])=>(groups[t.grp]=groups[t.grp]||[]).push([k,t]));
-  openSheet(`<h2>다른 기록</h2>${Object.entries(groups).map(([g,list])=>`<h2 class="sec">${g}</h2><div class="grid3">${list.map(([k,t])=>`<button class="tile" type="button" data-etc="${k}"><i style="background:var(${t.color})"></i>${t.label}</button>`).join('')}${g==='건강'?'':''}</div>`).join('')}
+  openSheet(`<h2>다른 기록</h2>${Object.entries(groups).map(([g,list])=>`<h2 class="sec">${g}</h2><div class="grid3">${list.map(([k,t])=>`<button class="tile" type="button" data-etc="${k}"><span class="ic" style="--c:var(${t.color})">${t.ic}</span>${t.label}</button>`).join('')}${g==='건강'?'':''}</div>`).join('')}
   <h2 class="sec">성장</h2><div class="grid3"><button class="tile" type="button" data-etc="growth"><i style="background:var(--accent)"></i>키·몸무게</button></div>`,()=>{
     $('#sw').querySelectorAll('[data-etc]').forEach(b=>b.onclick=()=>b.dataset.etc==='growth'?growthSheet():etcSheet(b.dataset.etc));
   });
