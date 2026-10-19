@@ -1,0 +1,79 @@
+# 아기로그 알림 서버(Cloudflare Workers 무료)를 배포하고, 갤럭시 앱이 읽는 android-app/push-config.json을 만듦.
+# 필요한 저장소 Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, FCM_SERVICE_ACCOUNT (Firebase 서비스 계정 키 JSON)
+# 선택 Variables: FIREBASE_ANDROID_APP_ID (자동 등록이 안 될 때만)
+name: Push server
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'push-server/**'
+      - '.github/workflows/push-server.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: push-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FCM_SA: ${{ secrets.FCM_SERVICE_ACCOUNT }}
+      FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Check secrets
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$FCM_SA" ] || missing="$missing FCM_SERVICE_ACCOUNT"
+          if [ -n "$missing" ]; then
+            echo "::warning::아직 넣지 않은 Secrets:$missing (android-app/README.md의 알림 서버 단계를 따라 넣어 주세요)"
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: KV namespace
+        if: env.SKIP != '1'
+        working-directory: push-server
+        run: |
+          W="npx -y wrangler@4"
+          find_id() { $W kv namespace list 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s.slice(s.indexOf("[")));const n=a.find(x=>/babylog-push-kv$/i.test(x.title));console.log(n?n.id:"")})'; }
+          ID=$(find_id)
+          if [ -z "$ID" ]; then $W kv namespace create babylog-push-kv; ID=$(find_id); fi
+          [ -n "$ID" ] || { echo "::error::KV 저장소를 만들지 못했어요"; exit 1; }
+          sed -i "s/KV_ID_PLACEHOLDER/$ID/" wrangler.toml
+
+      - name: Deploy worker
+        if: env.SKIP != '1'
+        working-directory: push-server
+        run: |
+          npx -y wrangler@4 deploy 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          [ -n "$URL" ] || { echo "::error::Workers 주소를 못 찾았어요. Cloudflare 대시보드 > Workers에서 workers.dev 주소를 한 번 만들어 주세요"; exit 1; }
+          echo "WORKER_URL=$URL" >> "$GITHUB_ENV"
+          printf '%s' "$FCM_SA" | npx -y wrangler@4 secret put FCM_SA
+          curl -fsS "$URL/" && echo
+
+      - name: Write push-config.json
+        if: env.SKIP != '1'
+        run: |
+          node push-server/android-config.mjs android-app/push-config.json
+          if ! git diff --quiet -- android-app/push-config.json || [ -n "$(git status --porcelain android-app/push-config.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898888+github-actions[bot]@users.noreply.github.com"
+            git add android-app/push-config.json
+            git commit -m "알림 서버 주소와 갤럭시 앱 푸시 설정 갱신"
+            git push origin HEAD:main
+          fi

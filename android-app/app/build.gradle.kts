@@ -47,3 +47,9 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 }
+
+dependencies {
+    // 알림 서버가 보내는 푸시(FCM)를 받아 위젯·잠금화면 타이머를 바로 바꿈
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
+}

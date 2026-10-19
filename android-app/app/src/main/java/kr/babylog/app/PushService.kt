@@ -1,0 +1,19 @@
+package kr.babylog.app
+
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import org.json.JSONObject
+
+// 알림 서버가 보낸 요약 푸시를 받음 (앱이 꺼져 있어도 옴)
+class PushService : FirebaseMessagingService() {
+    override fun onMessageReceived(msg: RemoteMessage) {
+        val d = msg.data
+        if (d["kind"] != "summary") return
+        val o = JSONObject()
+        for (k in listOf("lastFeed", "sleep", "feed", "at")) o.put(k, d[k]?.toLongOrNull() ?: JSONObject.NULL)
+        for (k in listOf("lastFeedText", "feedLabel", "name")) o.put(k, d[k] ?: JSONObject.NULL)
+        Push.apply(this, o)
+    }
+
+    override fun onNewToken(token: String) = Push.onToken(this, token)
+}

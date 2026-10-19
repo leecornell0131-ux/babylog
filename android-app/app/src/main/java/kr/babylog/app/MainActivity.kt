@@ -107,6 +107,7 @@ class MainActivity : Activity() {
         takeAction(intent)
 
         Updater.check(this)
+        Push.refreshConfig(this)
         offerWidgetOnce()
     }
 
@@ -199,8 +200,13 @@ class MainActivity : Activity() {
                 if (!o.isNull("sleep") || !o.isNull("feed")) askNotifyPermission()
                 LiveNotify.update(this@MainActivity, o)
                 QuickWidget.save(this@MainActivity, o)
+                Push.onLocal(this@MainActivity, if (o.isNull("fid")) null else o.optString("fid"))
             }
         }
+
+        // 웹앱이 알림 서버에 요약을 보낼 때 이 휴대폰은 빼도록 알려 줌
+        @JavascriptInterface
+        fun pushToken(): String = Push.token(this@MainActivity) ?: ""
 
         @JavascriptInterface
         fun shareFile(name: String, mime: String, base64: String) {

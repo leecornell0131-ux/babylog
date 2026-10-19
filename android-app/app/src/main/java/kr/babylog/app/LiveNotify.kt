@@ -31,9 +31,9 @@ object LiveNotify {
     }
 
     fun update(ctx: Context, o: JSONObject) {
-        val name = o.optString("name", "아기")
+        val name = if (o.isNull("name")) "아기" else o.optString("name", "아기")
         show(ctx, ID_SLEEP, o.optLongOrNull("sleep"), "$name 수면 중", "깼어요", "stop_sleep")
-        val feedLabel = o.optString("feedLabel").ifBlank { "수유" }
+        val feedLabel = if (o.isNull("feedLabel")) "수유" else o.optString("feedLabel").ifBlank { "수유" }
         show(ctx, ID_FEED, o.optLongOrNull("feed"), "$name $feedLabel 중", "끝", "stop_feed")
     }
 
