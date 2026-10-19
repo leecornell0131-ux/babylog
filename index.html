@@ -215,7 +215,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.6';
+const VERSION='0.3.7';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -566,18 +566,19 @@ function renderToday(){
     <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
     <div class="list">${listHTML}</div>`;
   } else {
-    const span=480, y=t=>((t-d)/DAY*span);
+    // 위치는 % 로 두고, 막대 전체 높이는 render() 뒤에 오른쪽 목록 높이에 맞춤 (fitBar)
+    const y=t=>((t-d)/DAY*100);
     let bar='';
-    for(let h=0;h<=24;h+=3) bar+=`<span class="tick" style="top:${h/24*span}px">${h}</span>`;
+    for(let h=0;h<=24;h+=3) bar+=`<span class="tick" style="top:${h/24*100}%">${h}</span>`;
     bar+='<div class="bg"></div>';
     st.list.forEach(x=>{
-      if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${sleepKind(x)==='nap'?' nap':''}${x.end===null?' live':''}" style="top:${y(a)}px;height:${Math.max(3,y(b)-y(a))}px"></div>`}
-      else if(x.type==='feed') bar+=`<div class="f" style="top:${y(x.start)}px"></div>`;
-      else if(x.type==='diaper') bar+=`<div class="d${x.sub!=='pee'?' poo':''}" style="top:${y(x.start)}px"></div>`;
-      else bar+=`<div class="o" style="top:${y(x.start)}px;background:${evColor(x)}"></div>`;
+      if(x.type==='sleep'){const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); bar+=`<div class="s${sleepKind(x)==='nap'?' nap':''}${x.end===null?' live':''}" style="top:${y(a)}%;height:max(3px,${y(b)-y(a)}%)"></div>`}
+      else if(x.type==='feed') bar+=`<div class="f" style="top:${y(x.start)}%"></div>`;
+      else if(x.type==='diaper') bar+=`<div class="d${x.sub!=='pee'?' poo':''}" style="top:${y(x.start)}%"></div>`;
+      else bar+=`<div class="o" style="top:${y(x.start)}%;background:${evColor(x)}"></div>`;
     });
-    gaps.filter(g=>g.state!=='slept').forEach(g=>bar+=`<div class="g" style="top:${y(g.start)}px;height:${y(g.end)-y(g.start)}px"></div>`);
-    if(d===today) bar+=`<div class="now" style="top:${y(now)}px"></div>`;
+    gaps.filter(g=>g.state!=='slept').forEach(g=>bar+=`<div class="g" style="top:${y(g.start)}%;height:${y(g.end)-y(g.start)}%"></div>`);
+    if(d===today) bar+=`<div class="now" style="top:${y(now)}%"></div>`;
     body=`<div class="day"><div class="card bar" role="img" aria-label="하루 24시간 세로 타임라인"><div class="track">${bar}</div></div><div class="list">${listHTML}</div></div>`;
   }
   const comp=Math.round(completeness(d)*100);
@@ -794,6 +795,10 @@ function renderSettings(){
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
   <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 기록 ${S.events.length}개 · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p>`;
 }
+// 세로 차트 길이를 오른쪽 기록 목록 길이에 맞춤 (기록이 적으면 최소 480px)
+function fitBar(){ const tr=$('#app .day .track'), li=$('#app .day .list'); if(!tr||!li) return;
+  tr.style.height=Math.max(480,li.offsetHeight-24)+'px' }
+addEventListener('resize',fitBar);
 function render(){
   const app=$('#app');
   document.body.classList.toggle('nodock',!S.onboarded);
@@ -803,6 +808,7 @@ function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
   const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요':'수면'; $('#bSleep').classList.toggle('awake',!!ls);
   $('#bFeed').hidden=!S.items.feed; $('#bSleep').hidden=!S.items.sleep; $('#bDiaper').hidden=!S.items.diaper;
+  fitBar();
   // 최신이 아래일 때: 앱을 열거나 오늘 탭으로 올 때 한 번만 최신 기록이 보이게 내림
   if(view.scrollLatest&&view.tab==='today'){ view.scrollLatest=false; const it=view.order==='asc'&&view.day===dayStart(Date.now())&&$('#app .list>*:last-child'); if(it) requestAnimationFrame(()=>{ const dk=$('.dock'), gap=innerHeight-(dk&&!document.body.classList.contains('nodock')?dk.offsetHeight:0)-12, r=it.getBoundingClientRect(); if(r.bottom>gap) scrollBy(0,r.bottom-gap) }) }
 }
