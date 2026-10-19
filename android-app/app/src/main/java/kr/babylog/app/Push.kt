@@ -30,6 +30,7 @@ object Push {
     }
 
     fun token(ctx: Context): String? = p(ctx).getString("token", null)
+    fun fid(ctx: Context): String? = p(ctx).getString("fid", null)
 
     // 앱을 열 때마다 설정을 다시 읽음 (서버를 처음 올렸거나 주소가 바뀐 경우)
     fun refreshConfig(ctx: Context) {
@@ -88,11 +89,12 @@ object Push {
         val regToken = pr.getString("regToken", null)
         if (fid == regFid && token == regToken) return
         thread {
-            if (regFid != null && regToken != null && (regFid != fid || regToken != token)) {
+            // 예전 가족 등록을 지우지 못했으면 기록을 남겨 두고 다음에 다시 시도함
+            val unOk = regFid == null || regToken == null ||
                 post("$worker/unregister", JSONObject().put("fid", regFid).put("token", regToken))
-            }
-            val ok = fid == null || post("$worker/register", JSONObject().put("fid", fid).put("token", token))
-            if (ok) pr.edit().putString("regFid", fid).putString("regToken", token).apply()
+            val regOk = fid == null || post("$worker/register", JSONObject().put("fid", fid).put("token", token))
+            if (unOk && regOk) pr.edit().putString("regFid", fid).putString("regToken", token).apply()
+            else if (regOk && fid == regFid) pr.edit().putString("regToken", token).apply()
         }
     }
 

@@ -9,6 +9,8 @@ class PushService : FirebaseMessagingService() {
     override fun onMessageReceived(msg: RemoteMessage) {
         val d = msg.data
         if (d["kind"] != "summary") return
+        // 가족 공유를 바꾸기 전에 보낸 푸시는 무시
+        if (d["fid"] == null || d["fid"] != Push.fid(this)) return
         val o = JSONObject()
         for (k in listOf("lastFeed", "sleep", "feed", "at")) o.put(k, d[k]?.toLongOrNull() ?: JSONObject.NULL)
         for (k in listOf("lastFeedText", "feedLabel", "name")) o.put(k, d[k] ?: JSONObject.NULL)

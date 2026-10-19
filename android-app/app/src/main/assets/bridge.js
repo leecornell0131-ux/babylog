@@ -33,6 +33,8 @@
   Storage.prototype.setItem = function (k, v) {
     setItem.apply(this, arguments);
     if (this === localStorage && k === KEY) send(v);
+    // 가족 공유를 켜거나 끄면(가족코드가 바뀌면) 바로 알림 서버 등록을 바꿈
+    else if (this === localStorage && k === 'babylog-sync-v1') send();
   };
   send();
 
