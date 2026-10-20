@@ -24,6 +24,37 @@ class StopReceiver : BroadcastReceiver() {
         fun pending(ctx: Context): JSONArray =
             runCatching { JSONArray(ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY, "[]")) }.getOrDefault(JSONArray())
 
+        // 앱을 열지 않고 기록 (잠금 상태 음성 명령). 앱이 떠 있으면 바로 넣고 결과를 소리로 알려 줌(true),
+        // 아니면 앱을 열 때 그 시각으로 넣음(false)
+        fun record(ctx: Context, a: String, at: Long, label: String): Boolean {
+            add(ctx, a, at)
+            val live = MainActivity.live?.get()
+            live?.flushStops(speak = true)
+            if (a == "stop_sleep" || a == "stop_feed") {
+                ctx.getSystemService(NotificationManager::class.java).cancel(if (a == "stop_feed") LiveNotify.ID_FEED else LiveNotify.ID_SLEEP)
+                Widgets.stopped(ctx, a, at)
+            }
+            notifyDone(ctx, label, at, live != null)
+            return live != null
+        }
+
+        private fun notifyDone(ctx: Context, label: String, at: Long, live: Boolean) {
+            val hm = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(at))
+            val n = Notification.Builder(ctx, LiveNotify.CH)
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle("$label · $hm 기록")
+                .setContentText(if (live) "가족에게도 올렸어요" else "앱을 열면 가족에게도 올라가요")
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setAutoCancel(true)
+                .setTimeoutAfter(60_000)
+                .setContentIntent(LiveNotify.openApp(ctx))
+                .build()
+            try {
+                ctx.getSystemService(NotificationManager::class.java).notify(ID_DONE, n)
+            } catch (_: SecurityException) {
+            }
+        }
+
         private fun add(ctx: Context, a: String, at: Long) {
             val list = pending(ctx).put(JSONObject().put("a", a).put("at", at))
             ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString(KEY, list.toString()).commit()
@@ -59,22 +90,8 @@ class StopReceiver : BroadcastReceiver() {
         val live = MainActivity.live?.get()
         live?.flushStops()
         // 누른 즉시 타이머 알림·위젯을 내리고, 기록했다는 짧은 알림을 띄움
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        nm.cancel(if (a == "stop_feed") LiveNotify.ID_FEED else LiveNotify.ID_SLEEP)
+        ctx.getSystemService(NotificationManager::class.java).cancel(if (a == "stop_feed") LiveNotify.ID_FEED else LiveNotify.ID_SLEEP)
         Widgets.stopped(ctx, a, at)
-        val hm = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(at))
-        val n = Notification.Builder(ctx, LiveNotify.CH)
-            .setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle((if (a == "stop_feed") "수유 끝" else "깼어요") + " · $hm 기록")
-            .setContentText(if (live != null) "가족에게도 올렸어요" else "앱을 열면 가족에게도 올라가요")
-            .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setAutoCancel(true)
-            .setTimeoutAfter(60_000)
-            .setContentIntent(LiveNotify.openApp(ctx))
-            .build()
-        try {
-            nm.notify(ID_DONE, n)
-        } catch (_: SecurityException) {
-        }
+        notifyDone(ctx, if (a == "stop_feed") "수유 끝" else "깼어요", at, live != null)
     }
 }

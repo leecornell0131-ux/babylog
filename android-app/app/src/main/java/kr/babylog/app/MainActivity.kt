@@ -37,6 +37,9 @@ class MainActivity : Activity() {
         const val HOST = "leecornell0131-ux.github.io"
         const val EXTRA_ACTION = "babylog_action"
         const val EXTRA_AT = "babylog_at"
+        const val EXTRA_VOICE = "babylog_voice"
+        // 웹앱에 넘겨도 되는 동작 (밖에서 들어온 다른 값은 버림)
+        val ACTIONS = setOf("feed", "feed_start", "stop_feed", "sleep", "sleep_start", "stop_sleep", "pee", "poo", "both")
         private const val REQ_FILE = 41
         // 떠 있는 화면 (잠금화면 "깼어요"를 바로 웹앱에 넣을 때 씀)
         var live: java.lang.ref.WeakReference<MainActivity>? = null
@@ -47,7 +50,7 @@ class MainActivity : Activity() {
 
     private lateinit var web: WebView
     private lateinit var ad: AdView
-    private val pending = mutableListOf<Pair<String, Long>>() // 페이지가 준비되기 전에 들어온 위젯·알림 동작 (동작, 누른 시각)
+    private val pending = mutableListOf<Triple<String, Long, Boolean>>() // 페이지가 준비되기 전에 들어온 위젯·알림·음성 동작 (동작, 누른 시각, 음성인지)
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -102,7 +105,7 @@ class MainActivity : Activity() {
                 flushStops()
                 val todo = pending.toList()
                 pending.clear()
-                todo.forEach { (a, at) -> runAction(a, at) }
+                todo.forEach { (a, at, v) -> runAction(a, at, v) }
             }
 
             override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
@@ -160,25 +163,38 @@ class MainActivity : Activity() {
         val p = getSharedPreferences("babylog", MODE_PRIVATE)
         if (at <= p.getLong("lastActionAt", 0) || System.currentTimeMillis() - at > 60_000) return
         p.edit().putLong("lastActionAt", at).apply()
-        runAction(a, at)
+        runAction(a, at, i.getBooleanExtra(EXTRA_VOICE, false))
     }
 
     // 잠금화면에서 누른 "깼어요"·"끝"을 웹앱에 넣고, 들어간 것만 저장 목록에서 지움
-    fun flushStops() = runOnUiThread {
+    // speak: 잠금 상태 음성 명령이면 결과를 소리로도 알려 줌
+    fun flushStops(speak: Boolean = false) = runOnUiThread {
         val stops = StopReceiver.pending(this)
         for (i in 0 until stops.length()) {
             val o = stops.optJSONObject(i) ?: continue
             val a = o.optString("a")
             val at = o.optLong("at")
-            web.evaluateJavascript("window.__babyQuick?__babyQuick('$a',$at):'notready'") { r ->
-                if (r?.contains("ok") == true) StopReceiver.done(this, a, at)
+            if (a !in ACTIONS) { StopReceiver.done(this, a, at); continue }
+            web.evaluateJavascript(quick(a, at)) { r ->
+                if (r?.contains("ok") == true) {
+                    StopReceiver.done(this, a, at)
+                    if (speak) Speak.say(this, said(r))
+                }
             }
         }
     }
 
-    private fun runAction(a: String, at: Long) {
-        web.evaluateJavascript("window.__babyQuick?__babyQuick('$a',$at):'notready'") { r ->
-            if (r?.contains("notready") != false) pending.add(a to at) // 페이지가 아직 안 열렸으면 열린 뒤 실행
+    private fun quick(a: String, at: Long) = "window.__babyQuick?__babyQuick(${JSONObject.quote(a)},$at):'notready'"
+
+    // bridge.js가 돌려준 'ok:수면 40분 기록했어요'에서 문구만
+    private fun said(r: String) = runCatching { org.json.JSONArray("[$r]").getString(0) }.getOrDefault("").substringAfter("ok:", "")
+
+    // voice: 음성 명령이면 "수면 40분 기록했어요"처럼 결과를 소리로도 알려 줌 (bridge.js가 'ok:문구'로 돌려줌)
+    private fun runAction(a: String, at: Long, voice: Boolean = false) {
+        if (a !in ACTIONS) return
+        web.evaluateJavascript(quick(a, at)) { r ->
+            if (r?.contains("notready") != false) pending.add(Triple(a, at, voice)) // 페이지가 아직 안 열렸으면 열린 뒤 실행
+            else if (voice) Speak.say(this, said(r))
         }
     }
 
@@ -240,6 +256,16 @@ class MainActivity : Activity() {
 
     // 웹앱에서 부르는 안드로이드 기능 (window.BabyNative)
     inner class Bridge {
+        // 설정의 "음성 명령 사용법" 버튼 (갤럭시 앱에서만 보임)
+        @JavascriptInterface
+        fun voiceHelp() = runOnUiThread {
+            android.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("음성 명령 사용법")
+                .setMessage(assets.open("voice_help.txt").bufferedReader().readText())
+                .setPositiveButton("확인", null)
+                .show()
+        }
+
         @JavascriptInterface
         fun update(json: String) {
             val o = JSONObject(json)
