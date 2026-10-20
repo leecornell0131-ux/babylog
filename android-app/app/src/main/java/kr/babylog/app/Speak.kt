@@ -11,6 +11,11 @@ object Speak {
 
     fun say(ctx: Context, text: String) {
         if (text.isBlank()) return
+        // 화면 글자는 "1h 05m"이지만 소리로는 "1시간 5분"으로 읽음
+        val said = Regex("(\\d+)h (\\d+)m").replace(text) { r ->
+            val h = r.groupValues[1].toInt(); val m = r.groupValues[2].toInt()
+            listOfNotNull(if (h > 0) "${h}시간" else null, if (m > 0 || h == 0) "${m}분" else null).joinToString(" ")
+        }
         tts?.shutdown()
         var t: TextToSpeech? = null
         t = TextToSpeech(ctx.applicationContext) { st ->
@@ -22,7 +27,7 @@ object Speak {
                 override fun onDone(id: String?) { s.shutdown(); if (tts === s) tts = null }
                 @Deprecated("old") override fun onError(id: String?) { s.shutdown(); if (tts === s) tts = null }
             })
-            s.speak(text, TextToSpeech.QUEUE_FLUSH, null, "babylog")
+            s.speak(said, TextToSpeech.QUEUE_FLUSH, null, "babylog")
         }
         tts = t
     }

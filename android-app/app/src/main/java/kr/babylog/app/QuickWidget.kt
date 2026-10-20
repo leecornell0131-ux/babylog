@@ -7,7 +7,11 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
+import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
@@ -49,7 +53,8 @@ object Widgets {
             val ids = m.getAppWidgetIds(ComponentName(ctx, w.javaClass))
             if (ids.isNotEmpty()) {
                 any = true
-                m.updateAppWidget(ids, w.build(ctx, Data(ctx)))
+                val d = Data(ctx)
+                for (id in ids) m.updateAppWidget(id, views(ctx, w, d, m.getAppWidgetOptions(id)))
             }
         }
         if (any) tick(ctx)
@@ -92,15 +97,39 @@ object Widgets {
         val tSleep = (if (fresh) n("tSleep") else 0) + (if (sleep > 0) now - maxOf(sleep, today) else 0)
     }
 
+    // 위젯을 길게 눌러 크게 늘리면 작은 글씨와 버튼도 같은 비율로 커짐 (최대 1.5배).
+    // 큰 시계 숫자는 원래 커서 그대로 둠 (2×2에서 가로가 넘치지 않게).
+    // Android 12 이상은 런처가 알려 준 크기마다 따로 그려서 가로·세로 화면 어느 쪽도 넘치지 않음
+    private fun views(ctx: Context, w: BabyWidget, d: Data, o: Bundle): RemoteViews {
+        if (Build.VERSION.SDK_INT >= 31) {
+            @Suppress("DEPRECATION")
+            val sizes = o.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+            if (!sizes.isNullOrEmpty())
+                return RemoteViews(sizes.take(16).associateWith { z -> w.build(ctx, d).also { fit(it, w, z.width, z.height) } })
+        }
+        // 크기 목록이 없으면 가장 좁은 폭·가장 낮은 높이로 맞춤 (어느 방향에서도 넘치지 않게)
+        return w.build(ctx, d).also {
+            fit(it, w, o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH).toFloat(), o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).toFloat())
+        }
+    }
+
+    private fun fit(v: RemoteViews, w: BabyWidget, wd: Float, ht: Float) {
+        if (wd <= 0 || ht <= 0) return
+        val s = minOf(wd / w.baseW, ht / w.baseH).coerceIn(1f, 1.5f)
+        for ((id, sp) in w.texts) v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * s)
+        if (Build.VERSION.SDK_INT >= 31) for ((id, dp) in w.rows) v.setViewLayoutHeight(id, dp * s, TypedValue.COMPLEX_UNIT_DIP)
+    }
+
     // 지난 시간이 계속 흘러가는 시계
     fun chrono(v: RemoteViews, id: Int, since: Long) =
         v.setChronometer(id, SystemClock.elapsedRealtime() - (System.currentTimeMillis() - since), null, true)
 
     fun hm(t: Long): String = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(t))
 
+    // 걸린 시간은 웹앱과 같은 "1h 05m" 꼴 (웹앱 durS)
     fun dur(ms: Long): String {
-        val m = ms / 60_000
-        return if (m >= 60) "${m / 60}시간" + (if (m % 60 > 0) " ${m % 60}분" else "") else "${m}분"
+        val m = Math.round(ms / 60_000.0)
+        return "${m / 60}h " + String.format(Locale.ROOT, "%02d", m % 60) + "m"
     }
 
     // 위젯 버튼: 앱이 열리면서 바로 기록 (ActionActivity가 누른 시각을 붙임)
@@ -135,12 +164,25 @@ object Widgets {
 
 abstract class BabyWidget : AppWidgetProvider() {
     abstract fun build(ctx: Context, d: Widgets.Data): RemoteViews
+    // 크기 맞춤(Widgets.fit)용: 기본 크기(위젯 정보 xml의 minWidth·minHeight, dp),
+    // 키울 글자(레이아웃의 sp 그대로)와 버튼 줄 높이(dp)
+    abstract val baseW: Float
+    abstract val baseH: Float
+    abstract val texts: Map<Int, Float>
+    open val rows: Map<Int, Float> = emptyMap()
     // 위젯을 새로 놓거나 30분 주기 갱신 때: 전부 다시 그리고 1분 갱신도 다시 걸어 둠
     override fun onUpdate(ctx: Context, m: AppWidgetManager, ids: IntArray) = Widgets.refresh(ctx)
+    // 위젯 크기를 바꾸면 글씨도 다시 맞춤
+    override fun onAppWidgetOptionsChanged(ctx: Context, m: AppWidgetManager, id: Int, o: Bundle) = Widgets.refresh(ctx)
 }
 
 // 1) 빠른 기록 (4×2): 마지막 수유 후 시간 + 진행 중 수면·수유 + 수유·소변·대변·수면 버튼
 class QuickWidget : BabyWidget() {
+    override val baseW = 250f
+    override val baseH = 110f
+    override val texts = mapOf(R.id.feed_label to 13f, R.id.feed_none to 15f, R.id.live_label to 13f, R.id.live_timer to 20f,
+        R.id.b_feed to 14f, R.id.b_pee to 14f, R.id.b_poo to 14f, R.id.b_sleep to 14f)
+    override val rows = mapOf(R.id.btn_row to 44f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_quick)
         Widgets.show(v, R.id.feed_timer, d.lastFeed > 0)
@@ -168,6 +210,10 @@ class QuickWidget : BabyWidget() {
 
 // 2) 수유 타이머 (2×2): 마지막 수유 후 시간을 크게, 평소 간격으로 본 다음 수유 시각
 class FeedWidget : BabyWidget() {
+    override val baseW = 110f
+    override val baseH = 110f
+    override val texts = mapOf(R.id.w_label to 13f, R.id.w_none to 15f, R.id.w_sub to 13f, R.id.w_btn to 15f)
+    override val rows = mapOf(R.id.w_btn to 40f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_feed)
         val since = if (d.feed > 0) d.feed else d.lastFeed
@@ -192,6 +238,10 @@ class FeedWidget : BabyWidget() {
 
 // 2-1) 수유 카드 (2×2): 아기 이름·월령 띠, 마지막 수유 시각과 양, 몇 시간 전 (삐요로그 위젯처럼 한눈에)
 class FeedCardWidget : BabyWidget() {
+    override val baseW = 110f
+    override val baseH = 110f
+    // 가운데 시각·양 줄은 이미 2×2 가로를 거의 채워서 위아래 줄만 키움
+    override val texts = mapOf(R.id.c_name to 14f, R.id.c_age to 14f, R.id.c_ago to 16f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_card)
         v.setTextViewText(R.id.c_name, d.name)
@@ -223,6 +273,10 @@ class TickReceiver : android.content.BroadcastReceiver() {
 
 // 3) 수면 (2×2): 자는 중이면 수면 시간, 깨어 있으면 깨어 있는 시간 (낮잠 타이밍 보기용)
 class SleepWidget : BabyWidget() {
+    override val baseW = 110f
+    override val baseH = 110f
+    override val texts = mapOf(R.id.w_label to 13f, R.id.w_none to 15f, R.id.w_sub to 13f, R.id.w_btn to 15f)
+    override val rows = mapOf(R.id.w_btn to 40f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_sleep)
         val since = if (d.sleep > 0) d.sleep else d.lastWake
@@ -240,6 +294,10 @@ class SleepWidget : BabyWidget() {
 
 // 4) 기저귀 (4×1): 마지막 기저귀 후 시간 + 소변·대변·둘 다 버튼
 class DiaperWidget : BabyWidget() {
+    override val baseW = 250f
+    override val baseH = 50f
+    override val texts = mapOf(R.id.w_label to 13f, R.id.w_timer to 20f, R.id.w_none to 15f, R.id.b_pee to 14f, R.id.b_poo to 14f, R.id.b_both to 14f)
+    override val rows = mapOf(R.id.btn_row to 44f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_diaper)
         Widgets.show(v, R.id.w_timer, d.lastDiaper > 0)
@@ -256,6 +314,10 @@ class DiaperWidget : BabyWidget() {
 
 // 5) 오늘 요약 (4×2): 수유 횟수·양, 수면 합계, 소변·대변 횟수, 마지막 수유 후 시간
 class TodayWidget : BabyWidget() {
+    override val baseW = 250f
+    override val baseH = 120f
+    override val texts = mapOf(R.id.w_title to 14f, R.id.l_feed to 12f, R.id.l_gap to 12f, R.id.l_diaper to 12f, R.id.l_sleep to 12f,
+        R.id.t_feed to 17f, R.id.w_timer to 17f, R.id.w_none to 17f, R.id.t_diaper to 17f, R.id.t_sleep to 17f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
         v.setTextViewText(R.id.w_title, "오늘 · ${d.name}")

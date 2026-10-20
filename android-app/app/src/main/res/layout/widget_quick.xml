@@ -26,7 +26,7 @@
                 android:layout_height="wrap_content"
                 android:text="마지막 수유 후"
                 android:textColor="@color/feed_ink"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <Chronometer
@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:text="수면 중"
                 android:textColor="@color/sleep_ink"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <Chronometer
@@ -75,6 +75,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/btn_row"
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_marginTop="8dp"
