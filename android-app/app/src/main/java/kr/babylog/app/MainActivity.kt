@@ -21,7 +21,9 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.FrameLayout
+import android.view.Gravity
+import android.widget.LinearLayout
+import com.google.android.gms.ads.AdView
 import android.widget.Toast
 import org.json.JSONObject
 import java.io.File
@@ -44,6 +46,7 @@ class MainActivity : Activity() {
     }
 
     private lateinit var web: WebView
+    private lateinit var ad: AdView
     private val pending = mutableListOf<Pair<String, Long>>() // 페이지가 준비되기 전에 들어온 위젯·알림 동작 (동작, 누른 시각)
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
@@ -56,8 +59,11 @@ class MainActivity : Activity() {
         web = WebView(this)
         // 웹뷰는 자기 padding을 무시하고 그려서, 바깥 틀에 여백을 줌.
         // Android 15부터 앱이 상태 표시줄·내비게이션 바 밑까지 그려지므로 그만큼 비워 둬야 시계와 겹치지 않고 하단 탭이 눌림
-        val root = FrameLayout(this)
-        root.addView(web, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        // 맨 위에 배너 광고 자리(평소엔 숨김), 그 아래 웹앱
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        ad = Ads.create(this)
+        root.addView(ad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        root.addView(web, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
         // 상태 표시줄·내비게이션 바·키보드 아래로 화면이 들어가지 않게
         root.setOnApplyWindowInsetsListener { v, insets ->
@@ -138,6 +144,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        ad.resume()
         // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리)
         web.evaluateJavascript("window.BabyApp&&BabyApp.refresh()", null)
         // 휴대폰 설정에서 알림을 막 켜고 돌아왔을 때도 진행 중 타이머 알림이 바로 뜨게 다시 보냄
@@ -175,7 +182,13 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onPause() {
+        ad.pause()
+        super.onPause()
+    }
+
     override fun onDestroy() {
+        ad.destroy()
         if (live?.get() === this) live = null
         super.onDestroy()
     }
@@ -276,6 +289,10 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun version(): Int = BuildConfig.VERSION_CODE
+
+        // 지금 화면이 광고를 띄워도 되는 곳인지 (기록·내보내기 탭, 입력 창 없음, 광고 켜짐)
+        @JavascriptInterface
+        fun adZone(on: Boolean) = runOnUiThread { Ads.show(ad, on) }
 
         // 홈 화면에 위젯 추가 창 띄우기
         @JavascriptInterface

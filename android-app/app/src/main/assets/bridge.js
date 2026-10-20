@@ -100,6 +100,26 @@
     return 'ok';
   };
 
+  // 광고: "기록"·"내보내기" 탭에서만, 입력 창이 열려 있지 않고, 개발자 모드에서 끄지 않았을 때 (밤 시간은 앱이 막음)
+  var lastZone = null;
+  function adZone() {
+    if (!N.adZone) return;
+    var A = window.BabyApp, cur = document.querySelector('#tabs button[aria-current="page"]');
+    var sheet = document.getElementById('sheetRoot');
+    var on = !!(A && A.ads !== false && A.state && A.state.onboarded !== false &&
+      !document.body.classList.contains('nodock') && cur && (cur.dataset.tab === 'week' || cur.dataset.tab === 'export') &&
+      !(sheet && sheet.innerHTML.trim()));
+    if (on !== lastZone) { lastZone = on; N.adZone(on); }
+  }
+  var adTimer = null;
+  function adLater() { clearTimeout(adTimer); adTimer = setTimeout(adZone, 150); }
+  try {
+    new MutationObserver(adLater).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-current', 'class'] });
+  } catch (e) {}
+  addEventListener('babylog-ads', adLater);
+  setInterval(function () { lastZone = null; adZone(); }, 60000); // 밤 시간이 되면 내리기
+  adZone();
+
   // 공유·복사: 안드로이드 웹뷰에는 없어서 앱 기능으로 대신함
   navigator.canShare = function (d) { return !!d; };
   navigator.share = function (d) {
