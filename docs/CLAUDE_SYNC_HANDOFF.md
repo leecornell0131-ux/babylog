@@ -4,6 +4,8 @@
 
 사용자와 논의한 외부 공유·위젯 자동 갱신 요구, Cloudflare 대안, 월 10만원 수익 목표와 미확정 광고/구독 후보는 [PRODUCT_BUSINESS_DISCUSSION.md](PRODUCT_BUSINESS_DISCUSSION.md)를 함께 읽을 것. 가격·전환율·광고 단가·운영비는 가정이며, 수익화 구현이나 유료 전환을 승인받은 상태가 아니다.
 
+후속 목표는 **월 최소 10만원, 기대 목표 20만~30만원**이다. 무료/유료 운영 비교와 Apple 연회비를 포함해 재계산한 최신 보고서는 [육아앱 운영비와 수익 구조](../reports/육아앱%20운영비와%20수익%20구조.md), Claude에게 전달할 요청은 [CLAUDE_BUSINESS_REVIEW_PROMPT.md](CLAUDE_BUSINESS_REVIEW_PROMPT.md)에 있다. 이전 대화의 연회비 제외 예시보다 최신 보고서의 조건을 우선한다.
+
 ## 먼저 알아야 할 현재 상태
 
 **실서비스 미적용. 사용자는 아이폰 Safari/PWA로, 배우자는 기존 갤럭시 APK로 실제 육아에 사용 중이다. 서비스 중단 금지.**
