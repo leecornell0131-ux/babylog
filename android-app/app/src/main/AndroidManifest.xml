@@ -37,7 +37,76 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:noHistory="true"
+            android:showWhenLocked="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- 음성 명령용 이름표. "하이 빅스비, 아기깼어 열어"처럼 말하면 앱 화면을 거치지 않고 바로 기록 (ActionActivity.VOICE) -->
+        <activity-alias
+            android:name=".VoiceSleep"
+            android:label="아기잠듦"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".VoiceWake"
+            android:label="아기깼어"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".VoiceFeed"
+            android:label="수유시작"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".VoiceFeedEnd"
+            android:label="수유끝"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".VoicePee"
+            android:label="소변기록"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".VoicePoo"
+            android:label="대변기록"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- 잠금화면 알림의 "깼어요"·"끝" (잠금 해제 없이 기록) -->
         <receiver

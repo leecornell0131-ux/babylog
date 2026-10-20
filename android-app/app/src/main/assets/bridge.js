@@ -75,7 +75,7 @@
     var A = window.BabyApp;
     if (!A) return 'notready';
     if (A.state.sample || A.state.onboarded === false) { A.toast('먼저 앱에서 아기 정보를 넣어 주세요'); return 'ok'; }
-    if (a === 'feed') { var b = document.getElementById('bFeed'); if (b) b.click(); return 'ok'; }
+    if (a === 'feed') { var b = document.getElementById('bFeed'); if (b) b.click(); return 'ok:'; }
     var now = at || Date.now(), msg = '';
     var id = now.toString(36) + Math.random().toString(36).slice(2, 7);
     A.applyRemote(function (S) {
@@ -88,16 +88,29 @@
         if (ls && a === 'stop_sleep' && ls.start > now) ls = null; // 누른 뒤에 새로 시작한 수면은 끝내지 않음
         if (ls) { ls.end = Math.max(now, ls.start + 60000); msg = '수면 ' + Math.round((ls.end - ls.start) / 60000) + '분 기록했어요'; }
         else if (a === 'sleep') { S.events.push({ id: id, type: 'sleep', start: now, end: null }); msg = '수면 시작을 기록했어요'; }
+        else msg = '자는 중인 기록이 없어요';
+      } else if (a === 'feed_start') {
+        // 음성 명령 "수유 시작": 마지막 수유와 같은 종류·양으로 타이머 시작 (끝날 때 "수유 끝")
+        var lf0 = live('feed'), last = null;
+        S.events.forEach(function (e) { if (e.type === 'feed' && (!last || e.start > last.start)) last = e; });
+        if (lf0) msg = '이미 수유 중이에요';
+        else {
+          var fe = { id: id, type: 'feed', sub: (last && last.sub) || 'formula', start: now, end: null, note: '' };
+          if (last && last.ml && !/^breast/.test(fe.sub)) fe.ml = last.ml;
+          S.events.push(fe);
+          msg = '수유 시작을 기록했어요';
+        }
       } else if (a === 'stop_feed') {
         // 진행 중 수유(end가 null인 feed)를 웹앱이 지원하게 되면 그대로 끝냄
         var lf = live('feed');
         if (lf && lf.start > now) lf = null;
         if (lf) { lf.end = Math.max(now, lf.start + 60000); if (!lf.ml) lf.min = Math.round((lf.end - lf.start) / 60000); msg = '수유를 기록했어요'; }
+        else msg = '진행 중인 수유가 없어요';
       }
     });
     try { if (window.BabySync) window.BabySync.local(A.state); } catch (e) {}
     if (msg) A.toast(msg);
-    return 'ok';
+    return 'ok:' + msg;
   };
 
   // 광고: "기록"·"내보내기" 탭에서만, 입력 창이 열려 있지 않고, 개발자 모드에서 끄지 않았을 때 (밤 시간은 앱이 막음)
