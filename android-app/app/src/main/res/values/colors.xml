@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg">#F3F5F8</color>
-    <color name="widget_bg">#F7F5FF</color>
-    <color name="widget_ink">#1F2340</color>
-    <color name="widget_sub">#5A5F7A</color>
-    <color name="btn_feed">#FCDCE8</color>
-    <color name="btn_diaper">#DDEFD8</color>
-    <color name="btn_sleep">#DCE5F5</color>
+    <color name="widget_bg">#FFFFFF</color>
+    <color name="widget_ink">#1B1F3B</color>
+    <color name="widget_sub">#6A6F8A</color>
+    <color name="btn_feed">#FCE1EB</color>
+    <color name="btn_diaper">#DDF3EE</color>
+    <color name="btn_sleep">#ECE5FB</color>
     <color name="band">#3B49B8</color>
     <color name="feed_ink">#D6457A</color>
     <color name="accent_ink">#3B49B8</color>
+    <color name="widget_line">#E6E3F2</color>
+    <color name="btn_poo">#F3E6D8</color>
+    <color name="sleep_ink">#7457D6</color>
+    <color name="diaper_ink">#23917F</color>
+    <color name="poo_ink">#9A6533</color>
 </resources>

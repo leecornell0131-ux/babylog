@@ -25,15 +25,16 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="마지막 수유 후"
-                android:textColor="@color/widget_sub"
-                android:textSize="12sp" />
+                android:textColor="@color/feed_ink"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <Chronometer
                 android:id="@+id/feed_timer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/widget_ink"
-                android:textSize="24sp"
+                android:textSize="28sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -59,8 +60,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="수면 중"
-                android:textColor="@color/widget_sub"
-                android:textSize="12sp" />
+                android:textColor="@color/sleep_ink"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <Chronometer
                 android:id="@+id/live_timer"
@@ -82,24 +84,24 @@
             android:id="@+id/b_feed"
             style="@style/WidgetBtn"
             android:background="@drawable/btn_feed"
-            android:text="수유" />
+            android:text="🍼 수유" />
 
         <TextView
             android:id="@+id/b_pee"
             style="@style/WidgetBtn"
             android:background="@drawable/btn_diaper"
-            android:text="소변" />
+            android:text="💧 소변" />
 
         <TextView
             android:id="@+id/b_poo"
             style="@style/WidgetBtn"
-            android:background="@drawable/btn_diaper"
-            android:text="대변" />
+            android:background="@drawable/btn_poo"
+            android:text="💩 대변" />
 
         <TextView
             android:id="@+id/b_sleep"
             style="@style/WidgetBtn"
             android:background="@drawable/btn_sleep"
-            android:text="잠듦" />
+            android:text="🌙 잠듦" />
     </LinearLayout>
 </LinearLayout>
