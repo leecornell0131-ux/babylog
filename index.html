@@ -219,7 +219,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.17';
+const VERSION='0.3.18';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -1134,7 +1134,7 @@ $('#app').addEventListener('input',e=>{ if(e.target.id==='famCode') view.joinCod
 window.BabyApp={
   get state(){return S},
   applyRemote(fn){ fn(S); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){} if(!$('#sw')&&!(document.activeElement&&/INPUT/.test(document.activeElement.tagName))) render() },
-  refresh(){ if(!$('#sw')) render() },
+  refresh(){ checkUpdate(); if(!$('#sw')) render() },
   // 광고 표시 여부 (갤럭시 앱이 AdMob 배너를 띄울지 판단). localStorage 'babylog-v1-ads' = '0'이면 끔, 그 밖엔 켬.
   // 바뀌면 window에 'babylog-ads' 이벤트(detail: true/false)를 보냄
   get ads(){ return pref('ads')!=='0' },
@@ -1142,7 +1142,17 @@ window.BabyApp={
 };
 render();
 setInterval(()=>{ if(!$('#sw')&&view.tab==='today'&&!(document.activeElement&&document.activeElement.tagName==='INPUT')) render() },60000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&!$('#sw')) render() });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ checkUpdate(); if(!$('#sw')) render() } });
+// 새 버전이 올라왔으면 화면을 다시 열어 최신 코드로 바꿈 (앱을 며칠씩 켜 두는 휴대폰도 같은 버전을 쓰게).
+// 입력 창이 열려 있거나 글을 쓰는 중이면 기다렸다가 다음 확인 때 바꿈. 인터넷이 없으면 그대로 씀
+let lastCheck=0;
+async function checkUpdate(){
+  if(location.protocol!=='https:'||Date.now()-lastCheck<60000) return; lastCheck=Date.now();
+  try{ const t=await (await fetch('sw.js',{cache:'no-store'})).text(), m=t.match(/VERSION = 'babylog-([^']+)'/);
+    // 같은 버전으로 두 번 다시 열지 않음 (sw.js와 index.html 버전이 어긋나도 무한 새로고침 안 되게)
+    if(m&&m[1]!==VERSION&&pref('reloadedFor')!==m[1]&&!$('#sw')&&!(document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName))){ pref('reloadedFor',m[1]); location.reload() } }catch(_){}
+}
+setInterval(checkUpdate,30*60000);
 
 if('serviceWorker' in navigator && topLevel && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(window.FIREBASE_CONFIG) import('./sync.js').then(()=>{ if(view.tab==='settings') render() }).catch(e=>{console.warn('sync load failed',e)});
