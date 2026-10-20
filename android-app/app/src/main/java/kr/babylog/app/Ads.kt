@@ -12,7 +12,7 @@ import com.google.android.gms.ads.RequestConfiguration
 import java.util.Calendar
 
 // 화면 맨 위 배너 광고 (AdMob).
-// 규칙: 기록·성장·오늘 탭과 기록 입력 창에는 안 띄움. "기록"(주간·이전 기록) 탭과 "내보내기" 탭에서만,
+// 규칙: "오늘"·"기록"(주간·이전 기록)·"내보내기" 탭의 맨 위에서만 (아래쪽 기록 버튼과 멀리). 성장·설정 탭과 기록 입력 창에는 안 띄움.
 // 밤(21시~7시)에는 끔, 건강 기록으로 맞춤 광고하지 않게 비맞춤(npa=1)으로만 요청.
 // 개발자 모드에서 광고를 끄면(웹앱 localStorage 'babylog-v1-ads' = '0') 안 띄움.
 object Ads {
