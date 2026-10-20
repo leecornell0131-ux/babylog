@@ -98,9 +98,10 @@ object Widgets {
 
     fun hm(t: Long): String = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(t))
 
+    // 걸린 시간은 웹앱과 같은 "1h 05m" 꼴 (웹앱 durS)
     fun dur(ms: Long): String {
-        val m = ms / 60_000
-        return if (m >= 60) "${m / 60}시간" + (if (m % 60 > 0) " ${m % 60}분" else "") else "${m}분"
+        val m = Math.round(ms / 60_000.0)
+        return "${m / 60}h " + "%02d".format(m % 60) + "m"
     }
 
     // 위젯 버튼: 앱이 열리면서 바로 기록 (ActionActivity가 누른 시각을 붙임)
