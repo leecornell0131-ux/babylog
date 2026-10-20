@@ -215,7 +215,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.9';
+const VERSION='0.3.10';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -802,7 +802,8 @@ function renderSettings(){
   <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
   <h2 class="sec">가족 공유</h2>${familyHTML()}
   <h2 class="sec">백업</h2>
-  <div class="card panel"><div class="field"><span class="small muted">기록은 이 휴대폰에만 저장돼요. 휴대폰을 바꾸거나 앱을 지우기 전에 백업 파일을 저장해 두세요. 삐요로그에서 옮긴 파일도 "불러오기"로 넣어요.</span></div></div>
+  <div class="card panel"><div class="field"><span class="small muted">${window.BabySync&&window.BabySync.status().fid?'가족 공유 중이라 기록이 무료 서버에도 있지만, 실수로 지우면 양쪽에서 같이 지워져요.':'기록은 이 휴대폰에만 저장돼요.'} 휴대폰을 바꾸거나 앱을 지우기 전에, 그리고 가끔 한 번씩 백업 파일을 저장해 두세요. 불러오면 지금 기록과 합쳐지고, 삐요로그에서 옮긴 파일도 "불러오기"로 넣어요.</span></div>
+  <div class="field"><span>마지막 백업</span><b class="small" style="${lastBackupOld()?'color:var(--warn)':''}">${(()=>{const t=+pref('lastBackup');const n=t?Math.floor((Date.now()-t)/DAY):0; return t?md(t)+(n?' ('+n+'일 전)':' (오늘)'):'아직 없음'})()}</b></div></div>
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="backup">백업 파일 저장</button><button class="btn ghost" style="flex:1" type="button" data-act="import">불러오기</button></div>
   <h2 class="sec">데이터</h2>
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
@@ -985,17 +986,18 @@ function commit(msg){ save(); closeSheet(); render(); if(msg) toast(msg) }
 let tt; function toast(m){ const t=$('#toast'); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2200) }
 
 // ---------- 백업 ----------
+function lastBackupOld(){ const t=+pref('lastBackup'); return S.events.length>20&&(!t||Date.now()-t>14*DAY) }
 async function backup(){
   const name='babylog-backup-'+new Date().toISOString().slice(0,10)+'.json';
   const blob=new Blob([JSON.stringify({app:'babylog',v:2,exportedAt:new Date().toISOString(),state:S})],{type:'application/json'});
   try{ const f=new File([blob],name,{type:'application/json'});
-    if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:name}); return } }catch(e){ if(e&&e.name==='AbortError') return }
+    if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:name}); pref('lastBackup',Date.now()); render(); return } }catch(e){ if(e&&e.name==='AbortError') return }
   // 미리보기 창 안에서는 파일 저장이 막히므로 텍스트로 보여 주고 복사하게 함
   if(!topLevel){ const txt=await blob.text();
     openSheet(`<h2>백업 텍스트</h2><p class="small muted" style="margin:0">이 화면에서는 파일 저장이 막혀 있어요. 아래 내용을 복사해 메모 앱 등에 보관하세요. 홈 화면에 설치한 앱에서는 파일로 저장돼요.</p><pre class="out" id="bk">${esc(txt.slice(0,20000))}${txt.length>20000?'…':''}</pre><button class="btn full" type="button" id="bkCopy">복사하기</button>`,()=>{
       $('#bkCopy').onclick=()=>{ try{ navigator.clipboard.writeText(txt).then(()=>toast('복사했어요'),()=>toast('텍스트를 길게 눌러 복사하세요')) }catch(_){ toast('텍스트를 길게 눌러 복사하세요') } } }); return }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
-  toast('백업 파일을 저장했어요. "파일" 앱에 보관하세요');
+  pref('lastBackup',Date.now()); render(); toast('백업 파일을 저장했어요. "파일" 앱에 보관하세요');
 }
 $('#importFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
