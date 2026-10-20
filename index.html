@@ -215,7 +215,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.11';
+const VERSION='0.3.12';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -801,6 +801,7 @@ function renderSettings(){
   <h2 class="sec">매일 기록할 항목 (끈 항목은 기록 공백 판정과 내보내기에서 빠져요)</h2>
   <div class="card panel">${[['feed','수유'],['sleep','수면'],['diaper','기저귀']].map(([k,n])=>`<label class="field" for="it-${k}">${n}<input type="checkbox" id="it-${k}" data-item="${k}" ${S.items[k]?'checked':''}></label>`).join('')}</div>
   <h2 class="sec">가족 공유</h2>${familyHTML()}
+  ${window.BabyNative&&BabyNative.voiceHelp?`<h2 class="sec">음성 명령 (갤럭시)</h2><div class="card panel"><div class="field"><span class="small muted">말로 잠듦·깼어요·수유·기저귀를 기록해요</span><button class="btn ghost" type="button" data-act="voiceHelp">사용법 보기</button></div></div>`:''}
   <h2 class="sec">개발자</h2>${pref('dev')==='1'?`<div class="card panel"><label class="field" for="adsOn">광고 표시<input type="checkbox" id="adsOn" ${pref('ads')!=='0'?'checked':''}></label>
     <div class="field"><span class="small muted">개발 테스터용이에요. 광고는 스토어에서 받은 앱에만 나와요.</span><button class="linkbtn" type="button" data-act="devOff">개발자 모드 끄기</button></div></div>`:`<div class="card panel" style="padding:12px 14px"><div class="row"><input type="text" id="devCode" placeholder="개발자 코드" autocapitalize="off" autocomplete="off" style="flex:1"><button class="btn ghost" type="button" data-act="devCode">확인</button></div></div>`}
   <h2 class="sec">백업</h2>
@@ -1054,6 +1055,7 @@ $('#app').addEventListener('click',async e=>{
     try{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)); h=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('') }catch(_){}
     // 공개 저장소라 코드 원문 대신 SHA-256 해시로 비교
     if(h==='f9f40d77657a9dfff29bbfba10471c821bb4c5ef571613c11765fb64e63baa6a'){ pref('dev','1'); render(); toast('개발자 모드를 켰어요') } else toast('코드가 맞지 않아요'); return }
+  if(a==='voiceHelp'){ try{ BabyNative.voiceHelp() }catch(_){} return }
   if(a==='devOff'){ pref('dev','0'); render(); return }
   if(a==='backup') backup();
   if(a==='import') $('#importFile').click();
