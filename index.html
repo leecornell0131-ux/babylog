@@ -143,6 +143,8 @@ nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
 @supports (background:color-mix(in srgb,red 10%,transparent)){.tile .ic{background:color-mix(in srgb,var(--c) 22%,transparent)}}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card)}
+.chip.sm{min-height:34px;padding:0 10px;font-size:13px}
+.tagbox{display:flex;flex-direction:column;gap:6px}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
 .stepper{display:flex;align-items:center;gap:10px}
 .stepper output{font-size:28px;font-weight:700;min-width:110px;text-align:center;font-variant-numeric:tabular-nums}
@@ -217,7 +219,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.15';
+const VERSION='0.3.16';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -256,6 +258,14 @@ const ETC={
   vaccine:{label:'예방접종',ic:'💉',grp:'건강',text:'접종 이름 (예: B형간염 2차)',color:'--health'},
   memo:{label:'메모',ic:'📝',grp:'기타',text:'내용',color:'--etc'},
 };
+// 수유·대변 상태 태그 (x.tags). 따로 고르지 않으면 정상으로 봄
+const TAGS={
+  feed:[['spit','💦','게움'],['vomit','🤮','토함'],['left','🍼','남김'],['refuse','🙅','거부'],['fuss','😫','보챔'],['asleep','😴','먹다 잠듦']],
+  poo:[['loose','💧','묽은 변'],['hard','🪨','단단한 변'],['sour','🍋','시큼한 냄새'],['green','🟢','초록색'],['mucus','🫧','점액·거품'],['blood','🩸','피 섞임'],['pale','⚪','흰색·회색']]};
+const tagGroup=x=>x.type==='feed'?'feed':x.type==='diaper'&&x.sub!=='pee'?'poo':null;
+const tagText=x=>{ const g=tagGroup(x); return g&&x.tags&&x.tags.length?TAGS[g].filter(t=>x.tags.includes(t[0])).map(t=>t[1]+' '+t[2]).join(', '):'' };
+function tagChipsHTML(g,sel,hint){ return `<div class="tagbox" data-tg="${g}"><span class="small muted">${hint}</span><div class="chips">${TAGS[g].map(([k,e,n])=>`<button class="chip sm" type="button" aria-pressed="${sel.includes(k)}" data-tag="${k}">${e} ${n}</button>`).join('')}</div></div>` }
+function bindTags(sel){ $('#sw').querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{ const k=b.dataset.tag, i=sel.indexOf(k); if(i<0) sel.push(k); else sel.splice(i,1); b.setAttribute('aria-pressed',i<0) }) }
 const FEEDN={formula:'분유',breastL:'모유 왼쪽',breastR:'모유 오른쪽',pump:'유축 수유'};
 
 // ---------- 상태 ----------
@@ -463,7 +473,7 @@ function itemHTML(x){
   const live=(x.type==='sleep'||x.type==='feed')&&x.end===null;
   const sub=x.type==='sleep'||(x.type==='feed'&&x.end!==undefined)?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
   const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
-  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
+  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · '+esc(tagText(x)):''}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
 }
 function gapHTML(g){
   const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
@@ -707,7 +717,8 @@ function redFlags(days){
     out.push(`${md(x.start)} ${hm(x.start)} 체온 ${x.val}℃${!isNaN(ad)&&ad<91?' (생후 3개월 미만 38℃ 이상: 바로 진료 권고 기준)':' (38℃ 이상)'}`) });
   // 소변: 생후 6일 이후, 기록 완성도 80% 이상인 지난 날만 (덜 적은 날을 위험신호로 오인하지 않게)
   days.forEach(d=>{ const st=dayStats(d), ad=(d-birth)/DAY; if(st.list.some(e=>e.type==='diaper')&&d<dayStart(Date.now())&&!(ad<6)&&completeness(d)>=0.8&&st.pee<4) out.push(`${md(d)} 소변 기저귀 ${st.pee}회 (하루 4회 미만, 기록 기준)`) });
-  const vom=ev.filter(x=>x.type==='etc'&&x.sub==='vomit'); if(vom.length>=3) out.push(`토함 ${vom.length}회 기록`);
+  const vom=ev.filter(x=>(x.type==='etc'&&x.sub==='vomit')||(x.type==='feed'&&x.tags&&x.tags.includes('vomit'))); if(vom.length>=3) out.push(`토함 ${vom.length}회 기록`);
+  ev.filter(x=>x.type==='diaper'&&x.tags&&(x.tags.includes('blood')||x.tags.includes('pale'))).forEach(x=>out.push(`${md(x.start)} ${hm(x.start)} 대변 ${x.tags.includes('blood')?'피 섞임':'흰색·회색'} (진료 권고 기준)`));
   return out;
 }
 function exportText(){
@@ -740,14 +751,16 @@ function exportText(){
   if(S.items.diaper) lines.push(dp.length?`소변 ${avgOf(dp,s=>s.pee).toFixed(1)}회 · 대변 ${avgOf(dp,s=>s.poo).toFixed(1)}회/일${partial(dp)}`:'기저귀 기록 없음');
   lines.push(`[기록 완성도] ${comp}%${missed.length?' · 빈 시간: '+missed.slice(0,6).join(', ')+(missed.length>6?` 외 ${missed.length-6}건 (빈 시간은 통계에서 빠짐)`:''):''}`);
   lines.push(`[기록하지 않는 항목] ${['feed','sleep','diaper'].filter(k=>!S.items[k]).map(k=>({feed:'수유',sleep:'수면',diaper:'기저귀'}[k])).join(', ')||'없음'}`);
+  { const f0=days[0], t0=days[n-1]+DAY, cnt={}; S.events.filter(x=>x.start>=f0&&x.start<t0&&tagGroup(x)&&x.tags).forEach(x=>TAGS[tagGroup(x)].forEach(([k,,nm])=>{ if(x.tags.includes(k)) cnt[nm]=(cnt[nm]||0)+1 }));
+    const ks=Object.keys(cnt); lines.push(`[수유·대변 특이사항] ${ks.length?ks.map(k=>k+' '+cnt[k]+'회').join(', ')+' (표시 안 한 수유·대변은 부모가 정상으로 본 것)':'없음 (따로 표시하지 않으면 정상 수유·정상 변으로 기록함)'}`) }
   const from=days[0], to=days[n-1]+DAY, etc=S.events.filter(x=>x.type==='etc'&&x.start>=from&&x.start<to&&x.sub!=='memo').sort((a,c)=>a.start-c.start);
   if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+x.note+')':''}`).join(', ')}`);
   const gr=S.events.filter(x=>x.type==='growth').sort((a,c)=>a.start-c.start).slice(-4);
   if(gr.length&&(ex.q==='growth'||ex.q==='normal')) lines.push(`[성장 측정] ${gr.map(x=>`${md(x.start)} ${[x.kg&&x.kg+'kg'+(pctText('wfa',x.kg,x.start)?'('+pctText('wfa',x.kg,x.start)+')':''),x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' ')}`).join(', ')} · WHO 기준`);
   days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 수유 ${hs('feed')?s.feeds+'회'+(s.ml?' '+s.ml+'ml':''):'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
-    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} ${FEEDN[x.sub]||'수유'} ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}`);
+    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} ${FEEDN[x.sub]||'수유'} ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}${tagText(x)?' ('+tagText(x)+')':''}`);
       else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} ${sleepKind(x)==='night'?'밤잠':'낮잠'}`);
-      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}`) })});
+      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' ('+tagText(x)+')':''}`) })});
   const rf=redFlags(days); lines.push(`[앱 위험신호 점검 · 고정 규칙] ${rf.length?rf.join(', '):'걸린 항목 없음 (기록된 것만 확인함)'}`);
   const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
   lines.push(`[질문] ${q}`);
@@ -869,7 +882,7 @@ function feedFinishSheet(lf){
 }
 function feedSheet(){
   const lf=liveFeed(); if(lf) return feedFinishSheet(lf);
-  let sub=S.baby.feeding==='모유'?'breastL':'formula', ml=120, min=15;
+  let sub=S.baby.feeding==='모유'?'breastL':'formula', ml=120, min=15, note=''; const tags=[];
   const last=lastOf(x=>x.type==='feed'&&x.ml); if(last) ml=last.ml;
   const draw=()=>{ const breast=sub==='breastL'||sub==='breastR';
     openSheet(`<h2>수유 기록</h2>
@@ -877,12 +890,14 @@ function feedSheet(){
     <div class="stepper" style="justify-content:center"><button type="button" data-step="-1" aria-label="줄이기">−</button><output id="amt">${breast?min+'분':ml+'ml'}</output><button type="button" data-step="1" aria-label="늘리기">+</button></div>
     <button class="btn ghost full" type="button" id="fTimer">⏱️ 지금 시작하고 끝날 때 누르기</button>
     <label class="field" for="fTime">시각<input type="time" id="fTime" value="${timeDefault()}"></label>
-    <label class="field" for="fNote">메모<input type="text" id="fNote" placeholder="예: 남김, 토함" style="width:180px"></label>
+    <label class="field" for="fNote">메모<input type="text" id="fNote" placeholder="그 밖에 남길 말" value="${esc(note)}" style="width:180px"></label>
+    ${tagChipsHTML('feed',tags,'특이사항 (없으면 안 눌러도 돼요)')}
     <button class="btn full" style="height:52px" type="button" id="save">저장</button>`,()=>{
+      $('#fNote').oninput=e=>note=e.target.value; bindTags(tags);
       $('#sw').querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{sub=b.dataset.sub;draw()});
       $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const s=+b.dataset.step; if(breast){min=Math.max(1,min+s*5);$('#amt').textContent=min+'분'}else{ml=Math.max(10,ml+s*10);$('#amt').textContent=ml+'ml'}});
-      $('#fTimer').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:Date.now(),end:null,note:$('#fNote').value.trim()}; if(!breast) ev.ml=ml; add(ev,(FEEDN[sub]||'수유')+' 시작! 끝나면 "수유 끝"을 누르세요') };
-      $('#save').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:timeToMs($('#fTime').value),note:$('#fNote').value.trim()}; if(breast)ev.min=min; else ev.ml=ml; add(ev,'수유를 기록했어요') };
+      $('#fTimer').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:Date.now(),end:null,note:$('#fNote').value.trim()}; if(tags.length) ev.tags=[...tags]; if(!breast) ev.ml=ml; add(ev,(FEEDN[sub]||'수유')+' 시작! 끝나면 "수유 끝"을 누르세요') };
+      $('#save').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:timeToMs($('#fTime').value),note:$('#fNote').value.trim()}; if(tags.length) ev.tags=[...tags]; if(breast)ev.min=min; else ev.ml=ml; add(ev,'수유를 기록했어요') };
     })};
   draw();
 }
@@ -890,8 +905,10 @@ function diaperSheet(){
   openSheet(`<h2>기저귀 기록</h2>
   <div class="dtypes"><button type="button" style="background:var(--pee)" data-d="pee">💧 소변</button><button type="button" style="background:var(--poo)" data-d="poo">💩 대변</button><button type="button" style="background:var(--ink);color:var(--on-ink)" data-d="both">💧💩 둘 다</button></div>
   <label class="field" for="dTime">시각<input type="time" id="dTime" value="${timeDefault()}"></label>
-  <label class="field" for="dNote">메모<input type="text" id="dNote" placeholder="예: 노란색, 묽음" style="width:180px"></label>`,()=>{
-    $('#sw').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>add({id:uid(),type:'diaper',sub:b.dataset.d,start:timeToMs($('#dTime').value),note:$('#dNote').value.trim()},'기저귀를 기록했어요'));
+  <label class="field" for="dNote">메모<input type="text" id="dNote" placeholder="그 밖에 남길 말" style="width:180px"></label>
+  ${tagChipsHTML('poo',[],'대변 상태: 먼저 고른 뒤 위의 대변 버튼을 눌러요 (안 고르면 정상 변)')}`,()=>{
+    const tags=[]; bindTags(tags);
+    $('#sw').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ const ev={id:uid(),type:'diaper',sub:b.dataset.d,start:timeToMs($('#dTime').value),note:$('#dNote').value.trim()}; if(tags.length&&ev.sub!=='pee') ev.tags=[...tags]; add(ev,'기저귀를 기록했어요') });
   });
 }
 function sleepAction(){
@@ -961,13 +978,18 @@ function evSheet(id){
   ${x.type==='feed'&&x.sub!=='breastL'&&x.sub!=='breastR'?`<label class="field" for="eMl">양 (ml)<input type="number" inputmode="numeric" id="eMl" value="${x.ml??''}" style="width:90px"></label>`:''}
   ${x.type==='sleep'?`<div class="field"><span>구분</span><div class="chips">${[['auto','자동 ('+(autoKind(x)==='night'?'밤잠':'낮잠')+')'],['night','밤잠'],['nap','낮잠']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${(x.kind||'auto')===k}" data-kind="${k}">${n}</button>`).join('')}</div></div>`:''}
   ${x.type==='diaper'?`<div class="chips">${[['pee','소변'],['poo','대변'],['both','둘 다']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${x.sub===k}" data-dsub="${k}">${n}</button>`).join('')}</div>`:''}
+  <label class="field" for="eNote">메모<input type="text" id="eNote" value="${esc(x.note||'')}" placeholder="그 밖에 남길 말" style="width:180px"></label>
+  ${x.type==='feed'?tagChipsHTML('feed',x.tags||[],'특이사항 (없으면 정상 수유)'):x.type==='diaper'?tagChipsHTML('poo',x.tags||[],'대변 상태 (없으면 정상 변)'):''}
   <div class="row"><button class="btn" style="flex:1" type="button" id="eSave">저장</button><button class="btn ghost" style="flex:1" type="button" id="eDel">삭제</button></div>`,()=>{
-    let dsub=x.sub, kind=x.kind||'auto'; $('#sw').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ kind=b.dataset.kind; $('#sw').querySelectorAll('[data-kind]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
-    $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
+    let dsub=x.sub, kind=x.kind||'auto'; const tags=[...(x.tags||[])]; bindTags(tags);
+    const tb=$('#sw .tagbox[data-tg="poo"]'); if(tb) tb.hidden=dsub==='pee'; $('#sw').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ kind=b.dataset.kind; $('#sw').querySelectorAll('[data-kind]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
+    $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)); if(tb) tb.hidden=dsub==='pee' });
     $('#eSave').onclick=()=>{ x.start=withTime(x.start,$('#eTime').value);
       if($('#eEnd')){ let end=withTime(x.start,$('#eEnd').value); if(end<=x.start) end+=DAY; x.end=end }
       if($('#eMl')){ const v=+$('#eMl').value; if(v>0) x.ml=v; else delete x.ml }
       if(x.type==='diaper') x.sub=dsub;
+      x.note=$('#eNote').value.trim(); if(!x.note) delete x.note;
+      if(tagGroup(x)&&tags.length) x.tags=[...tags]; else delete x.tags;
       if(x.type==='sleep'){ if(kind==='auto') delete x.kind; else x.kind=kind }
       commit('수정했어요') };
     bindDelete(id);
