@@ -24,16 +24,18 @@ class StopReceiver : BroadcastReceiver() {
         fun pending(ctx: Context): JSONArray =
             runCatching { JSONArray(ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY, "[]")) }.getOrDefault(JSONArray())
 
-        // 앱을 열지 않고 기록 (잠금 상태 음성 명령). 앱이 떠 있으면 바로 넣고, 아니면 앱을 열 때 그 시각으로 넣음
-        fun record(ctx: Context, a: String, at: Long, label: String) {
+        // 앱을 열지 않고 기록 (잠금 상태 음성 명령). 앱이 떠 있으면 바로 넣고 결과를 소리로 알려 줌(true),
+        // 아니면 앱을 열 때 그 시각으로 넣음(false)
+        fun record(ctx: Context, a: String, at: Long, label: String): Boolean {
             add(ctx, a, at)
             val live = MainActivity.live?.get()
-            live?.flushStops()
+            live?.flushStops(speak = true)
             if (a == "stop_sleep" || a == "stop_feed") {
                 ctx.getSystemService(NotificationManager::class.java).cancel(if (a == "stop_feed") LiveNotify.ID_FEED else LiveNotify.ID_SLEEP)
                 Widgets.stopped(ctx, a, at)
             }
             notifyDone(ctx, label, at, live != null)
+            return live != null
         }
 
         private fun notifyDone(ctx: Context, label: String, at: Long, live: Boolean) {

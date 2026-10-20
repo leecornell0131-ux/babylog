@@ -83,6 +83,10 @@
       if (a === 'pee' || a === 'poo' || a === 'both') {
         S.events.push({ id: id, type: 'diaper', sub: a, start: now, note: '' });
         msg = '기저귀를 기록했어요';
+      } else if (a === 'sleep_start') {
+        // 음성 명령 "아기잠듦": 이미 자는 중이면 그대로 둠 (위젯 '잠듦' 버튼처럼 끝내지 않음)
+        if (live('sleep')) msg = '이미 자는 중이에요';
+        else { S.events.push({ id: id, type: 'sleep', start: now, end: null }); msg = '수면 시작을 기록했어요'; }
       } else if (a === 'sleep' || a === 'stop_sleep') {
         var ls = live('sleep');
         if (ls && a === 'stop_sleep' && ls.start > now) ls = null; // 누른 뒤에 새로 시작한 수면은 끝내지 않음
