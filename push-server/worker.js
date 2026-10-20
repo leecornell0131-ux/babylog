@@ -9,7 +9,7 @@
 
 const FID = /^[A-HJ-NP-Z2-9]{10}$/;
 const NUM_KEYS = ['lastFeed', 'sleep', 'feed', 'at', 'feedGap', 'lastWake', 'lastDiaper', 'day', 'tFeeds', 'tMl', 'tPee', 'tPoo', 'tSleep'];
-const STR_KEYS = ['lastFeedText', 'feedLabel', 'name', 'lastDiaperText'];
+const STR_KEYS = ['lastFeedText', 'feedLabel', 'name', 'lastDiaperText', 'lastFeedAmt', 'lastFeedSub', 'birth'];
 const MAX_TOKENS = 10;
 
 export default {

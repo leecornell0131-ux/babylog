@@ -4,6 +4,8 @@
     <string name="widget_name">아기로그 빠른 기록</string>
     <string name="w_feed">아기로그 수유 타이머</string>
     <string name="w_feed_desc">마지막 수유 후 지난 시간을 크게, 평소 간격으로 본 다음 수유 시각</string>
+    <string name="w_card">아기로그 마지막 수유</string>
+    <string name="w_card_desc">아기 이름·월령과 마지막 수유 시각·양, 몇 시간 전인지</string>
     <string name="w_sleep">아기로그 수면·깨어 있는 시간</string>
     <string name="w_sleep_desc">자는 중이면 수면 시간, 깨어 있으면 깬 뒤 지난 시간과 잠듦·깼어요 버튼</string>
     <string name="w_diaper">아기로그 기저귀</string>

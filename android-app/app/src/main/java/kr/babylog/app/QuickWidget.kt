@@ -1,5 +1,6 @@
 package kr.babylog.app
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -21,9 +22,9 @@ object Widgets {
     private const val PREF = "babylog_widget"
     // 웹앱 요약(bridge.js summary·web-notify.js summaryOf)에서 받는 값
     val NUM_KEYS = listOf("lastFeed", "sleep", "feed", "feedGap", "lastWake", "lastDiaper", "day", "tFeeds", "tMl", "tPee", "tPoo", "tSleep")
-    val STR_KEYS = listOf("lastFeedText", "feedLabel", "lastDiaperText", "name")
+    val STR_KEYS = listOf("lastFeedText", "feedLabel", "lastDiaperText", "name", "lastFeedAmt", "lastFeedSub", "birth")
 
-    private val all get() = listOf(QuickWidget(), FeedWidget(), SleepWidget(), DiaperWidget(), TodayWidget())
+    private val all get() = listOf(QuickWidget(), FeedWidget(), FeedCardWidget(), SleepWidget(), DiaperWidget(), TodayWidget())
 
     fun save(ctx: Context, o: JSONObject) {
         val e = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
@@ -43,10 +44,23 @@ object Widgets {
 
     fun refresh(ctx: Context) {
         val m = AppWidgetManager.getInstance(ctx)
+        var any = false
         for (w in all) {
             val ids = m.getAppWidgetIds(ComponentName(ctx, w.javaClass))
-            if (ids.isNotEmpty()) m.updateAppWidget(ids, w.build(ctx, Data(ctx)))
+            if (ids.isNotEmpty()) {
+                any = true
+                m.updateAppWidget(ids, w.build(ctx, Data(ctx)))
+            }
         }
+        if (any) tick(ctx)
+    }
+
+    // "4시간 10분 전"·오늘 수면 합계 같은 글자는 1분마다 다시 그림.
+    // 깨우지 않는 알람이라 화면이 꺼져 있을 때는 미뤄져서 배터리를 거의 안 씀
+    private fun tick(ctx: Context) {
+        val pi = PendingIntent.getBroadcast(ctx, 0, Intent(ctx, TickReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val next = (System.currentTimeMillis() / 60_000 + 1) * 60_000
+        ctx.getSystemService(AlarmManager::class.java).set(AlarmManager.RTC, next, pi)
     }
 
     // 위젯이 그릴 값. 잠금화면에서 끝냈지만 아직 웹앱에 안 들어간 타이머는 끝난 것으로 봄
@@ -65,6 +79,9 @@ object Widgets {
         val lastDiaper = n("lastDiaper")
         val lastDiaperText = s("lastDiaperText")
         val name = s("name").ifBlank { "아기" }
+        val lastFeedAmt = s("lastFeedAmt")
+        val lastFeedSub = s("lastFeedSub")
+        val birth = s("birth")
         // 오늘 숫자는 저장한 날이 오늘일 때만 (자정이 지나면 0부터)
         private val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
         private val fresh = n("day") == today
@@ -97,12 +114,29 @@ object Widgets {
     fun open(ctx: Context): PendingIntent =
         PendingIntent.getActivity(ctx, 100, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
+    // 생후 "3개월 24일" (태어난 날이 없으면 빈칸)
+    fun age(birth: String): String {
+        val b = runCatching { SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).parse(birth) }.getOrNull() ?: return ""
+        val today = Calendar.getInstance()
+        fun plus(m: Int) = Calendar.getInstance().apply { time = b; add(Calendar.MONTH, m) }
+        var months = 0
+        while (!plus(months + 1).after(today)) months++
+        val days = ((today.timeInMillis - plus(months).timeInMillis) / 86_400_000L).toInt()
+        return if (months == 0) "생후 ${days}일" else "${months}개월 ${days}일"
+    }
+
+    fun ago(t: Long): String {
+        val ms = System.currentTimeMillis() - t
+        return if (ms < 60_000) "방금" else dur(ms) + " 전"
+    }
+
     fun show(v: RemoteViews, id: Int, on: Boolean) = v.setViewVisibility(id, if (on) View.VISIBLE else View.GONE)
 }
 
 abstract class BabyWidget : AppWidgetProvider() {
     abstract fun build(ctx: Context, d: Widgets.Data): RemoteViews
-    override fun onUpdate(ctx: Context, m: AppWidgetManager, ids: IntArray) = m.updateAppWidget(ids, build(ctx, Widgets.Data(ctx)))
+    // 위젯을 새로 놓거나 30분 주기 갱신 때: 전부 다시 그리고 1분 갱신도 다시 걸어 둠
+    override fun onUpdate(ctx: Context, m: AppWidgetManager, ids: IntArray) = Widgets.refresh(ctx)
 }
 
 // 1) 빠른 기록 (4×2): 마지막 수유 후 시간 + 진행 중 수면·수유 + 수유·소변·대변·수면 버튼
@@ -154,6 +188,37 @@ class FeedWidget : BabyWidget() {
         v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, if (d.feed > 0) "stop_feed" else "feed"))
         return v
     }
+}
+
+// 2-1) 수유 카드 (2×2): 아기 이름·월령 띠, 마지막 수유 시각과 양, 몇 시간 전 (삐요로그 위젯처럼 한눈에)
+class FeedCardWidget : BabyWidget() {
+    override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
+        val v = RemoteViews(ctx.packageName, R.layout.widget_card)
+        v.setTextViewText(R.id.c_name, d.name)
+        val age = Widgets.age(d.birth)
+        Widgets.show(v, R.id.c_age, age.isNotBlank())
+        v.setTextViewText(R.id.c_age, age)
+        v.setTextViewText(R.id.c_icon, if (d.lastFeedSub == "breastL" || d.lastFeedSub == "breastR") "🤱" else "🍼")
+        if (d.feed > 0) {
+            v.setTextViewText(R.id.c_time, SimpleDateFormat("a h:mm", Locale.KOREA).format(Date(d.feed)))
+            v.setTextViewText(R.id.c_amt, "${d.feedLabel} 중")
+            v.setTextViewText(R.id.c_ago, Widgets.ago(d.feed).replace(" 전", "째"))
+        } else if (d.lastFeed > 0) {
+            v.setTextViewText(R.id.c_time, SimpleDateFormat("a h:mm", Locale.KOREA).format(Date(d.lastFeed)))
+            v.setTextViewText(R.id.c_amt, d.lastFeedAmt)
+            v.setTextViewText(R.id.c_ago, Widgets.ago(d.lastFeed))
+        } else {
+            v.setTextViewText(R.id.c_time, "수유 기록 없음")
+            v.setTextViewText(R.id.c_amt, "")
+            v.setTextViewText(R.id.c_ago, "누르면 앱이 열려요")
+        }
+        v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
+        return v
+    }
+}
+
+class TickReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) = Widgets.refresh(ctx)
 }
 
 // 3) 수면 (2×2): 자는 중이면 수면 시간, 깨어 있으면 깨어 있는 시간 (낮잠 타이밍 보기용)

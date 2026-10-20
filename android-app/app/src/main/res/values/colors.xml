@@ -7,4 +7,7 @@
     <color name="btn_feed">#FCDCE8</color>
     <color name="btn_diaper">#DDEFD8</color>
     <color name="btn_sleep">#DCE5F5</color>
+    <color name="band">#3B49B8</color>
+    <color name="feed_ink">#D6457A</color>
+    <color name="accent_ink">#3B49B8</color>
 </resources>

@@ -64,6 +64,23 @@
         </receiver>
 
         <receiver
+            android:name=".FeedCardWidget"
+            android:label="@string/w_card"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/card_widget_info" />
+        </receiver>
+
+        <!-- 위젯 글자("몇 분 전")를 1분마다 새로 그림 -->
+        <receiver
+            android:name=".TickReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".SleepWidget"
             android:label="@string/w_sleep"
             android:exported="false">
