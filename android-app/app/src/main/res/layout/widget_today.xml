@@ -39,13 +39,14 @@
             android:paddingEnd="8dp">
 
             <TextView
+                android:id="@+id/l_feed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🍼 오늘 수유"
                 android:includeFontPadding="false"
                 android:maxLines="1"
                 android:textColor="@color/feed_ink"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -73,13 +74,14 @@
             android:paddingEnd="8dp">
 
             <TextView
+                android:id="@+id/l_gap"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⏱ 마지막 수유 후"
                 android:includeFontPadding="false"
                 android:maxLines="1"
                 android:textColor="@color/feed_ink"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <Chronometer
@@ -125,13 +127,14 @@
             android:paddingEnd="8dp">
 
             <TextView
+                android:id="@+id/l_diaper"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🧷 기저귀"
                 android:includeFontPadding="false"
                 android:maxLines="1"
                 android:textColor="@color/diaper_ink"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -159,13 +162,14 @@
             android:paddingEnd="8dp">
 
             <TextView
+                android:id="@+id/l_sleep"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🌙 오늘 수면"
                 android:includeFontPadding="false"
                 android:maxLines="1"
                 android:textColor="@color/sleep_ink"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
