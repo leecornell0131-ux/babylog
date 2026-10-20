@@ -114,6 +114,8 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .ring svg{width:100%;max-width:320px;height:auto}
 .legend{display:flex;gap:6px 14px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted);max-width:100%;padding:0 8px;box-sizing:border-box}.legend span{white-space:nowrap}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.adprev{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;width:320px;max-width:100%;height:50px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;background:var(--soft);border:1px dashed var(--muted);color:var(--muted);font-size:13px;border-radius:4px}
+body:has(#sheetRoot .sheetwrap) .adprev{display:none}
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
   padding:10px max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));z-index:5}
 .dock .inner{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
@@ -215,7 +217,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.12';
+const VERSION='0.3.13';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -816,12 +818,20 @@ function renderSettings(){
 function fitBar(){ const tr=$('#app .day .track'), li=$('#app .day .list'); if(!tr||!li) return;
   tr.style.height=Math.max(480,li.offsetHeight-24)+'px' }
 addEventListener('resize',fitBar);
+// 개발자 모드에서만, 아이폰 웹앱에 광고 위치 미리보기 (진짜 광고는 갤럭시 앱에만). 규칙은 갤럭시 Ads.kt와 같게:
+// 기록·내보내기 탭에서만, 밤 21~7시·입력 창이 열렸을 때는 숨김
+function adPreviewHTML(){
+  if(window.BabyNative||pref('dev')!=='1'||pref('ads')==='0') return '';
+  if(view.tab!=='week'&&view.tab!=='export') return '';
+  const h=new Date().getHours(); if(h>=21||h<7) return '';
+  return '<div class="adprev" aria-hidden="true">광고 자리 (미리보기)</div>';
+}
 function render(){
   const app=$('#app');
   document.body.classList.toggle('nodock',!S.onboarded);
   if(!S.onboarded){ app.innerHTML=renderWelcome(); return }
   const R={today:renderToday,week:renderWeek,growth:renderGrowth,export:renderExport,settings:renderSettings}[view.tab]||renderToday;
-  app.innerHTML=R();
+  app.innerHTML=adPreviewHTML()+R();
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
   const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요':'수면'; $('#bSleep').classList.toggle('awake',!!ls);
   const lfd=liveFeed(); $('#bFeed').textContent=lfd?'수유 끝':'수유'; $('#bFeed').classList.toggle('live',!!lfd);
@@ -1054,7 +1064,7 @@ $('#app').addEventListener('click',async e=>{
   if(a==='devCode'){ const v=($('#devCode').value||'').trim(); let h='';
     try{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)); h=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('') }catch(_){}
     // 공개 저장소라 코드 원문 대신 SHA-256 해시로 비교
-    if(h==='f9f40d77657a9dfff29bbfba10471c821bb4c5ef571613c11765fb64e63baa6a'){ pref('dev','1'); render(); toast('개발자 모드를 켰어요') } else toast('코드가 맞지 않아요'); return }
+    if(h==='f9f40d77657a9dfff29bbfba10471c821bb4c5ef571613c11765fb64e63baa6a'){ pref('dev','1'); if(pref('ads')===null) pref('ads','1'); render(); toast('개발자 모드를 켰어요') } else toast('코드가 맞지 않아요'); return }
   if(a==='voiceHelp'){ try{ BabyNative.voiceHelp() }catch(_){} return }
   if(a==='devOff'){ pref('dev','0'); render(); return }
   if(a==='backup') backup();
@@ -1078,7 +1088,7 @@ $('#app').addEventListener('click',async e=>{
 });
 $('#app').addEventListener('change',e=>{
   const t=e.target, b=S.baby;
-  if(t.id==='adsOn'){ pref('ads',t.checked?'1':'0'); try{dispatchEvent(new CustomEvent('babylog-ads',{detail:t.checked}))}catch(_){} toast(t.checked?'광고를 켰어요':'광고를 껐어요'); return }
+  if(t.id==='adsOn'){ pref('ads',t.checked?'1':'0'); render(); try{dispatchEvent(new CustomEvent('babylog-ads',{detail:t.checked}))}catch(_){} toast(t.checked?'광고를 켰어요':'광고를 껐어요'); return }
   if(t.id==='anon'){view.exp.anon=t.checked;return render()}
   if(t.dataset.item){S.items[t.dataset.item]=t.checked;save();return render()}
   const map={sName:v=>b.name=v,sBirth:v=>b.birth=v,sBkg:v=>b.birthKg=v?+v:null,sDue:v=>b.due=v};
