@@ -217,7 +217,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.14';
+const VERSION='0.3.15';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -336,7 +336,13 @@ function sleepSummary(d){
     const g=b.start-a.end; if(g>0&&g<=8*H) wakes.push(g) }
   const ended=sl.filter(x=>x.end!=null&&x.end<=now), last=ended.length?Math.max(...ended.map(x=>x.end)):0;
   const awakeNow=d===dayStart(now)&&!sl.some(x=>x.end==null)&&last&&now-last<8*H?now-last:null;
-  return {night,nap,naps,nightN,has,wakes,awakeNow,live:sl.find(x=>x.end==null)||null} }
+  // 하루 깨어 있던 합계: 이날 아침 밤잠에서 깬 시각 ~ (오늘은 지금, 지난 날은 그날 밤잠 시작) 에서 낮잠 시간을 뺌
+  const nightEnds=sl.filter(x=>x.end!=null&&sleepKind(x)==='night'&&sleepDate(x)===d).map(x=>x.end), from=nightEnds.length?Math.max(...nightEnds):null;
+  const nextNight=sl.filter(x=>sleepKind(x)==='night'&&sleepDate(x)===d+DAY&&x.start>=(from??0)).map(x=>x.start);
+  const until=nextNight.length?Math.min(...nextNight):d===dayStart(now)?now:null;
+  let awakeTotal=null;
+  if(from!=null&&until!=null&&until>from){ let napIn=0; sl.forEach(x=>{ if(sleepKind(x)!=='nap') return; const a=Math.max(x.start,from), b=Math.min(x.end??now,until); if(b>a) napIn+=b-a }); awakeTotal=until-from-napIn }
+  return {night,nap,naps,nightN,has,wakes,awakeNow,awakeTotal,awakeFrom:from,live:sl.find(x=>x.end==null)||null} }
 function sleepRef(at){ const b=S.baby, base=b.preterm&&b.due?b.due:b.birth, t=new Date(base+'T00:00:00').getTime(); if(isNaN(t)) return null;
   const m=(dayStart(at)-t)/DAY/30.4375; if(m<0) return null; const r=SR.byAgeMonths.find(r=>m>=r.from&&m<r.to); return r?{...r,months:m}:null }
 const rng=(a,u='')=>a[0]===a[1]?a[0]+u:a[0]+'~'+a[1]+u;
@@ -350,7 +356,7 @@ function sleepCard(d){
   <div class="sleepsum">
     <div><span class="small muted">${d===today?'지난밤':'전날 밤~아침'} 밤잠</span><b>${ss.night?durS(ss.night):'–'}</b><span class="small muted">${ss.nightN>1?ss.nightN+'번 나눠 잠':ss.nightN?'한 번에 잠':'기록 없음'}</span></div>
     <div><span class="small muted">낮잠 ${ss.naps}회</span><b>${ss.nap?durS(ss.nap):'–'}</b><span class="small muted">${ss.live&&sleepKind(ss.live)==='nap'&&sleepDate(ss.live)===d?'지금 낮잠 중':ss.night+ss.nap?'합계 '+durS(ss.night+ss.nap):''}</span></div>
-    <div><span class="small muted">깨어 있는 시간</span><b>${ss.awakeNow!=null?dur(ss.awakeNow):wAvg?dur(wAvg):'–'}</b><span class="small muted">${ss.awakeNow!=null?'지금 깬 지'+(wAvg?' · 평균 '+dur(wAvg):''):wAvg?'평균 · 최장 '+dur(wMax):''}</span></div>
+    <div><span class="small muted">깨어 있는 시간</span><b>${ss.awakeNow!=null?dur(ss.awakeNow):wAvg?dur(wAvg):'–'}</b><span class="small muted">${ss.awakeNow!=null?'이번에 깬 지'+(wAvg?'<br>평균 '+durS(wAvg):''):wAvg?'평균 · 최장 '+durS(wMax):''}${ss.awakeTotal?'<br>'+(d===today?'오늘 ':'')+'합계 '+durS(ss.awakeTotal):''}</span></div>
   </div>
   ${r?`<p class="small muted" style="margin:0">${refText(r)}. 아기마다 차이가 커요.${young?' 생후 2개월 전에는 아직 낮밤 리듬이 생기기 전이라 낮잠·밤잠 구분이 덜 정확해요.':''}</p>`:`<p class="small muted" style="margin:0">태어난 날을 넣으면 월령에 흔한 낮잠·깨어 있는 시간 범위를 같이 보여 줘요.</p>`}</div>`;
 }
