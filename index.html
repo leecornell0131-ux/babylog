@@ -101,7 +101,7 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .item .sw{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;font-size:18px;line-height:1;background:var(--bg);box-shadow:inset 3px 0 0 var(--c)}
 @supports (background:color-mix(in srgb,red 10%,transparent)){.item .sw{background:color-mix(in srgb,var(--c) 20%,transparent)}}
 .item .t{display:flex;flex-direction:column;min-width:0}
-.item .t b{font-size:14px;font-weight:600}
+.item .t b{font-size:14px;font-weight:600}.item .tg{font-weight:600}.item .nt{color:var(--fg);opacity:.85}
 .item.live{box-shadow:inset 0 0 0 2px var(--sleep)}
 .gap{border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);
   background:repeating-linear-gradient(135deg,var(--hatch1) 0 8px,var(--hatch2) 8px 16px)}
@@ -221,7 +221,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.20';
+const VERSION='0.3.21';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -476,7 +476,7 @@ function itemHTML(x){
   const live=(x.type==='sleep'||x.type==='feed')&&x.end===null;
   const sub=x.type==='sleep'||(x.type==='feed'&&x.end!==undefined)?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
   const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
-  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · '+esc(tagText(x)):''}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
+  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · <span class="tg" style="color:'+(x.type==='feed'?'var(--feed-text)':'var(--poo)')+'">'+esc(tagText(x))+'</span>':''}${x.note?' · <span class="nt">📝 '+esc(x.note)+'</span>':''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
 }
 function gapHTML(g){
   const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
