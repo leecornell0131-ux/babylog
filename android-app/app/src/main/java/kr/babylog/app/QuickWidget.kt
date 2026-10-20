@@ -21,7 +21,7 @@ import java.util.Date
 import java.util.Locale
 
 // 홈 화면 위젯 5종이 함께 쓰는 저장값과 그리기 도구.
-// 기록이 바뀌면(이 휴대폰 저장·배우자 푸시·15분 확인) save()가 모든 위젯을 새로 그림.
+// 기록이 바뀌면(이 휴대폰 저장·배우자 푸시·앱 실행 후 동기화) save()가 모든 위젯을 새로 그림.
 object Widgets {
     private const val PREF = "babylog_widget"
     // 웹앱 요약(bridge.js summary·web-notify.js summaryOf)에서 받는 값

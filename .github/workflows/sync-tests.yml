@@ -1,0 +1,33 @@
+name: Sync compatibility tests
+
+on:
+  push:
+    paths:
+      - 'sync.js'
+      - 'push-server/**'
+      - 'android-app/**'
+      - 'tests/**'
+      - '.github/workflows/sync-tests.yml'
+      - '.github/workflows/push-server.yml'
+  pull_request:
+    paths:
+      - 'sync.js'
+      - 'push-server/**'
+      - 'android-app/**'
+      - 'tests/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      # 추가 패키지/실서비스 자격증명/원격 DB 없이 실행.
+      - run: node --test tests/*.test.mjs
