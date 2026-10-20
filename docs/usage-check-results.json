@@ -1,0 +1,94 @@
+{
+  "commit": "efdd7a9ee919dd80931c9b284a0707ff5409d222",
+  "worker": [
+    {
+      "label": "OPTIONS preflight",
+      "status": 204,
+      "kvReads": 0,
+      "kvWrites": 0
+    },
+    {
+      "label": "GET summary before first record",
+      "status": 200,
+      "kvReads": 1,
+      "kvWrites": 0
+    },
+    {
+      "label": "notify without registered devices",
+      "status": 200,
+      "kvReads": 2,
+      "kvWrites": 1
+    },
+    {
+      "label": "same summary with newer at",
+      "status": 200,
+      "kvReads": 2,
+      "kvWrites": 1
+    },
+    {
+      "label": "same summary and equal at",
+      "status": 200,
+      "kvReads": 2,
+      "kvWrites": 1
+    },
+    {
+      "label": "stale summary",
+      "status": 200,
+      "kvReads": 1,
+      "kvWrites": 0
+    },
+    {
+      "label": "register new token",
+      "status": 200,
+      "kvReads": 1,
+      "kvWrites": 1
+    },
+    {
+      "label": "register same token again",
+      "status": 200,
+      "kvReads": 1,
+      "kvWrites": 0
+    }
+  ],
+  "shared": {
+    "listeners": 2,
+    "eventQuery": {
+      "query": [
+        "families/AAAAAAAAAA/events",
+        [
+          "u",
+          ">",
+          700000
+        ],
+        "u"
+      ]
+    },
+    "afterSave": {
+      "batches": 1,
+      "documentWrites": 1,
+      "notifyCalls": 1
+    }
+  },
+  "localOnly": {
+    "listeners": 0,
+    "writes": 0,
+    "notifications": 0
+  },
+  "checks": [
+    "No-recipient notify still performs 2 KV reads and 1 write",
+    "Unchanged payload is written again including equal at",
+    "Older at skips KV write",
+    "Already registered token avoids KV write",
+    "Startup with matching sync state performs no writes",
+    "Startup listener count 2",
+    "20 UI refreshes cause no commits or notifications",
+    "One changed event produces one document write",
+    "One successful batch calls notify once",
+    "Remote receipt alone does not upload or notify again",
+    "Startup with sharing off performs no writes",
+    "Startup listener count 0",
+    "20 UI refreshes cause no commits or notifications",
+    "Local-only save makes no Firestore writes or notify calls"
+  ],
+  "scope": "Mocked code-path operation counts only; not production quota measurements, emulator billing, or real Android tests"
+}
