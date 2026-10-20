@@ -120,7 +120,7 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .rec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .rec button{height:58px;line-height:1.15;white-space:nowrap;padding:0 2px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
 .rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
-.rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"🧷"}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}
+.rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"🧷"}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}.rec .feed.live::before{content:"⏱️"}
 .rec .more{background:var(--card);color:var(--fg);border:1px solid var(--line)}
 :root[data-theme="dark"] .rec button:not(.more){color:#12161C}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button:not(.more){color:#12161C}}
@@ -215,7 +215,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.8';
+const VERSION='0.3.9';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -397,6 +397,8 @@ function completeness(d){
   return Math.max(0,1-miss/span);
 }
 function liveSleep(){return S.events.find(x=>x.type==='sleep'&&x.end===null)}
+// 진행 중 수유 = type 'feed' + end:null (갤럭시 위젯·잠금화면이 이 형태를 읽음)
+function liveFeed(){return lastOf(x=>x.type==='feed'&&x.end===null)}
 function lastOf(f){ let best=null; for(const x of S.events) if(f(x)&&(!best||x.start>best.start)) best=x; return best }
 // 같은 기록이 두 기기에서 5분 안에 들어오면 묻기
 function dupPairs(d){
@@ -442,7 +444,7 @@ function evIcon(x){ if(x.type==='feed') return x.sub==='formula'?'🍼':x.sub===
   return (ETC[x.sub]||ETC.memo).ic }
 function evTitle(x){
   const now=Date.now();
-  if(x.type==='feed') return (FEEDN[x.sub]||'수유')+(x.ml?' '+x.ml+'ml':'')+(x.min?' '+x.min+'분':'');
+  if(x.type==='feed') return x.end===null?(FEEDN[x.sub]||'수유')+' 중 · '+dur(now-x.start)+'째':(FEEDN[x.sub]||'수유')+(x.ml?' '+x.ml+'ml':'')+(x.min?' '+x.min+'분':'');
   if(x.type==='sleep'){ const live=x.end===null, len=(x.end??now)-x.start, night=sleepKind(x)==='night';
     return live?(night?'밤잠':'낮잠')+' 중 · '+dur(len)+'째':(night?'밤잠 ':'낮잠 ')+dur(len) }
   if(x.type==='diaper') return '기저귀 · '+({pee:'소변',poo:'대변',both:'소변+대변'}[x.sub]);
@@ -450,8 +452,8 @@ function evTitle(x){
   const t=ETC[x.sub]||ETC.memo; return t.label+(x.val!=null&&x.val!==''?' '+x.val+(t.unit||''):'');
 }
 function itemHTML(x){
-  const live=x.type==='sleep'&&x.end===null;
-  const sub=x.type==='sleep'?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
+  const live=(x.type==='sleep'||x.type==='feed')&&x.end===null;
+  const sub=x.type==='sleep'||(x.type==='feed'&&x.end!==undefined)?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
   const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
   return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${x.note?' · '+esc(x.note):''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
 }
@@ -565,13 +567,14 @@ function feverCard(){
 function renderToday(){
   const d=view.day, today=dayStart(Date.now()), st=dayStats(d), gaps=gapsOfDay(d), now=Date.now();
   const lf=lastOf(x=>x.type==='feed'), ls=liveSleep();
-  const top=d===today&&lf?`<div class="alertline">마지막 수유 <b>${dur(now-lf.start)} 전</b> · ${lf.ml?lf.ml+'ml ':''}${hm(lf.start)}</div>`:'';
+  const lfl=d===today&&liveFeed();
+  const top=lfl?`<div class="alertline"><b>${FEEDN[lfl.sub]||'수유'} 중 · ${dur(now-lfl.start)}째</b> · ${hm(lfl.start)} 시작</div>`:d===today&&lf?`<div class="alertline">마지막 수유 <b>${dur(now-lf.start)} 전</b> · ${lf.ml?lf.ml+'ml ':''}${hm(lf.start)}</div>`:'';
   const dups=dupPairs(d);
   const rows=[...st.list.map(x=>({t:x.start,h:itemHTML(x)})),...gaps.map(g=>({t:g.end-1,h:gapHTML(g)}))].sort((a,b)=>view.order==='asc'?a.t-b.t:b.t-a.t);
   const listHTML=rows.length?rows.map(r=>r.h).join(''):'<div class="card empty">아직 기록이 없어요. 아래 버튼으로 첫 기록을 남겨 보세요.</div>';
   let body;
   if(view.todayMode==='ring'){
-    const center=d===today?(ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?(()=>{const z=sleepSummary(d);return ['수면 합계',durS(st.sleep),'밤잠 '+durS(z.night)+' · 낮잠 '+z.naps+'회']})():['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
+    const center=d===today?(lfl?['지금 '+(FEEDN[lfl.sub]||'수유')+' 중',dur(now-lfl.start),hm(lfl.start)+' 시작']:ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?(()=>{const z=sleepSummary(d);return ['수면 합계',durS(st.sleep),'밤잠 '+durS(z.night)+' · 낮잠 '+z.naps+'회']})():['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
     body=`<div class="card ring">${ringSVG(d,{big:true,center,label:`${md(d)} 24시간 원형 기록: 수면 ${durS(st.sleep)}, 수유 ${st.feeds}회, 기저귀 ${st.pee+st.poo}회`})}
     <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
     <div class="list">${listHTML}</div>`;
@@ -817,6 +820,7 @@ function render(){
   app.innerHTML=R();
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===view.tab?'page':'false'));
   const ls=liveSleep(); $('#bSleep').textContent=ls?'깼어요':'수면'; $('#bSleep').classList.toggle('awake',!!ls);
+  const lfd=liveFeed(); $('#bFeed').textContent=lfd?'수유 끝':'수유'; $('#bFeed').classList.toggle('live',!!lfd);
   $('#bFeed').hidden=!S.items.feed; $('#bSleep').hidden=!S.items.sleep; $('#bDiaper').hidden=!S.items.diaper;
   fitBar();
   // 최신이 아래일 때: 앱을 열거나 오늘 탭으로 올 때 한 번만 최신 기록이 보이게 내림
@@ -829,18 +833,35 @@ function timeToMs(v){const [h,m]=(v||hm(Date.now())).split(':').map(Number); con
 function openSheet(html,onReady){ $('#sheetRoot').innerHTML=`<div class="sheetwrap" id="sw"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
   $('#sw').addEventListener('click',e=>{if(e.target.id==='sw')closeSheet()}); onReady&&onReady() }
 function closeSheet(){ $('#sheetRoot').innerHTML='' }
+function feedFinishSheet(lf){
+  const breast=lf.sub==='breastL'||lf.sub==='breastR'; let ml=lf.ml||(lastOf(x=>x.type==='feed'&&x.ml)||{}).ml||120;
+  const finish=()=>{ lf.end=Math.max(Date.now(),lf.start+MIN); lf.min=Math.round((lf.end-lf.start)/MIN); if(!breast) lf.ml=ml; return lf.min };
+  openSheet(`<h2>${FEEDN[lf.sub]||'수유'} 중 · ${dur(Date.now()-lf.start)}</h2><span class="small muted">${hm(lf.start)}에 시작했어요</span>
+    ${breast?'':`<div class="stepper" style="justify-content:center"><button type="button" data-step="-1" aria-label="줄이기">−</button><output id="amt">${ml}ml</output><button type="button" data-step="1" aria-label="늘리기">+</button></div>`}
+    <button class="btn full" style="height:52px" type="button" id="fEnd">수유 끝</button>
+    ${breast?`<button class="btn ghost full" type="button" id="fSwap">여기서 끝내고 ${lf.sub==='breastL'?'오른쪽':'왼쪽'} 시작</button>`:''}
+    <button class="linkbtn" type="button" id="fCancel">잘못 눌렀어요 (이 수유 지우기)</button>`,()=>{
+    $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ml=Math.max(10,ml+(+b.dataset.step)*10);$('#amt').textContent=ml+'ml'});
+    $('#fEnd').onclick=()=>commit('수유 '+finish()+'분 기록했어요');
+    if($('#fSwap')) $('#fSwap').onclick=()=>{ finish(); add({id:uid(),type:'feed',sub:lf.sub==='breastL'?'breastR':'breastL',start:lf.end,end:null},'반대쪽 수유를 시작했어요') };
+    $('#fCancel').onclick=()=>{ S.events=S.events.filter(e=>e!==lf); commit('수유 기록을 지웠어요') };
+  });
+}
 function feedSheet(){
+  const lf=liveFeed(); if(lf) return feedFinishSheet(lf);
   let sub=S.baby.feeding==='모유'?'breastL':'formula', ml=120, min=15;
   const last=lastOf(x=>x.type==='feed'&&x.ml); if(last) ml=last.ml;
   const draw=()=>{ const breast=sub==='breastL'||sub==='breastR';
     openSheet(`<h2>수유 기록</h2>
     <div class="chips">${Object.entries(FEEDN).map(([k,n])=>`<button class="chip" type="button" aria-pressed="${sub===k}" data-sub="${k}">${n}</button>`).join('')}</div>
     <div class="stepper" style="justify-content:center"><button type="button" data-step="-1" aria-label="줄이기">−</button><output id="amt">${breast?min+'분':ml+'ml'}</output><button type="button" data-step="1" aria-label="늘리기">+</button></div>
+    <button class="btn ghost full" type="button" id="fTimer">⏱️ 지금 시작하고 끝날 때 누르기</button>
     <label class="field" for="fTime">시각<input type="time" id="fTime" value="${timeDefault()}"></label>
     <label class="field" for="fNote">메모<input type="text" id="fNote" placeholder="예: 남김, 토함" style="width:180px"></label>
     <button class="btn full" style="height:52px" type="button" id="save">저장</button>`,()=>{
       $('#sw').querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{sub=b.dataset.sub;draw()});
       $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const s=+b.dataset.step; if(breast){min=Math.max(1,min+s*5);$('#amt').textContent=min+'분'}else{ml=Math.max(10,ml+s*10);$('#amt').textContent=ml+'ml'}});
+      $('#fTimer').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:Date.now(),end:null,note:$('#fNote').value.trim()}; if(!breast) ev.ml=ml; add(ev,(FEEDN[sub]||'수유')+' 시작! 끝나면 "수유 끝"을 누르세요') };
       $('#save').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:timeToMs($('#fTime').value),note:$('#fNote').value.trim()}; if(breast)ev.min=min; else ev.ml=ml; add(ev,'수유를 기록했어요') };
     })};
   draw();
