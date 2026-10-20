@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기저귀 아이콘. 웹앱과 같은 모양 (/mnt/project-files/shared/diaper_icon.svg) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="14dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/diaper_ink"
+        android:pathData="M3,4H21Q22,4 22,5V9.2C18.6,9.8 16.6,13.4 16.2,19.2Q16.1,20 15.3,20H8.7Q7.9,20 7.8,19.2C7.4,13.4 5.4,9.8 2,9.2V5Q2,4 3,4Z" />
+    <path
+        android:pathData="M3.6,7.4H20.4"
+        android:strokeColor="@color/btn_diaper"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.4" />
+    <path
+        android:fillAlpha="0.85"
+        android:fillColor="@color/btn_diaper"
+        android:pathData="M3.2,5H5.4V6.4H3.2ZM18.6,5H20.8V6.4H18.6Z" />
+</vector>
