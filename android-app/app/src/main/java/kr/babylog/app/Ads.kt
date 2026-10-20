@@ -36,6 +36,7 @@ object Ads {
             )
             Thread { MobileAds.initialize(a) {} }.start()
         }
+        loaded = false // 화면이 새로 만들어지면 새 광고 칸에 다시 불러옴
         return AdView(a).apply {
             setAdUnitId(UNIT)
             setAdSize(AdSize.BANNER)
