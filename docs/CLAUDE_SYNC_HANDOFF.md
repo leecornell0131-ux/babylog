@@ -6,6 +6,8 @@
 
 작업 브랜치: `codex/reduce-sync-usage`. 구현 커밋: `2f79169`. main 기준: `48e3a874e4514e92b397e1fe5c617373b7902b82`. 복구 태그: `backup/main-before-sync-optimization-2026-10-20`.
 
+검토용 Draft PR: https://github.com/leecornell0131-ux/babylog/pull/13 . 병합하지 않았음.
+
 원본 기록, 가족 코드, Firebase 규칙/DB, 실제 Worker, 최신 APK 릴리스는 변경하지 않았다. 현재 코드의 분석 자료는 `docs/SERVER_USAGE_AUDIT.md`, 이번 작업 설계/범위는 `docs/SYNC_OPTIMIZATION_PLAN.md`를 읽을 것. 브랜치를 main에 합치면 기존 자동 배포가 실행될 수 있으므로 **PR 검토 완료를 배포 승인으로 오인하지 말 것**.
 
 ## 구현한 것
@@ -32,7 +34,7 @@
 - 로컬 Node 24: `node --test tests/*.test.mjs` **32개 통과**. D1 SQL은 모의 객체가 실제 SQLite에서 실행한다. 배치/전송 큐/브라우저 진입부는 Firebase/네트워크 경계를 주입한 코드 경로 테스트다. Android 검사는 소스 계약 검사이므로 실기기 테스트가 아니다.
 - 실제 Cloudflare 로컬 런타임: Wrangler 4.151.2 workerd + 로컬 D1/KV에서 migration 성공. HTTP POST/GET, 동시 저장 최신 at 유지, 늦은 요청 거절, null 필드 보존, OPTIONS 캐시 확인. **원격 계정이나 실서비스 데이터에 요청하지 않음.**
 - Wrangler `deploy --dry-run` 패키징 성공. 원격 배포가 아님.
-- GitHub Linux 자동 테스트: https://github.com/leecornell0131-ux/babylog/actions/runs/39390713556 성공(구현 커밋 2f79169, 31개). 이후 브라우저 전송 진입부 회귀 검사 1개 추가; 최신 결과는 PR Checks를 확인.
+- GitHub Linux 자동 테스트: https://github.com/leecornell0131-ux/babylog/actions/runs/39390713556 성공(구현 커밋 2f79169, 31개). 브라우저 전송 진입부 회귀 검사 추가 후 https://github.com/leecornell0131-ux/babylog/actions/runs/39391192851 도 성공(130a9de, 32개). 최신 결과는 PR Checks를 확인.
 - Android 브랜치 APK 빌드: https://github.com/leecornell0131-ux/babylog/actions/runs/39390713144 **성공**. Build APK/Keep APK 단계 성공, Publish release는 skipped로 확인. 브랜치 artifact만 생성하고 최신 릴리스는 교체하지 않았음.
 - 실기기 Safari/PWA→구버전 갤럭시 FCM 및 위젯 전달성, 잠금/절전 상태, 원격 D1 권한/배포는 미검증.
 - 기존 분석용 `usage-check-results.json`은 이전 기준 코드의 역사적 결과다. 현재 브랜치 검증의 기준은 tests/ 및 위 Actions다.
