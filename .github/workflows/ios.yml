@@ -1,0 +1,32 @@
+# 아이폰 앱 코드가 빌드되는지만 확인 (서명 없이 시뮬레이터용). 공개 저장소라 macOS 러너도 무료.
+# TestFlight에 올리는 실제 빌드는 Codemagic(codemagic.yaml)이 함.
+name: iOS build check
+
+on:
+  push:
+    paths:
+      - 'ios-app/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths:
+      - 'ios-app/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Generate Xcode project
+        working-directory: ios-app
+        run: |
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          xcodegen generate
+
+      - name: Build for simulator
+        working-directory: ios-app
+        run: |
+          xcodebuild -project Babylog.xcodeproj -scheme Babylog \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

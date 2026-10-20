@@ -1,0 +1,36 @@
+# 아기로그 아이폰 앱을 Codemagic(Mac 클라우드, 개인 무료 구간)에서 빌드해 TestFlight에 올림.
+# Mac이 없어서 Xcode 프로젝트는 빌드할 때 ios-app/project.yml로 만듦(XcodeGen).
+# 무료 시간을 아끼려고 자동 시작은 꺼 둠: Codemagic 화면에서 "Start new build"를 눌러야 빌드함.
+# 아이폰 앱 화면은 웹앱을 띄우는 것이라 웹앱만 바뀌면 다시 빌드할 필요 없음.
+workflows:
+  ios-testflight:
+    name: 아이폰 TestFlight
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    integrations:
+      # Codemagic 팀 설정 > Integrations > Developer Portal에 이 이름으로 API 키를 연결해야 함
+      app_store_connect: babylog
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: kr.babylog.app
+      xcode: latest
+    scripts:
+      - name: Xcode 프로젝트 만들기
+        script: |
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          cd ios-app && xcodegen generate
+      - name: 서명 파일 적용
+        script: xcode-project use-profiles --project ios-app/Babylog.xcodeproj
+      - name: 빌드 번호 올리기
+        script: cd ios-app && agvtool new-version -all "$BUILD_NUMBER"
+      - name: 앱 파일(ipa) 만들기
+        script: xcode-project build-ipa --project ios-app/Babylog.xcodeproj --scheme Babylog
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # 내부 테스트(본인·배우자 Apple ID)는 Apple 심사 없이 올라가자마자 받을 수 있음
+        submit_to_testflight: false

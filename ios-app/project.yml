@@ -1,0 +1,29 @@
+# 아기로그 아이폰 앱 프로젝트 설정. Mac 없이 클라우드(Codemagic·GitHub Actions)에서
+# XcodeGen으로 Xcode 프로젝트를 만들어 빌드함. 그래서 .xcodeproj는 저장소에 넣지 않음.
+name: Babylog
+options:
+  bundleIdPrefix: kr.babylog
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    VERSIONING_SYSTEM: apple-generic
+    SWIFT_VERSION: "5.0"
+targets:
+  Babylog:
+    type: application
+    platform: iOS
+    sources:
+      - Babylog
+    scheme: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: kr.babylog.app
+        PRODUCT_NAME: Babylog
+        INFOPLIST_FILE: Babylog/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
