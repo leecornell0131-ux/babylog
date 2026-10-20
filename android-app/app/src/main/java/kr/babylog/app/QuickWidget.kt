@@ -155,8 +155,8 @@ class QuickWidget : BabyWidget() {
             v.setTextViewText(R.id.live_label, if (d.feed > 0) "${d.feedLabel} 중" else "수면 중")
             Widgets.chrono(v, R.id.live_timer, live)
         }
-        v.setTextViewText(R.id.b_feed, if (d.feed > 0) "수유 끝" else "수유")
-        v.setTextViewText(R.id.b_sleep, if (d.sleep > 0) "깼어요" else "잠듦")
+        v.setTextViewText(R.id.b_feed, if (d.feed > 0) "🍼 수유 끝" else "🍼 수유")
+        v.setTextViewText(R.id.b_sleep, if (d.sleep > 0) "☀️ 깼어요" else "🌙 잠듦")
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.b_feed, Widgets.act(ctx, this, if (d.feed > 0) "stop_feed" else "feed"))
         v.setOnClickPendingIntent(R.id.b_pee, Widgets.act(ctx, this, "pee"))
@@ -183,7 +183,7 @@ class FeedWidget : BabyWidget() {
                 else -> d.lastFeedText
             }
         )
-        v.setTextViewText(R.id.w_btn, if (d.feed > 0) "수유 끝" else "수유 기록")
+        v.setTextViewText(R.id.w_btn, if (d.feed > 0) "🍼 수유 끝" else "🍼 수유 기록")
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, if (d.feed > 0) "stop_feed" else "feed"))
         return v
@@ -231,7 +231,7 @@ class SleepWidget : BabyWidget() {
         if (since > 0) Widgets.chrono(v, R.id.w_timer, since)
         v.setTextViewText(R.id.w_label, if (d.sleep > 0) "${d.name} 수면 중" else "깨어 있는 시간")
         v.setTextViewText(R.id.w_sub, if (d.sleep > 0) Widgets.hm(d.sleep) + "에 잠듦" else if (d.lastWake > 0) Widgets.hm(d.lastWake) + "에 깸" else "")
-        v.setTextViewText(R.id.w_btn, if (d.sleep > 0) "깼어요" else "잠듦")
+        v.setTextViewText(R.id.w_btn, if (d.sleep > 0) "☀️ 깼어요" else "🌙 잠듦")
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, "sleep"))
         return v
@@ -260,7 +260,7 @@ class TodayWidget : BabyWidget() {
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
         v.setTextViewText(R.id.w_title, "오늘 · ${d.name}")
         v.setTextViewText(R.id.t_feed, "${d.tFeeds}회" + if (d.tMl > 0) " · ${d.tMl}ml" else "")
-        v.setTextViewText(R.id.t_sleep, if (d.tSleep > 0) Widgets.dur(d.tSleep) + (if (d.sleep > 0) " (자는 중)" else "") else "기록 없음")
+        v.setTextViewText(R.id.t_sleep, if (d.tSleep > 0) Widgets.dur(d.tSleep) + (if (d.sleep > 0) " 💤" else "") else "기록 없음")
         v.setTextViewText(R.id.t_diaper, "소 ${d.tPee} · 대 ${d.tPoo}")
         Widgets.show(v, R.id.w_timer, d.lastFeed > 0)
         Widgets.show(v, R.id.w_none, d.lastFeed == 0L)
