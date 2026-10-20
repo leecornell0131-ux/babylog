@@ -8,8 +8,8 @@
 // 비밀값(wrangler secret): FCM_SA = Firebase 서비스 계정 키 JSON 전체
 
 const FID = /^[A-HJ-NP-Z2-9]{10}$/;
-const NUM_KEYS = ['lastFeed', 'sleep', 'feed', 'at'];
-const STR_KEYS = ['lastFeedText', 'feedLabel', 'name'];
+const NUM_KEYS = ['lastFeed', 'sleep', 'feed', 'at', 'feedGap', 'lastWake', 'lastDiaper', 'day', 'tFeeds', 'tMl', 'tPee', 'tPoo', 'tSleep'];
+const STR_KEYS = ['lastFeedText', 'feedLabel', 'name', 'lastDiaperText', 'lastFeedAmt', 'lastFeedSub', 'birth'];
 const MAX_TOKENS = 10;
 
 export default {

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:orientation="vertical"
+        android:paddingStart="4dp">
+
+        <TextView
+            android:id="@+id/w_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/widget_sub"
+            android:textSize="12sp" />
+
+        <Chronometer
+            android:id="@+id/w_timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_ink"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/w_none"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="아직 기록이 없어요"
+            android:textColor="@color/widget_ink"
+            android:textSize="15sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="44dp"
+        android:layout_weight="2"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/b_pee"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_diaper"
+            android:text="소변" />
+
+        <TextView
+            android:id="@+id/b_poo"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_diaper"
+            android:text="대변" />
+
+        <TextView
+            android:id="@+id/b_both"
+            style="@style/WidgetBtn"
+            android:background="@drawable/btn_diaper"
+            android:text="둘 다" />
+    </LinearLayout>
+</LinearLayout>

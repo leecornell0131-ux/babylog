@@ -4,7 +4,10 @@
     <color name="widget_bg">#1E2030</color>
     <color name="widget_ink">#ECEEFA</color>
     <color name="widget_sub">#AEB2CA</color>
-    <color name="btn_feed">#5A4128</color>
+    <color name="btn_feed">#5A2A3E</color>
     <color name="btn_diaper">#2F4A2C</color>
     <color name="btn_sleep">#2C3A57</color>
+    <color name="band">#3B49B8</color>
+    <color name="feed_ink">#F07AA0</color>
+    <color name="accent_ink">#9AA6F5</color>
 </resources>

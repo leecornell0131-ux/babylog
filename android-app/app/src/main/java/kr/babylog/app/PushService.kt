@@ -12,8 +12,8 @@ class PushService : FirebaseMessagingService() {
         // 가족 공유를 바꾸기 전에 보낸 푸시는 무시
         if (d["fid"] == null || d["fid"] != Push.fid(this)) return
         val o = JSONObject()
-        for (k in listOf("lastFeed", "sleep", "feed", "at")) o.put(k, d[k]?.toLongOrNull() ?: JSONObject.NULL)
-        for (k in listOf("lastFeedText", "feedLabel", "name")) o.put(k, d[k] ?: JSONObject.NULL)
+        for (k in Widgets.NUM_KEYS + "at") o.put(k, d[k]?.toLongOrNull() ?: JSONObject.NULL)
+        for (k in Widgets.STR_KEYS) o.put(k, d[k] ?: JSONObject.NULL)
         Push.apply(this, o)
     }
 

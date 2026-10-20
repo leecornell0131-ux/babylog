@@ -36,19 +36,22 @@ class MainActivity : Activity() {
         const val EXTRA_ACTION = "babylog_action"
         const val EXTRA_AT = "babylog_at"
         private const val REQ_FILE = 41
+        // 떠 있는 화면 (잠금화면 "깼어요"를 바로 웹앱에 넣을 때 씀)
+        var live: java.lang.ref.WeakReference<MainActivity>? = null
         private const val REQ_NOTIFY = 42
         // 같은 기록을 다시 저장해서 bridge.js가 잠금화면 알림·위젯을 새로 그리게 함
         private const val RESEND = "(function(){var v=localStorage.getItem('babylog-v1');if(v)localStorage.setItem('babylog-v1',v)})()"
     }
 
     private lateinit var web: WebView
-    private var pending: String? = null // 페이지가 준비되기 전에 들어온 위젯·알림 동작
+    private val pending = mutableListOf<Pair<String, Long>>() // 페이지가 준비되기 전에 들어온 위젯·알림 동작 (동작, 누른 시각)
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LiveNotify.ensureChannel(this)
+        live = java.lang.ref.WeakReference(this)
 
         web = WebView(this)
         // 웹뷰는 자기 padding을 무시하고 그려서, 바깥 틀에 여백을 줌.
@@ -89,7 +92,11 @@ class MainActivity : Activity() {
             override fun onPageFinished(view: WebView, url: String) {
                 if (Uri.parse(url).host != HOST) return
                 view.evaluateJavascript(assets.open("bridge.js").bufferedReader().readText(), null)
-                pending?.let { a -> pending = null; runAction(a) }
+                // 앱이 꺼져 있을 때 잠금화면에서 누른 "깼어요"·"끝"도 누른 시각으로 넣음
+                flushStops()
+                val todo = pending.toList()
+                pending.clear()
+                todo.forEach { (a, at) -> runAction(a, at) }
             }
 
             override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
@@ -146,13 +153,31 @@ class MainActivity : Activity() {
         val p = getSharedPreferences("babylog", MODE_PRIVATE)
         if (at <= p.getLong("lastActionAt", 0) || System.currentTimeMillis() - at > 60_000) return
         p.edit().putLong("lastActionAt", at).apply()
-        runAction(a)
+        runAction(a, at)
     }
 
-    private fun runAction(a: String) {
-        web.evaluateJavascript("window.__babyQuick?__babyQuick('$a'):'notready'") { r ->
-            if (r?.contains("notready") != false) pending = a // 페이지가 아직 안 열렸으면 열린 뒤 실행
+    // 잠금화면에서 누른 "깼어요"·"끝"을 웹앱에 넣고, 들어간 것만 저장 목록에서 지움
+    fun flushStops() = runOnUiThread {
+        val stops = StopReceiver.pending(this)
+        for (i in 0 until stops.length()) {
+            val o = stops.optJSONObject(i) ?: continue
+            val a = o.optString("a")
+            val at = o.optLong("at")
+            web.evaluateJavascript("window.__babyQuick?__babyQuick('$a',$at):'notready'") { r ->
+                if (r?.contains("ok") == true) StopReceiver.done(this, a, at)
+            }
         }
+    }
+
+    private fun runAction(a: String, at: Long) {
+        web.evaluateJavascript("window.__babyQuick?__babyQuick('$a',$at):'notready'") { r ->
+            if (r?.contains("notready") != false) pending.add(a to at) // 페이지가 아직 안 열렸으면 열린 뒤 실행
+        }
+    }
+
+    override fun onDestroy() {
+        if (live?.get() === this) live = null
+        super.onDestroy()
     }
 
     @Deprecated("Activity API")
@@ -209,7 +234,7 @@ class MainActivity : Activity() {
                 // 타이머가 처음 시작될 때 알림 권한을 물어봄
                 if (!o.isNull("sleep") || !o.isNull("feed")) askNotifyPermission()
                 LiveNotify.update(this@MainActivity, o)
-                QuickWidget.save(this@MainActivity, o)
+                Widgets.save(this@MainActivity, o)
                 Push.onLocal(this@MainActivity, if (o.isNull("fid")) null else o.optString("fid"))
             }
         }

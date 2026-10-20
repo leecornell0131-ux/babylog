@@ -104,7 +104,7 @@ object Push {
         if (at <= p(ctx).getLong("appliedAt", 0)) return
         p(ctx).edit().putLong("appliedAt", at).apply()
         LiveNotify.update(ctx, s)
-        QuickWidget.save(ctx, s)
+        Widgets.save(ctx, s)
     }
 
     fun poll(ctx: Context) {

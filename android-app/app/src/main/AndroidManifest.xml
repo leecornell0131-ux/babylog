@@ -34,6 +34,11 @@
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- 잠금화면 알림의 "깼어요"·"끝" (잠금 해제 없이 기록) -->
+        <receiver
+            android:name=".StopReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".QuickWidget"
             android:label="@string/widget_name"
@@ -44,6 +49,71 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/quick_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".FeedWidget"
+            android:label="@string/w_feed"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/feed_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".FeedCardWidget"
+            android:label="@string/w_card"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/card_widget_info" />
+        </receiver>
+
+        <!-- 위젯 글자("몇 분 전")를 1분마다 새로 그림 -->
+        <receiver
+            android:name=".TickReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".SleepWidget"
+            android:label="@string/w_sleep"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sleep_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".DiaperWidget"
+            android:label="@string/w_diaper"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/diaper_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".TodayWidget"
+            android:label="@string/w_today"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
         </receiver>
 
         <service

@@ -6,27 +6,58 @@
   window.__babyNative = true;
   var N = window.BabyNative, KEY = 'babylog-v1';
 
+  // 위젯·잠금화면에 쓰는 요약. push-server/web-notify.js의 summaryOf()와 똑같이 유지할 것
+  function summary(S) {
+    const ev = S.events || [], now = Date.now();
+    const d0 = new Date(now); d0.setHours(0, 0, 0, 0); const day = +d0;
+    const pick = (f) => ev.reduce((r, e) => (f(e) && (!r || e.start > r.start) ? e : r), null);
+    const names = { formula: '분유', breastL: '모유 왼쪽', breastR: '모유 오른쪽', pump: '유축 수유' };
+    const dn = { pee: '소변', poo: '대변', both: '소변+대변' };
+    const ls = pick(e => e.type === 'sleep' && e.end === null);
+    const lf = pick(e => e.type === 'feed' && e.end === null);
+    const f = pick(e => e.type === 'feed' && e.start <= now);
+    const dp = pick(e => e.type === 'diaper' && e.start <= now);
+    // 최근 48시간 수유 간격 평균 (30분~8시간 사이만, 최근 8개)
+    const fs = ev.filter(e => e.type === 'feed' && e.start <= now && e.start > now - 48 * 3600e3).map(e => e.start).sort((a, b) => a - b);
+    const gaps = [];
+    for (let i = 1; i < fs.length; i++) { const g = fs[i] - fs[i - 1]; if (g >= 30 * 60e3 && g <= 8 * 3600e3) gaps.push(g); }
+    const g8 = gaps.slice(-8);
+    let wake = 0, tSleep = 0, tFeeds = 0, tMl = 0, tPee = 0, tPoo = 0;
+    ev.forEach(e => {
+      if (e.type === 'sleep' && e.end != null) {
+        if (e.end <= now && e.end > wake) wake = e.end;
+        tSleep += Math.max(0, Math.min(e.end, now) - Math.max(e.start, day));
+      } else if (e.type === 'feed' && e.start >= day && e.start <= now) { tFeeds++; tMl += +e.ml || 0; }
+      else if (e.type === 'diaper' && e.start >= day && e.start <= now) { if (e.sub !== 'poo') tPee++; if (e.sub !== 'pee') tPoo++; }
+    });
+    return {
+      at: now,
+      name: (S.baby && S.baby.name) || '아기',
+      sleep: ls ? ls.start : null,
+      feed: lf ? lf.start : null,
+      feedLabel: lf ? (names[lf.sub] || '수유') : null,
+      lastFeed: f ? f.start : null,
+      lastFeedText: f ? (names[f.sub] || '수유') + (f.ml ? ' ' + f.ml + 'ml' : f.min ? ' ' + f.min + '분' : '') : null,
+      lastFeedAmt: f ? (f.ml ? f.ml + 'ml' : f.min ? f.min + '분' : (names[f.sub] || '수유')) : null,
+      lastFeedSub: f ? (f.sub || null) : null,
+      birth: (S.baby && S.baby.birth) || null,
+      feedGap: g8.length >= 2 ? Math.round(g8.reduce((a, b) => a + b, 0) / g8.length) : null,
+      lastWake: ls || !wake ? null : wake,
+      lastDiaper: dp ? dp.start : null,
+      lastDiaperText: dp ? (dn[dp.sub] || '기저귀') : null,
+      day, tFeeds, tMl, tPee, tPoo, tSleep,
+    };
+  }
+
   // 기록이 저장될 때마다 안드로이드에 알려 줌 (잠금화면 타이머·위젯 갱신)
   function send(raw) {
     try {
       var S = JSON.parse(raw || localStorage.getItem(KEY) || 'null');
       if (!S) return;
-      var ev = S.events || [], now = Date.now();
-      var live = function (t) { var r = null; ev.forEach(function (e) { if (e.type === t && e.end === null && (!r || e.start > r.start)) r = e; }); return r; };
-      var last = function (t) { var r = null; ev.forEach(function (e) { if (e.type === t && e.start <= now && (!r || e.start > r.start)) r = e; }); return r; };
-      var names = { formula: '분유', breastL: '모유 왼쪽', breastR: '모유 오른쪽', pump: '유축 수유' };
-      var ls = live('sleep'), lf = live('feed'), f = last('feed');
-      var fid = null;
-      try { fid = (JSON.parse(localStorage.getItem('babylog-sync-v1') || '{}') || {}).fid || null; } catch (e) {}
-      N.update(JSON.stringify({
-        fid: fid,
-        name: (S.baby && S.baby.name) || '아기',
-        sleep: ls ? ls.start : null,
-        feed: lf ? lf.start : null,
-        feedLabel: lf ? (names[lf.sub] || '수유') : null,
-        lastFeed: f ? f.start : null,
-        lastFeedText: f ? (names[f.sub] || '수유') + (f.ml ? ' ' + f.ml + 'ml' : f.min ? ' ' + f.min + '분' : '') : null
-      }));
+      var o = summary(S);
+      o.fid = null;
+      try { o.fid = (JSON.parse(localStorage.getItem('babylog-sync-v1') || '{}') || {}).fid || null; } catch (e) {}
+      N.update(JSON.stringify(o));
     } catch (e) { console.warn('BabyNative.update', e); }
   }
   var setItem = Storage.prototype.setItem;
@@ -39,12 +70,13 @@
   send();
 
   // 위젯·알림 버튼으로 들어온 동작
-  window.__babyQuick = function (a) {
+  // at: 버튼을 누른 시각 (잠금화면에서 누르고 나중에 앱을 연 경우 그 시각으로 기록)
+  window.__babyQuick = function (a, at) {
     var A = window.BabyApp;
     if (!A) return 'notready';
     if (A.state.sample || A.state.onboarded === false) { A.toast('먼저 앱에서 아기 정보를 넣어 주세요'); return 'ok'; }
     if (a === 'feed') { var b = document.getElementById('bFeed'); if (b) b.click(); return 'ok'; }
-    var now = Date.now(), msg = '';
+    var now = at || Date.now(), msg = '';
     var id = now.toString(36) + Math.random().toString(36).slice(2, 7);
     A.applyRemote(function (S) {
       var live = function (t) { var r = null; S.events.forEach(function (e) { if (e.type === t && e.end === null && (!r || e.start > r.start)) r = e; }); return r; };
@@ -53,11 +85,13 @@
         msg = '기저귀를 기록했어요';
       } else if (a === 'sleep' || a === 'stop_sleep') {
         var ls = live('sleep');
+        if (ls && a === 'stop_sleep' && ls.start > now) ls = null; // 누른 뒤에 새로 시작한 수면은 끝내지 않음
         if (ls) { ls.end = Math.max(now, ls.start + 60000); msg = '수면 ' + Math.round((ls.end - ls.start) / 60000) + '분 기록했어요'; }
         else if (a === 'sleep') { S.events.push({ id: id, type: 'sleep', start: now, end: null }); msg = '수면 시작을 기록했어요'; }
       } else if (a === 'stop_feed') {
         // 진행 중 수유(end가 null인 feed)를 웹앱이 지원하게 되면 그대로 끝냄
         var lf = live('feed');
+        if (lf && lf.start > now) lf = null;
         if (lf) { lf.end = Math.max(now, lf.start + 60000); if (!lf.ml) lf.min = Math.round((lf.end - lf.start) / 60000); msg = '수유를 기록했어요'; }
       }
     });
