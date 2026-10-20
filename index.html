@@ -807,7 +807,7 @@ function renderSettings(){
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="backup">백업 파일 저장</button><button class="btn ghost" style="flex:1" type="button" data-act="import">불러오기</button></div>
   <h2 class="sec">데이터</h2>
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
-  <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 기록 ${S.events.length}개 · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p>`;
+  <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 기록 ${S.events.length}개 · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--accent)">개인정보처리방침</a></p>`;
 }
 // 세로 차트 길이를 오른쪽 기록 목록 길이에 맞춤 (기록이 적으면 최소 480px)
 function fitBar(){ const tr=$('#app .day .track'), li=$('#app .day .list'); if(!tr||!li) return;
