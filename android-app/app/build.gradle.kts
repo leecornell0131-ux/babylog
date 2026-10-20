@@ -52,4 +52,6 @@ dependencies {
     // 알림 서버가 보내는 푸시(FCM)를 받아 위젯·잠금화면 타이머를 바로 바꿈
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
+    // 광고 (AdMob 배너, 비맞춤). 지금은 구글 테스트 광고 ID라 수익 없음
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
 }
