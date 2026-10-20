@@ -219,7 +219,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.16';
+const VERSION='0.3.17';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -752,15 +752,19 @@ function exportText(){
   lines.push(`[기록 완성도] ${comp}%${missed.length?' · 빈 시간: '+missed.slice(0,6).join(', ')+(missed.length>6?` 외 ${missed.length-6}건 (빈 시간은 통계에서 빠짐)`:''):''}`);
   lines.push(`[기록하지 않는 항목] ${['feed','sleep','diaper'].filter(k=>!S.items[k]).map(k=>({feed:'수유',sleep:'수면',diaper:'기저귀'}[k])).join(', ')||'없음'}`);
   { const f0=days[0], t0=days[n-1]+DAY, cnt={}; S.events.filter(x=>x.start>=f0&&x.start<t0&&tagGroup(x)&&x.tags).forEach(x=>TAGS[tagGroup(x)].forEach(([k,,nm])=>{ if(x.tags.includes(k)) cnt[nm]=(cnt[nm]||0)+1 }));
-    const ks=Object.keys(cnt); lines.push(`[수유·대변 특이사항] ${ks.length?ks.map(k=>k+' '+cnt[k]+'회').join(', ')+' (표시 안 한 수유·대변은 부모가 정상으로 본 것)':'없음 (따로 표시하지 않으면 정상 수유·정상 변으로 기록함)'}`) }
+    const ks=Object.keys(cnt);
+    // 4일 이상은 시각별 상세가 없으니 특이사항·메모가 있는 수유·기저귀만 따로 나열
+    const odd=n>3?S.events.filter(x=>x.start>=f0&&x.start<t0&&(x.type==='feed'||x.type==='diaper')&&(tagText(x)||x.note)).sort((a,c)=>a.start-c.start):[];
+    if(odd.length) lines.push(`[특이사항·메모 있는 기록] ${odd.slice(-40).map(x=>`${md(x.start)} ${hm(x.start)} ${x.type==='feed'?(FEEDN[x.sub]||'수유'):'기저귀 '+({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' '+tagText(x):''}${x.note?' (메모: '+x.note+')':''}`).join(', ')}`);
+    lines.push(`[수유·대변 특이사항] ${ks.length?ks.map(k=>k+' '+cnt[k]+'회').join(', ')+' (표시 안 한 수유·대변은 부모가 정상으로 본 것)':'없음 (따로 표시하지 않으면 정상 수유·정상 변으로 기록함)'}`) }
   const from=days[0], to=days[n-1]+DAY, etc=S.events.filter(x=>x.type==='etc'&&x.start>=from&&x.start<to&&x.sub!=='memo').sort((a,c)=>a.start-c.start);
   if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+x.note+')':''}`).join(', ')}`);
   const gr=S.events.filter(x=>x.type==='growth').sort((a,c)=>a.start-c.start).slice(-4);
   if(gr.length&&(ex.q==='growth'||ex.q==='normal')) lines.push(`[성장 측정] ${gr.map(x=>`${md(x.start)} ${[x.kg&&x.kg+'kg'+(pctText('wfa',x.kg,x.start)?'('+pctText('wfa',x.kg,x.start)+')':''),x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' ')}`).join(', ')} · WHO 기준`);
   days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 수유 ${hs('feed')?s.feeds+'회'+(s.ml?' '+s.ml+'ml':''):'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
-    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} ${FEEDN[x.sub]||'수유'} ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}${tagText(x)?' ('+tagText(x)+')':''}`);
+    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} ${FEEDN[x.sub]||'수유'} ${x.ml?x.ml+'ml':''}${x.min?x.min+'분':''}${tagText(x)?' ('+tagText(x)+')':''}${x.note?' 메모: '+x.note:''}`);
       else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} ${sleepKind(x)==='night'?'밤잠':'낮잠'}`);
-      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' ('+tagText(x)+')':''}`) })});
+      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' ('+tagText(x)+')':''}${x.note?' 메모: '+x.note:''}`) })});
   const rf=redFlags(days); lines.push(`[앱 위험신호 점검 · 고정 규칙] ${rf.length?rf.join(', '):'걸린 항목 없음 (기록된 것만 확인함)'}`);
   const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
   lines.push(`[질문] ${q}`);
