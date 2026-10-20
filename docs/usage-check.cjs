@@ -38,7 +38,7 @@ async function syncCheck(shared){
  const context={window:{BabyApp:app},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},A:{},F,auth:{currentUser:{uid:'user-test'}},db:{},crypto:globalThis.crypto,setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout(id){timers.delete(id)},notifyFake(fid,state){notifications.push(fid)}};
  let source=fs.readFileSync(path.join(root,'sync.js'),'utf8');
  source=source.slice(source.indexOf("const LS = 'babylog-sync-v1'"));
- source=source.replace("import('./push-server/web-notify.js').then(m => m.notifyFamily(fid, App.state)).catch(() => {});",'notifyFake(fid, App.state);');
+ source=source.replaceAll("import('./push-server/web-notify.js')",'Promise.resolve({notifyFamily:notifyFake,observeFamily(){},retryPending(){}})');
  vm.runInNewContext(source,context,{timeout:1000});await tick();
  check(commits.length===0,'Startup with '+(shared?'matching sync state':'sharing off')+' performs no writes');
  check(snapshots.length===(shared?2:0),'Startup listener count '+(shared?2:0));
@@ -59,4 +59,4 @@ async function syncCheck(shared){
  check(commits.length===0&&notifications.length===0,'Local-only save makes no Firestore writes or notify calls');
  return {listeners:0,writes:0,notifications:0};
 }
-(async()=>{const result={commit:'efdd7a9ee919dd80931c9b284a0707ff5409d222',worker:await workerCheck(),shared:await syncCheck(true),localOnly:await syncCheck(false),checks,scope:'Mocked code-path operation counts only; not production quota measurements, emulator billing, or real Android tests'};console.log(JSON.stringify(result,null,2))})().catch(e=>{console.error(e);process.exit(1)});
+(async()=>{const result={baselineCommit:'efdd7a9ee919dd80931c9b284a0707ff5409d222',worker:await workerCheck(),shared:await syncCheck(true),localOnly:await syncCheck(false),checks,scope:'Current working-tree mocked paths; baselineCommit identifies the original audit only. Not production quotas, billing, or real Android tests.'};console.log(JSON.stringify(result,null,2))})().catch(e=>{console.error(e);process.exit(1)});
