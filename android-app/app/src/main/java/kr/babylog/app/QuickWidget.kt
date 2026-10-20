@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -53,7 +54,7 @@ object Widgets {
             if (ids.isNotEmpty()) {
                 any = true
                 val d = Data(ctx)
-                for (id in ids) m.updateAppWidget(id, w.build(ctx, d).also { fit(it, w, m.getAppWidgetOptions(id)) })
+                for (id in ids) m.updateAppWidget(id, views(ctx, w, d, m.getAppWidgetOptions(id)))
             }
         }
         if (any) tick(ctx)
@@ -97,10 +98,22 @@ object Widgets {
     }
 
     // 위젯을 길게 눌러 크게 늘리면 작은 글씨와 버튼도 같은 비율로 커짐 (최대 1.5배).
-    // 큰 시계 숫자는 원래 커서 그대로 둠 (2×2에서 가로가 넘치지 않게)
-    private fun fit(v: RemoteViews, w: BabyWidget, o: Bundle) {
-        val wd = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-        val ht = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+    // 큰 시계 숫자는 원래 커서 그대로 둠 (2×2에서 가로가 넘치지 않게).
+    // Android 12 이상은 런처가 알려 준 크기마다 따로 그려서 가로·세로 화면 어느 쪽도 넘치지 않음
+    private fun views(ctx: Context, w: BabyWidget, d: Data, o: Bundle): RemoteViews {
+        if (Build.VERSION.SDK_INT >= 31) {
+            @Suppress("DEPRECATION")
+            val sizes = o.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+            if (!sizes.isNullOrEmpty())
+                return RemoteViews(sizes.take(16).associateWith { z -> w.build(ctx, d).also { fit(it, w, z.width, z.height) } })
+        }
+        // 크기 목록이 없으면 가장 좁은 폭·가장 낮은 높이로 맞춤 (어느 방향에서도 넘치지 않게)
+        return w.build(ctx, d).also {
+            fit(it, w, o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH).toFloat(), o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).toFloat())
+        }
+    }
+
+    private fun fit(v: RemoteViews, w: BabyWidget, wd: Float, ht: Float) {
         if (wd <= 0 || ht <= 0) return
         val s = minOf(wd / w.baseW, ht / w.baseH).coerceIn(1f, 1.5f)
         for ((id, sp) in w.texts) v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * s)
