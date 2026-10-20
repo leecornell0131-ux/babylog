@@ -1,0 +1,172 @@
+import UIKit
+import WebKit
+
+// 웹앱을 띄우는 화면. 갤럭시 앱 MainActivity와 같은 역할.
+// 웹앱은 고치지 않고, 웹앱이 이미 가진 연결점(window.BabyApp 등)만 씀.
+class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, WKDownloadDelegate {
+    static let startURL = URL(string: "https://leecornell0131-ux.github.io/babylog/")!
+    static let host = "leecornell0131-ux.github.io"
+
+    private var web: WKWebView!
+    private var downloadNames: [ObjectIdentifier: URL] = [:]
+
+    override func loadView() {
+        let config = WKWebViewConfiguration()
+        // 기록(localStorage)이 앱을 껐다 켜도 남게 기본 저장소를 씀 (앱을 지우면 같이 지워짐)
+        config.websiteDataStore = .default()
+        config.userContentController.add(self, name: "babyNative")
+        let ver = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        config.applicationNameForUserAgent = "BabylogIOS/\(ver)"
+
+        web = WKWebView(frame: .zero, configuration: config)
+        web.navigationDelegate = self
+        web.uiDelegate = self
+        web.allowsBackForwardNavigationGestures = false
+        web.isOpaque = false
+        web.backgroundColor = .systemBackground
+        // 아래쪽 여백(홈 바)은 웹앱이 env(safe-area-inset-bottom)으로 직접 처리
+        web.scrollView.contentInsetAdjustmentBehavior = .never
+
+        let root = UIView()
+        root.backgroundColor = .systemBackground
+        web.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(web)
+        NSLayoutConstraint.activate([
+            // 위쪽은 시계·다이내믹 아일랜드와 겹치지 않게 안전 영역부터
+            web.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor),
+            web.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            web.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            web.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+        ])
+        view = root
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        web.load(URLRequest(url: Self.startURL))
+        NotificationCenter.default.addObserver(self, selector: #selector(becameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+
+    // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리)
+    @objc private func becameActive() {
+        web.evaluateJavaScript("window.BabyApp&&BabyApp.refresh()", completionHandler: nil)
+    }
+
+    // MARK: 페이지 이동
+
+    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // 백업 파일 저장(<a download>)은 내려받기로 처리
+        if action.shouldPerformDownload {
+            decisionHandler(.download)
+            return
+        }
+        guard let url = action.request.url else { return decisionHandler(.cancel) }
+        let scheme = url.scheme ?? ""
+        if url.host == Self.host || scheme == "file" || scheme == "blob" || scheme == "data" || scheme == "about" {
+            return decisionHandler(.allow)
+        }
+        // 다른 사이트 링크는 Safari로 엶 (Firebase 등 페이지 안에서 부르는 주소는 이동이 아니라 여기 안 옴)
+        if action.targetFrame?.isMainFrame ?? true {
+            UIApplication.shared.open(url)
+            return decisionHandler(.cancel)
+        }
+        decisionHandler(.allow)
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        decisionHandler(response.canShowMIMEType ? .allow : .download)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        showOffline(error)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        showOffline(error)
+    }
+
+    private func showOffline(_ error: Error) {
+        let e = error as NSError
+        if e.domain == NSURLErrorDomain && e.code == NSURLErrorCancelled { return }
+        if e.domain == "WebKitErrorDomain" && e.code == 102 { return } // 내려받기로 넘어간 것
+        if let f = Bundle.main.url(forResource: "offline", withExtension: "html") {
+            web.loadFileURL(f, allowingReadAccessTo: f)
+        }
+    }
+
+    // 웹앱이 다시 그려야 할 때 (메모리가 부족해 웹 화면이 꺼졌을 때)
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        webView.reload()
+    }
+
+    // MARK: 오프라인 화면의 "다시 열기"
+
+    func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.body as? String == "reload" {
+            web.load(URLRequest(url: Self.startURL))
+        }
+    }
+
+    // MARK: 백업 파일 저장 → 공유 창(파일 앱에 저장, 카톡 보내기 등)
+
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent(suggestedFilename.isEmpty ? "babylog-backup.json" : suggestedFilename)
+        downloadNames[ObjectIdentifier(download)] = dest
+        completionHandler(dest)
+    }
+
+    func downloadDidFinish(_ download: WKDownload) {
+        guard let file = downloadNames.removeValue(forKey: ObjectIdentifier(download)) else { return }
+        let sheet = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+        sheet.popoverPresentationController?.sourceView = view
+        present(sheet, animated: true)
+    }
+
+    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+        downloadNames.removeValue(forKey: ObjectIdentifier(download))
+    }
+
+    // MARK: 웹앱의 alert·confirm·prompt (없으면 아이폰 앱에서 "삭제할까요?" 같은 확인 창이 안 뜸)
+
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler() })
+        presentOr(a) { completionHandler() }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "취소", style: .cancel) { _ in completionHandler(false) })
+        a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler(true) })
+        presentOr(a) { completionHandler(false) }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        let a = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+        a.addTextField { $0.text = defaultText }
+        a.addAction(UIAlertAction(title: "취소", style: .cancel) { _ in completionHandler(nil) })
+        a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler(a.textFields?.first?.text) })
+        presentOr(a) { completionHandler(nil) }
+    }
+
+    // 다른 창이 이미 떠 있으면 확인 창을 못 띄우므로 바로 취소로 돌려줌 (웹앱이 멈추지 않게)
+    private func presentOr(_ a: UIAlertController, fallback: () -> Void) {
+        if presentedViewController == nil { present(a, animated: true) } else { fallback() }
+    }
+
+    // target="_blank" 링크는 Safari로
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = action.request.url { UIApplication.shared.open(url) }
+        return nil
+    }
+}
