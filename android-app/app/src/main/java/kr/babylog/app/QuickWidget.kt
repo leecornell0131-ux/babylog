@@ -101,7 +101,7 @@ object Widgets {
     // 걸린 시간은 웹앱과 같은 "1h 05m" 꼴 (웹앱 durS)
     fun dur(ms: Long): String {
         val m = Math.round(ms / 60_000.0)
-        return "${m / 60}h " + "%02d".format(m % 60) + "m"
+        return "${m / 60}h " + String.format(Locale.ROOT, "%02d", m % 60) + "m"
     }
 
     // 위젯 버튼: 앱이 열리면서 바로 기록 (ActionActivity가 누른 시각을 붙임)
