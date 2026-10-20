@@ -88,6 +88,10 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .bar .s{position:absolute;left:28px;width:18px;background:var(--sleep);border-radius:4px;min-height:3px}.bar .s.nap,.week .col .s.nap{background:var(--nap)}
 .sleepsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sleepsum>div{display:flex;flex-direction:column;gap:2px}.sleepsum b{font-size:19px;color:var(--sleep-text)}.sleepsum .aw{color:var(--sleep-text);font-weight:600}
 .qbtn{width:22px;height:22px;min-height:0;border-radius:50%;border:1.5px solid var(--muted);background:none;color:var(--muted);font-size:12px;font-weight:700;padding:0;margin-left:6px;line-height:1}
+.awbox{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit;min-height:0}
+.awl{color:var(--sleep-text);font-weight:700;font-size:16px;line-height:1.3}.awl small{font-size:12px;font-weight:600;margin-right:4px;opacity:.8}
+.tong{color:var(--sleep-text);font-weight:700}
+.datepick{position:relative;display:inline-block}.datepick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0}.datepick h1::after{content:" ▾";font-size:.6em;color:var(--muted)}
 .refpop{position:absolute;left:10px;right:10px;top:42px;z-index:5;margin:0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 .bar .s.live{box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--sleep)}
 .bar .g{position:absolute;left:28px;width:18px;border-radius:4px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 6px);opacity:.6}
@@ -124,7 +128,7 @@ body:has(#sheetRoot .sheetwrap) .adprev{display:none}
 .rec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .rec button{height:58px;line-height:1.15;white-space:nowrap;padding:0 2px;border:0;border-radius:14px;color:#fff;font-weight:600;font-size:15px}
 .rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
-.rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"🧷"}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}.rec .feed.live::before{content:"⏱️"}
+.rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"";width:22px;height:20px;margin:0 auto 2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M3 4H21Q22 4 22 5V9.2C18.6 9.8 16.6 13.4 16.2 19.2Q16.1 20 15.3 20H8.7Q7.9 20 7.8 19.2C7.4 13.4 5.4 9.8 2 9.2V5Q2 4 3 4Z'/%3E%3Cpath fill='none' stroke='%2323917F' stroke-width='1.4' stroke-linecap='round' d='M3.6 7.4H20.4'/%3E%3Cpath fill='%2323917F' d='M3.2 5H5.4V6.4H3.2ZM18.6 5H20.8V6.4H18.6Z' opacity='.85'/%3E%3C/svg%3E") center/contain no-repeat}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}.rec .feed.live::before{content:"⏱️"}
 .rec .more{background:var(--card);color:var(--fg);border:1px solid var(--line)}
 :root[data-theme="dark"] .rec button:not(.more){color:#12161C}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button:not(.more){color:#12161C}}
@@ -221,7 +225,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.21';
+const VERSION='0.3.22';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -231,6 +235,7 @@ const hm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes()
 const md=t=>{const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()};
 const dow=t=>'일월화수목금토'[new Date(t).getDay()];
 const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
+const ymdOf=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 // 걸린 시간은 모두 "1h 05m" / "25m" 꼴로 통일 (사용자 요청 10/20)
 const fmtMin=v=>{const m=Math.round(v),h=Math.floor(m/60);return h?h+'h '+pad(m%60)+'m':m+'m'};
 const dur=ms=>fmtMin(ms/MIN), durS=dur;
@@ -340,8 +345,8 @@ function sleepDate(x){ if(sleepKind(x)==='nap') return dayStart(x.start);
   const mid=x.end==null?x.start:(x.start+x.end)/2; return dayStart(mid+(24-nightWin().from)*H) }
 function sleepSummary(d){
   const now=Date.now(), sl=S.events.filter(x=>x.type==='sleep'&&x.start<d+2*DAY&&(x.end??now)>d-2*DAY).sort((a,b)=>a.start-b.start);
-  let night=0,nap=0,naps=0,nightN=0,has=false;
-  sl.forEach(x=>{ if(sleepDate(x)!==d) return; has=true; const len=Math.max(0,(x.end??now)-x.start); if(sleepKind(x)==='night'){night+=len;nightN++} else {nap+=len;naps++} });
+  let night=0,nap=0,naps=0,nightN=0,nightMax=0,has=false;
+  sl.forEach(x=>{ if(sleepDate(x)!==d) return; has=true; const len=Math.max(0,(x.end??now)-x.start); if(sleepKind(x)==='night'){night+=len;nightN++;if(x.end!=null)nightMax=Math.max(nightMax,len)} else {nap+=len;naps++} });
   // 깨어 있는 시간: 깬 시각이 이 날짜인 구간. 밤잠 사이 수유로 깬 것과 8시간 넘는 빈칸(기록 누락일 가능성)은 뺌
   const wakes=[];
   for(let i=0;i<sl.length-1;i++){ const a=sl[i], b=sl[i+1]; if(a.end==null||a.end<d||a.end>=d+DAY) continue;
@@ -355,7 +360,7 @@ function sleepSummary(d){
   const until=nextNight.length?Math.min(...nextNight):d===dayStart(now)?now:null;
   let awakeTotal=null;
   if(from!=null&&until!=null&&until>from){ let napIn=0; sl.forEach(x=>{ if(sleepKind(x)!=='nap') return; const a=Math.max(x.start,from), b=Math.min(x.end??now,until); if(b>a) napIn+=b-a }); awakeTotal=until-from-napIn }
-  return {night,nap,naps,nightN,has,wakes,awakeNow,awakeTotal,awakeFrom:from,live:sl.find(x=>x.end==null)||null} }
+  return {night,nap,naps,nightN,nightMax,has,wakes,awakeNow,awakeTotal,awakeFrom:from,live:sl.find(x=>x.end==null)||null} }
 function sleepRef(at){ const b=S.baby, base=b.preterm&&b.due?b.due:b.birth, t=new Date(base+'T00:00:00').getTime(); if(isNaN(t)) return null;
   const m=(dayStart(at)-t)/DAY/30.4375; if(m<0) return null; const r=SR.byAgeMonths.find(r=>m>=r.from&&m<r.to); return r?{...r,months:m}:null }
 const rng=(a,u='')=>a[0]===a[1]?a[0]+u:a[0]+'~'+a[1]+u;
@@ -365,20 +370,27 @@ function sleepCard(d){
   const today=dayStart(Date.now()), ss=sleepSummary(d), r=sleepRef(d);
   const wAvg=ss.wakes.length?ss.wakes.reduce((a,b)=>a+b,0)/ss.wakes.length:0, wMax=ss.wakes.length?Math.max(...ss.wakes):0;
   const young=r&&r.months<SR.newbornNoRhythmMonths;
-  return `<div class="card panel" style="gap:10px;position:relative"><div class="row between"><span class="row" style="gap:0"><b>수면</b><button class="qbtn" type="button" data-act="sleepRef" aria-label="월령별 흔한 범위 보기">?</button></span><button class="linkbtn" type="button" data-act="sleepInfo">기준 보기</button></div>
+  const tz=r?tongjamH(r.months):6, tong=ss.nightMax>=tz*H;
+  const wNow=ss.awakeNow!=null?ss.awakeNow:ss.wakes.length?ss.wakes[ss.wakes.length-1]:null, wMin=ss.wakes.length?Math.min(...ss.wakes):0;
+  return `<div class="card panel" style="gap:10px;position:relative"><div class="row between"><span class="row" style="gap:0"><b>수면</b><button class="qbtn" type="button" data-popfor="ref" aria-label="월령별 흔한 범위 보기">?</button></span><button class="linkbtn" type="button" data-act="sleepInfo">기준 보기</button></div>
   <div class="sleepsum">
-    <div><span class="small muted">${d===today?'지난밤':'전날 밤~아침'} 밤잠</span><b>${ss.night?durS(ss.night):'–'}</b><span class="small muted">${ss.nightN>1?ss.nightN+'번 나눠 잠':ss.nightN?'한 번에 잠':'기록 없음'}</span></div>
+    <div><span class="small muted">${d===today?'지난밤':'전날 밤~아침'} 밤잠</span><b>${ss.night?durS(ss.night):'–'}</b><span class="small muted">${tong?'<span class="tong">통잠 🎉</span>':ss.nightN>1?ss.nightN+'번 나눠 잠':''}</span></div>
     <div><span class="small muted">낮잠 ${ss.naps}회</span><b>${ss.nap?durS(ss.nap):'–'}</b><span class="small muted">${ss.live&&sleepKind(ss.live)==='nap'&&sleepDate(ss.live)===d?'지금 낮잠 중':ss.night+ss.nap?'합계 '+durS(ss.night+ss.nap):''}</span></div>
-    <div><span class="small muted">깨어 있는 시간</span><b>${ss.awakeNow!=null?dur(ss.awakeNow):wAvg?dur(wAvg):'–'}</b><span class="small aw">${ss.awakeNow!=null?'이번에 깬 지'+(wAvg?'<br>평균 '+durS(wAvg):''):wAvg?'오늘 평균'+(ss.wakes.length>1?'<br>최장 '+durS(wMax):''):''}${ss.awakeTotal?'<br>'+(d===today?'오늘 ':'')+'합계 '+durS(ss.awakeTotal):''}</span></div>
+    <button type="button" class="awbox" data-popfor="awake" aria-label="깨어 있는 시간 평균·최장·최단 보기"><span class="small muted">깨어 있는 시간 ›</span><span class="awl"><small>최근</small>${wNow!=null?durS(wNow):'–'}</span><span class="awl"><small>총</small>${ss.awakeTotal?durS(ss.awakeTotal):'–'}</span></button>
   </div>
-  ${r?`<p class="small refpop" hidden>${refText(r)}. 아기마다 차이가 커요.${young?' 생후 2개월 전에는 아직 낮밤 리듬이 생기기 전이라 낮잠·밤잠 구분이 덜 정확해요.':''}</p>`:`<p class="small refpop" hidden>태어난 날을 넣으면 월령에 흔한 낮잠·깨어 있는 시간 범위를 같이 보여 줘요.</p>`}</div>`;
+  <div class="small refpop" data-pop="awake" hidden>${ss.wakes.length?`<b>${d===today?'오늘':md(d)} 깨어 있던 구간 ${ss.wakes.length}번</b><br>평균 ${durS(wAvg)} · 최장 ${durS(wMax)} · 최단 ${durS(wMin)}`:'아직 끝난 깨어 있던 구간이 없어요.'}${ss.awakeNow!=null?'<br>지금 깬 지 '+durS(ss.awakeNow)+' (진행 중이라 평균에서 빠져요)':''}<br><span class="muted">총은 아침에 밤잠에서 깬 뒤부터 ${d===today?'지금':'그날 밤잠'}까지에서 낮잠을 뺀 시간이에요.</span></div>
+  ${r?`<p class="small refpop" data-pop="ref" hidden>${refText(r)}. 아기마다 차이가 커요.${young?' 생후 2개월 전에는 아직 낮밤 리듬이 생기기 전이라 낮잠·밤잠 구분이 덜 정확해요.':''}<br>통잠 🎉: 밤잠 중 한 번에 ${tz}시간 넘게 잔 날 표시해요.</p>`:`<p class="small refpop" data-pop="ref" hidden>태어난 날을 넣으면 월령에 흔한 낮잠·깨어 있는 시간 범위를 같이 보여 줘요.</p>`}</div>`;
 }
+// 통잠 기준(축하 표시용, 건강 판단 아님): 연구에서 쓰는 "밤에 깨지 않고 잔 시간" 정의를 월령별로 적용
+// 3개월 미만 5시간(Henderson 2010 자정~5시 5시간), 3~6개월 6시간(Pennestri 2018), 6개월 이상 8시간(Henderson 2010 22~6시 8시간)
+const tongjamH=m=>m<3?5:m<6?6:8;
 function sleepInfoSheet(){
   const r=sleepRef(Date.now()), {from,to}=nightWin();
   openSheet(`<h2>낮잠·밤잠 기준</h2>
   <p class="small" style="margin:0">수면 버튼 하나로 기록하면, 밤 시간대(<b>${from}시~다음 날 ${to}시</b>)에 잠들었거나 그 시간대에 절반 이상 걸친 잠은 밤잠, 나머지는 낮잠으로 나눠요. 밤잠 중 잠깐 깼다가 아침에 다시 잔 것도 밤잠으로 이어 봐요. 밤잠은 아침이 오는 날짜에 셈해요. 틀리게 나뉜 기록은 눌러서 직접 바꿀 수 있고, 밤 시간대는 설정에서 바꿀 수 있어요.</p>
   <div class="card" style="overflow-x:auto;padding:4px 10px;flex-shrink:0"><table><thead><tr><th>월령</th><th>낮잠</th><th>낮잠 합계</th><th>깨어 있는 시간</th><th>하루 총</th></tr></thead><tbody>${SR.byAgeMonths.map(x=>`<tr${r&&r.from===x.from?' style="font-weight:700"':''}><td>${x.from===0?'0~2':x.from+'~'+(x.to-1)}개월</td><td>${rng(x.napCount,'회')}</td><td>${rng(x.napH,'h')}</td><td>${minR(x.wakeMin).join('~')}</td><td>${rng(x.totalH,'h')}</td></tr>`).join('')}</tbody></table></div>
   <p class="small muted" style="margin:0">하루 총 수면: 0~3개월은 미국 수면재단(NSF, 2015), 4개월 이후는 미국수면의학회(AASM) 합의·미국소아과학회(AAP) 지지(2016) 권고예요. 낮잠 횟수·합계·깨어 있는 시간은 공식 기준이 없어서 소아 수면 안내서에서 흔히 쓰는 대략적인 참고치예요. 조산이면 예정일 기준 월령을 써요.</p>
+  <p class="small muted" style="margin:0">통잠 🎉은 밤잠 중 한 번에 깨지 않고 잔 시간이 3개월 미만 5시간, 3~6개월 6시간, 6개월 이상 8시간을 넘은 날에 붙는 축하 표시예요. 연구에서 "밤새 잔다"를 정의할 때 쓰는 기준(Henderson 2010: 자정~새벽 5시 5시간, 밤 10시~아침 6시 8시간 / Pennestri 2018: 6시간)을 월령에 맞춰 골랐어요. 통잠을 안 해도 흔한 일이에요. 6개월에도 6시간 연속으로 자지 않는 아기가 약 38%였어요.</p>
   <p class="small muted" style="margin:0">범위를 벗어나도 이상하다는 뜻은 아니에요. 아기마다 차이가 크고, 걱정되면 소아과에 물어보세요. 참고 정보이며 진단이 아니에요.</p>
   <button class="btn ghost full" type="button" data-close>닫기</button>`,()=>{ const c=$('#sw [data-close]'); if(c) c.onclick=closeSheet });
 }
@@ -460,8 +472,10 @@ function installBanner(){
 function evColor(x){ if(x.type==='feed') return 'var(--feed)'; if(x.type==='sleep') return 'var(--sleep)';
   if(x.type==='diaper') return x.sub==='pee'?'var(--pee)':'var(--poo)'; if(x.type==='growth') return 'var(--accent)';
   return 'var('+((ETC[x.sub]||ETC.memo).color)+')' }
+// 기저귀 아이콘: /mnt/project-files/shared/diaper_icon.svg 와 같은 모양 (갤럭시 위젯과 공용)
+const DIAPER_IMG='<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" style="vertical-align:middle" aria-hidden="true"><path fill="var(--pee-text)" d="M3 4H21Q22 4 22 5V9.2C18.6 9.8 16.6 13.4 16.2 19.2Q16.1 20 15.3 20H8.7Q7.9 20 7.8 19.2C7.4 13.4 5.4 9.8 2 9.2V5Q2 4 3 4Z"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M3.6 7.4H20.4"/><path fill="#fff" d="M3.2 5H5.4V6.4H3.2ZM18.6 5H20.8V6.4H18.6Z" opacity=".85"/></svg>';
 function evIcon(x){ if(x.type==='feed') return x.sub==='formula'?'🍼':x.sub==='pump'?'🍼':'🤱'; if(x.type==='sleep') return sleepKind(x)==='night'?'🌙':'😴';
-  if(x.type==='diaper') return x.sub==='pee'?'💧':x.sub==='poo'?'💩':'🧷'; if(x.type==='growth') return '📏';
+  if(x.type==='diaper') return x.sub==='pee'?'💧':x.sub==='poo'?'💩':DIAPER_IMG; if(x.type==='growth') return '📏';
   return (ETC[x.sub]||ETC.memo).ic }
 function evTitle(x){
   const now=Date.now();
@@ -617,7 +631,7 @@ function renderToday(){
   }
   const comp=Math.round(completeness(d)*100);
   return `${sampleBanner()}${d===today?installBanner():''}
-  <header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${esc(S.baby.name)}${S.baby.name&&ageText(d)?' · ':''}${ageText(d)}</span><h1>${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일</h1></div>
+  <header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${esc(S.baby.name)}${S.baby.name&&ageText(d)?' · ':''}${ageText(d)}</span><label class="datepick"><h1>${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일</h1><input type="date" data-pick="day" value="${ymdOf(d)}" max="${ymdOf(today)}" aria-label="날짜 골라 이동"></label></div>
   <div class="row"><button class="iconbtn" type="button" aria-label="이전 날" data-act="prev">${ICON.prev}</button><button class="iconbtn" type="button" aria-label="다음 날" data-act="next" ${d>=today?'disabled':''}>${ICON.next}</button></div></header>
   ${d===today?feverCard():''}${top}${feedCheckCard(d)}${dups.map(dupHTML).join('')}
   <div class="stats">
@@ -625,7 +639,7 @@ function renderToday(){
     ${S.items.diaper?`<div class="card"><span class="small muted">기저귀</span><b style="color:var(--pee-text)">소${st.pee} · 대${st.poo}</b></div>`:''}
   </div>
   ${S.items.sleep?sleepCard(d):''}
-  <div class="row between"><span class="small muted">기록 완성도 <b style="color:var(--fg)">${comp}%</b></span><div class="seg" role="group" aria-label="보기 방식"><button type="button" aria-pressed="${view.todayMode==='ring'}" data-mode="ring">원형</button><button type="button" aria-pressed="${view.todayMode==='bars'}" data-mode="bars">세로</button></div></div>
+  <div class="row between"><span></span><div class="seg" role="group" aria-label="보기 방식"><button type="button" aria-pressed="${view.todayMode==='ring'}" data-mode="ring">원형</button><button type="button" aria-pressed="${view.todayMode==='bars'}" data-mode="bars">세로</button></div></div>
   ${body}`;
 }
 
@@ -651,7 +665,7 @@ function renderWeek(){
   }
   const rows=days.slice().reverse().map((d,ri)=>{const s=sts[6-ri];return `<tr><td><button class="linkbtn" style="padding:0;min-height:0" type="button" data-goday="${d}">${md(d)} ${dow(d)}</button></td><td>${durS(s.sleep)}</td><td>${s.ml}ml · ${s.feeds}회</td><td>${s.pee}/${s.poo}</td><td>${Math.round(completeness(d)*100)}%</td></tr>`}).join('');
   const fd=sts.filter(s=>s.feeds), avgMl=fd.length?Math.round(fd.reduce((a,s)=>a+s.ml,0)/fd.length):0;
-  return `${sampleBanner()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">이전 기록</span><h1>${md(days[0])} – ${md(days[6])}</h1></div>
+  return `${sampleBanner()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">이전 기록</span><label class="datepick"><h1>${md(days[0])} – ${md(days[6])}</h1><input type="date" data-pick="week" value="${ymdOf(days[6])}" max="${ymdOf(today)}" aria-label="날짜 골라 그 주로 이동"></label></div>
   <div class="row"><button class="iconbtn" type="button" aria-label="이전 주" data-act="wprev">${ICON.prev}</button><button class="iconbtn" type="button" aria-label="다음 주" data-act="wnext" ${off<=0?'disabled':''}>${ICON.next}</button></div></header>
   <div class="row between"><span class="small">평균 분유 <b>${avgMl}ml</b> · 수면 <b>${(sts.reduce((a,s)=>a+s.sleep,0)/7/H).toFixed(1)}h</b></span><div class="seg" role="group" aria-label="보기 방식"><button type="button" aria-pressed="${view.weekMode==='bars'}" data-wmode="bars">세로</button><button type="button" aria-pressed="${view.weekMode==='ring'}" data-wmode="ring">원형</button></div></div>
   ${main}
@@ -1067,9 +1081,14 @@ $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); 
   pref('tab',JSON.stringify({tab:view.tab})); render(); window.scrollTo(0,0)});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
 // 수면 카드 (?) 말풍선: 누르면 열고, 아무 데나 누르면 닫음
-document.addEventListener('click',e=>{ const pop=$('#app .refpop'); if(!pop) return;
-  const q=e.target.closest('[data-act="sleepRef"]'); if(q&&pop.hidden){ pop.hidden=false; return }
-  if(!e.target.closest('.refpop')) pop.hidden=true },true);
+document.addEventListener('click',e=>{ const q=e.target.closest('[data-popfor]'), open=[...document.querySelectorAll('#app .refpop:not([hidden])')];
+  if(!e.target.closest('.refpop')) open.forEach(p=>p.hidden=true);
+  if(q){ const p=$(`#app .refpop[data-pop="${q.dataset.popfor}"]`); if(p&&!open.includes(p)) p.hidden=false; e.stopPropagation() } },true);
+// 날짜 글자를 누르면 달력: 오늘 탭은 그날로, 기록 탭은 그날이 든 주로 이동
+$('#app').addEventListener('change',e=>{ const i=e.target.closest('[data-pick]'); if(!i||!i.value) return;
+  const [y,m,dd]=i.value.split('-').map(Number), t=Math.min(dayStart(Date.now()),new Date(y,m-1,dd).getTime());
+  if(i.dataset.pick==='day'){ view.day=t; view.scrollLatest=true } else view.weekOff=Math.floor((dayStart(Date.now())-t)/(7*DAY));
+  render() });
 $('#app').addEventListener('click',async e=>{
   const t=e.target.closest('button'); if(!t) return;
   if(t.dataset.ev) return evSheet(t.dataset.ev);
