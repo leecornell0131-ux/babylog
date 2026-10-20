@@ -217,7 +217,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.13';
+const VERSION='0.3.14';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -819,10 +819,10 @@ function fitBar(){ const tr=$('#app .day .track'), li=$('#app .day .list'); if(!
   tr.style.height=Math.max(480,li.offsetHeight-24)+'px' }
 addEventListener('resize',fitBar);
 // 개발자 모드에서만, 아이폰 웹앱에 광고 위치 미리보기 (진짜 광고는 갤럭시 앱에만). 규칙은 갤럭시 Ads.kt와 같게:
-// 기록·내보내기 탭에서만, 밤 21~7시·입력 창이 열렸을 때는 숨김
+// 오늘·기록·내보내기 탭에서만, 밤 21~7시·입력 창이 열렸을 때는 숨김
 function adPreviewHTML(){
   if(window.BabyNative||pref('dev')!=='1'||pref('ads')==='0') return '';
-  if(view.tab!=='week'&&view.tab!=='export') return '';
+  if(view.tab!=='today'&&view.tab!=='week'&&view.tab!=='export') return '';
   const h=new Date().getHours(); if(h>=21||h<7) return '';
   return '<div class="adprev" aria-hidden="true">광고 자리 (미리보기)</div>';
 }
