@@ -160,6 +160,8 @@ nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
 .stepper{display:flex;align-items:center;gap:10px}
 .stepper output{font-size:28px;font-weight:700;min-width:110px;text-align:center;font-variant-numeric:tabular-nums}
+.stepper output.typable{cursor:text;border-bottom:2px dashed var(--line);padding:0 6px}
+.stepper .amtin{font-size:28px;font-weight:700;width:130px;height:52px;text-align:center;border:2px solid var(--accent);border-radius:12px;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums}
 .stepper button{width:52px;height:52px;border-radius:26px;border:1px solid var(--line);background:var(--card);font-size:20px}
 label.field,.field{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px}
 .field + .field{border-top:1px solid var(--soft)}
@@ -231,7 +233,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.29';
+const VERSION='0.3.30';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -907,6 +909,13 @@ function timeToMs(v){const [h,m]=(v||hm(Date.now())).split(':').map(Number); con
 function openSheet(html,onReady){ $('#sheetRoot').innerHTML=`<div class="sheetwrap" id="sw"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
   $('#sw').addEventListener('click',e=>{if(e.target.id==='sw')closeSheet()}); onReady&&onReady() }
 function closeSheet(){ $('#sheetRoot').innerHTML='' }
+// 수유량 등 가운데 숫자를 누르면 숫자 키패드로 바로 입력 (+/- 버튼은 그대로)
+function typableAmt(get,set,{dec=false,unit=''}={}){ const o=$('#amt'); if(!o) return; o.classList.add('typable'); o.setAttribute('role','button'); o.setAttribute('aria-label','숫자 눌러 직접 입력'); o.tabIndex=0;
+  const open=()=>{ const inp=document.createElement('input'); inp.type='text'; inp.className='amtin'; inp.inputMode=dec?'decimal':'numeric'; if(!dec) inp.pattern='[0-9]*';
+    inp.value=get(); inp.setAttribute('aria-label',unit?unit+' 단위로 입력':'숫자 입력'); o.hidden=true; o.after(inp); inp.focus(); inp.select();
+    let done=false; const fin=ok=>{ if(done) return; done=true; const v=parseFloat(inp.value.replace(',','.')); if(ok&&isFinite(v)) set(v); inp.remove(); o.hidden=false };
+    inp.onblur=()=>fin(true); inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur() } else if(e.key==='Escape'){ fin(false) } } };
+  o.onclick=open; o.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open() } } }
 function feedFinishSheet(lf){
   const breast=lf.sub==='breastL'||lf.sub==='breastR'; let ml=lf.ml||(lastOf(x=>x.type==='feed'&&x.ml)||{}).ml||120;
   const finish=()=>{ lf.end=Math.max(Date.now(),lf.start+MIN); lf.min=Math.round((lf.end-lf.start)/MIN); if(!breast) lf.ml=ml; return lf.min };
@@ -916,6 +925,7 @@ function feedFinishSheet(lf){
     ${breast?`<button class="btn ghost full" type="button" id="fSwap">여기서 끝내고 ${lf.sub==='breastL'?'오른쪽':'왼쪽'} 시작</button>`:''}
     <button class="linkbtn" type="button" id="fCancel">잘못 눌렀어요 (이 수유 지우기)</button>`,()=>{
     $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ml=Math.max(10,ml+(+b.dataset.step)*10);$('#amt').textContent=ml+'ml'});
+    typableAmt(()=>ml,v=>{ml=Math.min(500,Math.max(1,Math.round(v)));$('#amt').textContent=ml+'ml'},{unit:'ml'});
     $('#fEnd').onclick=()=>commit('수유 '+fmtMin(finish())+' 기록했어요');
     if($('#fSwap')) $('#fSwap').onclick=()=>{ finish(); add({id:uid(),type:'feed',sub:lf.sub==='breastL'?'breastR':'breastL',start:lf.end,end:null},'반대쪽 수유를 시작했어요') };
     $('#fCancel').onclick=()=>{ S.events=S.events.filter(e=>e!==lf); commit('수유 기록을 지웠어요') };
@@ -937,6 +947,7 @@ function feedSheet(){
       $('#fNote').oninput=e=>note=e.target.value; bindTags(tags);
       $('#sw').querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{sub=b.dataset.sub;draw()});
       $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const s=+b.dataset.step; if(breast){min=Math.max(1,min+s*5);$('#amt').textContent=fmtMin(min)}else{ml=Math.max(10,ml+s*10);$('#amt').textContent=ml+'ml'}});
+      typableAmt(()=>breast?min:ml,v=>{ v=Math.round(v); if(breast){min=Math.min(180,Math.max(1,v));$('#amt').textContent=fmtMin(min)}else{ml=Math.min(500,Math.max(1,v));$('#amt').textContent=ml+'ml'} },{unit:breast?'분':'ml'});
       $('#fTimer').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:Date.now(),end:null,note:$('#fNote').value.trim()}; if(tags.length) ev.tags=[...tags]; if(!breast) ev.ml=ml; add(ev,(FEEDN[sub]||'수유')+' 시작! 끝나면 "수유 끝"을 누르세요') };
       $('#save').onclick=()=>{ const ev={id:uid(),type:'feed',sub,start:timeToMs($('#fTime').value),note:$('#fNote').value.trim()}; if(tags.length) ev.tags=[...tags]; if(breast)ev.min=min; else ev.ml=ml; add(ev,'수유를 기록했어요') };
     })};
@@ -981,6 +992,7 @@ function etcSheet(sub,ex){
   <label class="field" for="eNote">${t.text||'메모'}<input type="text" id="eNote" value="${esc(ex?ex.note:'')}" style="width:180px"></label>
   <div class="row"><button class="btn" style="flex:1;height:52px" type="button" id="eSave">저장</button>${ex?'<button class="btn ghost" style="flex:1;height:52px" type="button" id="eDel">삭제</button>':''}</div>`,()=>{
     $('#sw').querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ val=Math.max(0,Math.round((Number(val)+(+b.dataset.step)*t.step)*10)/10); $('#amt').textContent=fmt(val)+t.unit });
+    if(t.unit) typableAmt(()=>fmt(val),v=>{ val=Math.max(0,Math.round(v*10)/10); $('#amt').textContent=fmt(val)+t.unit },{dec:t.step<1,unit:t.unit});
     $('#eSave').onclick=()=>{ const note=$('#eNote').value.trim();
       if(ex){ ex.start=withTime(ex.start,$('#eTime').value); if(t.unit) ex.val=Number(fmt(val)); ex.note=note; commit('수정했어요') }
       else { const e={id:uid(),type:'etc',sub,start:timeToMs($('#eTime').value),note}; if(t.unit) e.val=Number(fmt(val)); add(e,t.label+' 기록했어요') } };
