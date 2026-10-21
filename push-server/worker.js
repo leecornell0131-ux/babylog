@@ -2,7 +2,8 @@
 // 한 휴대폰에서 기록하면 웹앱이 /notify로 요약을 보내고, 이 서버가 같은 가족의 갤럭시 앱에 FCM 푸시를 보내
 // 홈 화면 위젯과 잠금화면 타이머를 몇 초 안에 바꿈. 기록 자체는 다루지 않고 위젯용 요약(시각 몇 개)만 받음.
 //
-// 저장(KV): t:<가족코드> = 갤럭시 앱 푸시 주소 목록, s:<가족코드> = 마지막 요약
+// 저장: KV t:<가족코드> = 푸시 주소 목록. DB(D1) summaries = 마지막 요약.
+// DB 바인딩 없는 기존 배포는 KV s:<가족코드> 유지. D1 전환 시 옛 요약을 지우지 않고 이관.
 // 보안: 가족코드(10자리 무작위)를 아는 사람만 쓸 수 있음. Firestore 규칙과 같은 기준.
 //
 // 비밀값(wrangler secret): FCM_SA = Firebase 서비스 계정 키 JSON 전체
@@ -18,13 +19,13 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
     try {
-      if (req.method === 'GET' && url.pathname === '/') return json({ ok: true, app: 'babylog-push' }, 200, cors);
+      if (req.method === 'GET' && url.pathname === '/') return json({ ok: true, app: 'babylog-push', summaryStorage: env.DB ? 'd1' : 'kv' }, 200, cors);
 
-      // 15분마다 갤럭시 앱이 확인 (푸시가 늦거나 막혔을 때 대비)
+      // 구버전 갤럭시의 15분 조회 API도 그대로 유지.
       if (req.method === 'GET' && url.pathname === '/summary') {
         const fid = url.searchParams.get('fid') || '';
         if (!FID.test(fid)) return json({ error: 'fid' }, 400, cors);
-        const s = await env.KV.get('s:' + fid, 'json');
+        const s = await readSummary(env, fid);
         return json({ summary: s }, 200, cors);
       }
 
@@ -54,10 +55,11 @@ export default {
       if (url.pathname === '/notify') {
         const summary = cleanSummary(body.summary);
         if (!summary) return json({ error: 'summary' }, 400, cors);
-        const prev = await env.KV.get('s:' + fid, 'json');
+        const prev = await readSummary(env, fid);
         // 순서가 뒤바뀌어 도착한 오래된 요약은 버림
         if (prev && prev.at > summary.at) return json({ ok: true, stale: true }, 200, cors);
-        await env.KV.put('s:' + fid, JSON.stringify(summary));
+        // 읽은 직후 더 최신 요청이 들어와도 SQL 조건으로 역순 덮어쓰기를 막음.
+        if (!await writeSummary(env, fid, summary)) return json({ ok: true, stale: true }, 200, cors);
         const except = cleanToken(body.except);
         const list = ((await env.KV.get('t:' + fid, 'json')) || []).filter(t => t !== except);
         if (!list.length) return json({ ok: true, sent: 0 }, 200, cors);
@@ -66,6 +68,8 @@ export default {
           const all = (await env.KV.get('t:' + fid, 'json')) || [];
           await env.KV.put('t:' + fid, JSON.stringify(all.filter(t => !res.dead.includes(t))));
         }
+        // 실패를 성공으로 응답하면 웹 전송 큐가 재시도를 포기하므로 일시 실패를 구분.
+        if (res.failed) return json({ ok: false, error: 'push unavailable', sent: res.sent }, 503, cors);
         return json({ ok: true, sent: res.sent }, 200, cors);
       }
 
@@ -83,12 +87,36 @@ function corsHeaders(req) {
     'Access-Control-Allow-Origin': ok ? o : 'https://leecornell0131-ux.github.io',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
 }
 
 function json(o, status, headers) {
-  return new Response(JSON.stringify(o), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(o), { status, headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+}
+
+async function writeSummary(env, fid, summary) {
+  if (!env.DB) {
+    await env.KV.put('s:' + fid, JSON.stringify(summary));
+    return true;
+  }
+  const result = await env.DB.prepare(`INSERT INTO summaries (fid, at, payload) VALUES (?1, ?2, ?3)
+    ON CONFLICT(fid) DO UPDATE SET at = excluded.at, payload = excluded.payload
+    WHERE excluded.at >= summaries.at`).bind(fid, summary.at, JSON.stringify(summary)).run();
+  return result.meta.changes > 0;
+}
+
+async function readSummary(env, fid) {
+  if (!env.DB) return env.KV.get('s:' + fid, 'json');
+  const row = await env.DB.prepare('SELECT payload FROM summaries WHERE fid = ?1').bind(fid).first();
+  if (row) return JSON.parse(row.payload);
+  const legacy = await env.KV.get('s:' + fid, 'json');
+  if (!legacy) return null;
+  // 최초 한 번만 이관. 동시에 새 저장이 들어와도 옛 값으로 덮어쓰지 않음.
+  await writeSummary(env, fid, legacy);
+  const latest = await env.DB.prepare('SELECT payload FROM summaries WHERE fid = ?1').bind(fid).first();
+  return latest ? JSON.parse(latest.payload) : legacy;
 }
 
 function cleanToken(t) {
@@ -135,7 +163,7 @@ async function sendAll(env, tokens, fid, summary) {
   const t = await accessToken(env);
   const data = { kind: 'summary', fid };
   for (const [k, v] of Object.entries(summary)) if (v !== null) data[k] = String(v);
-  let sent = 0;
+  let sent = 0, failed = 0;
   const dead = [];
   await Promise.all(tokens.map(async token => {
     const r = await fetch(`https://fcm.googleapis.com/v1/projects/${t.project}/messages:send`, {
@@ -147,8 +175,9 @@ async function sendAll(env, tokens, fid, summary) {
     const txt = await r.text();
     // 앱을 지웠거나 주소가 바뀐 휴대폰은 목록에서 뺌
     if (r.status === 404 || txt.includes('UNREGISTERED') || txt.includes('INVALID_ARGUMENT')) dead.push(token);
+    else failed++;
   }));
-  return { sent, dead };
+  return { sent, dead, failed };
 }
 
 function pemToDer(pem) {

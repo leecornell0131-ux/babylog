@@ -81,27 +81,42 @@ async function push(S) {
   }
   const m = metaOf(S), metaChanged = st.meta !== m && inflight.__meta !== m;
   if (!writes.length && !metaChanged) return;
+  const commits = [];
   for (let i = 0; i < writes.length || (i === 0 && metaChanged); i += 400) {
     const chunk = writes.slice(i, i + 400), b = F.writeBatch(db);
     chunk.forEach(([id, c, data]) => { inflight[id] = c; b.set(F.doc(db, 'families', fid, 'events', id), data); });
     const withMeta = i === 0 && metaChanged;
     if (withMeta) { inflight.__meta = m; b.update(F.doc(db, 'families', fid), { meta: JSON.parse(m), mu: F.serverTimestamp(), mby: me }); }
-    b.commit().then(() => {
+    commits.push(b.commit().then(() => {
       if (st.fid !== fid) return;
       chunk.forEach(([id, c]) => { st.synced[id] = c; if (inflight[id] === c) delete inflight[id]; });
       if (withMeta) { st.meta = m; if (inflight.__meta === m) delete inflight.__meta; }
       persist(); if (state !== 'on') setState('on');
-      // 갤럭시 위젯·잠금화면 즉시 갱신용 알림 서버에 요약 전달 (서버 설정이 없으면 아무것도 안 함)
-      import('./push-server/web-notify.js').then(m => m.notifyFamily(fid, App.state)).catch(() => {});
+      return true;
     }, e => {
       chunk.forEach(([id, c]) => { if (inflight[id] === c) delete inflight[id]; });
       if (withMeta && inflight.__meta === m) delete inflight.__meta;
       setState('err', errText(e));
-    });
+      return false;
+    }));
   }
+  // 여러 배치의 일부만 저장된 상태를 알리지 않음. 한 논리적 저장당 최대 한 번.
+  Promise.all(commits).then(results => {
+    if (st.fid !== fid || !results.every(Boolean)) return;
+    import('./push-server/web-notify.js').then(m => {
+      if (st.fid === fid) m.notifyFamily(fid, App.state);
+    }).catch(() => {});
+  });
 }
 
 // ---------- 받기 ----------
+function recoverWidget(fid, remote = false) {
+  import('./push-server/web-notify.js').then(m => {
+    if (st.fid !== fid) return;
+    if (remote) m.observeFamily(fid, App.state);
+    m.retryPending();
+  }).catch(() => {});
+}
 function listen() {
   unsubs.forEach(f => f()); unsubs = [];
   const fid = st.fid; if (!fid) return;
@@ -110,7 +125,10 @@ function listen() {
   const q = F.query(F.collection(db, 'families', fid, 'events'), F.where('u', '>', since), F.orderBy('u'));
   unsubs.push(F.onSnapshot(q, snap => {
     const changes = snap.docChanges().filter(ch => ch.type !== 'removed' && !ch.doc.metadata.hasPendingWrites);
-    if (!changes.length) { if (!snap.metadata.fromCache && state !== 'on') setState('on'); return; }
+    if (!changes.length) {
+      if (!snap.metadata.fromCache) { if (state !== 'on') setState('on'); recoverWidget(fid); }
+      return;
+    }
     App.applyRemote(S => {
       const idx = new Map(S.events.map((e, i) => [e.id, i]));
       for (const ch of changes) {
@@ -133,12 +151,15 @@ function listen() {
       }
     });
     persist(); if (!snap.metadata.fromCache) setState('on');
+    // 같은 로그인 ID를 공유하는 다른 탭의 변경도 비교. 내용 동일한 자기 echo는 큐가 무시.
+    if (!snap.metadata.fromCache) recoverWidget(fid, true);
   }, e => setState('err', errText(e))));
   unsubs.push(F.onSnapshot(F.doc(db, 'families', fid), snap => {
     const d = snap.data(); if (!d || !d.meta || snap.metadata.hasPendingWrites) return;
     const m = canon(d.meta); if (m === st.meta) return;
     st.meta = m; persist();
     App.applyRemote(S => { for (const k of META_KEYS) if (d.meta[k] !== undefined) S[k] = d.meta[k]; });
+    if (!snap.metadata.fromCache) recoverWidget(fid, true);
   }, e => setState('err', errText(e))));
 }
 
