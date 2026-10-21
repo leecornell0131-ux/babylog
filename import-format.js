@@ -112,6 +112,7 @@
       if (e.type !== 'growth' && (near[nk] || []).some(t => Math.abs(t - start) <= 2 * MIN)) return skip(n, '이미 비슷한 기록 있음');
       seen.add(e.id); (near[nk] = near[nk] || []).push(start);
       e.src = 'import'; if (source) e.from = source;
+      if (r.approx === true) e.approx = true;
       events.push(e);
     });
     let baby = null;
@@ -121,7 +122,7 @@
       if (b.sex === '남' || b.sex === 'M' || b.sex === 'male') baby.sex = 'm'; else if (b.sex === '여' || b.sex === 'F' || b.sex === 'female') baby.sex = 'f';
       if (num(b.birthKg) && b.birthKg < 7) baby.birthKg = num(b.birthKg);
     }
-    return { events, skipped, warned, baby, source };
+    return { events, skipped, warned, baby, source, approx: events.filter(e => e.approx).length };
   }
 
   function prompt() {
@@ -145,6 +146,7 @@ ${amt}
 3. 기저귀에 소변·대변이 같이 있으면 "소변+대변" 한 줄로 쓰세요.
 4. tags는 아는 경우만. 수유: 게움, 토함, 남김, 거부, 보챔, 먹다 잠듦 / 대변: 묽은 변, 단단한 변, 시큼한 냄새, 초록색, 점액·거품, 피 섞임, 흰색·회색. 이 외의 상태나 위 목록에 없는 기록 종류는 "메모" 또는 note에 원문 그대로 쓰세요.
 5. 숫자를 지어내지 마세요. 모르는 값은 빼고, 원래 기록에 없는 줄을 만들지 마세요. 아기 이름은 넣지 마세요.
+5-1. 원래 파일이 그래프 리포트라 시각이 글자로 없고 점·막대 위치로만 보이면(예: 삐요로그 PDF), 거절하지 말고 그 점이 있는 칸의 가운데 시각을 쓰고 그 줄에 "approx":true를 붙이세요 (예: 한 칸이 1시간이고 14시 칸에 점이 있으면 "14:30"). 양(ml)이 날마다 아래에서 위로 쌓인 막대로만 있으면 아래쪽부터 그날 시각 순서로 짝지으세요. 시각을 위치로도 알 수 없는 기록(하루 합계·횟수만 있는 것)은 빼고, 마지막 한 줄에 무엇을 뺐는지 알려 주세요.
 6. 답에는 JSON만, records는 한 줄에 기록 하나씩 쓰세요.
 7. 기록이 300개가 넘으면 코드 실행으로 babylog-import.json 파일을 만들어 내려받게 해 주세요. 그게 안 되면 한 달씩 나눠서 차례로 답해 주세요 (각 답이 모두 위 양식의 완전한 JSON이어야 해요).
 8. 마지막에 JSON 밖에 한 줄로, 바꾸지 못한 기록이 있으면 몇 개이고 왜인지 알려 주세요.`;
