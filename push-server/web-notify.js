@@ -3,13 +3,91 @@
 //   import('./push-server/web-notify.js').then(m => m.notifyFamily(fid, App.state)).catch(() => {});
 // 서버가 아직 없으면(push-config.json에 worker가 없으면) 아무것도 안 함. 실패해도 기록에는 영향 없음.
 let cfgP = null;
-let timer = null;
+let queue = null;
 
 export function notifyFamily(fid, S) {
   if (!fid || !S || S.sample) return;
-  // 연달아 저장될 때 한 번만 보냄 (알림 서버 무료 쓰기 한도 절약)
-  clearTimeout(timer);
-  timer = setTimeout(() => send(fid, summaryOf(S)), 1500);
+  getQueue().notify(fid, summaryOf(S));
+}
+
+// 상대 기록 후 같은 내용으로 되돌리는 저장도 알릴 수 있게 성공 비교값을 무효화.
+export function observeFamily(fid, S) {
+  if (fid && S && !S.sample) getQueue().observe(fid, summaryOf(S));
+}
+
+export function retryPending() { return getQueue().flush(); }
+
+function getQueue() {
+  if (!queue) queue = createNotifier({
+    storage: {
+      getItem: k => localStorage.getItem(k),
+      setItem: (k, v) => localStorage.setItem(k, v),
+    },
+    isActive: fid => {
+      try { return JSON.parse(localStorage.getItem('babylog-sync-v1') || '{}').fid === fid; }
+      catch (_) { return false; }
+    },
+    post: send,
+  });
+  return queue;
+}
+
+// 원본 기록과 분리된 소량의 전송 상태. 실패한 최신 요약만 보관하며 정기 조회는 하지 않음.
+export function createNotifier({ storage, isActive, post, setTimer = setTimeout, clearTimer = clearTimeout }) {
+  const key = 'babylog-notify-v1';
+  let saved = { fid: null, lastKey: null, pending: null, generation: 0 }, timer = null, running = false;
+  try {
+    const parsed = JSON.parse(storage.getItem(key) || 'null');
+    if (parsed && typeof parsed === 'object') Object.assign(saved, parsed);
+  } catch (_) {}
+  const persist = () => { try { storage.setItem(key, JSON.stringify(saved)); } catch (_) {} };
+  const contentKey = s => JSON.stringify(Object.keys(s).filter(k => k !== 'at').sort().map(k => [k, s[k]]));
+  const schedule = () => { clearTimer(timer); timer = setTimer(flush, 1500); };
+  function notify(fid, summary) {
+    if (!isActive(fid)) return;
+    if (saved.fid !== fid) saved = { fid, lastKey: null, pending: null, generation: 0 };
+    const fingerprint = contentKey(summary);
+    if (!saved.pending && saved.lastKey === fingerprint) return;
+    saved.pending = { fid, summary, key: fingerprint }; persist(); schedule();
+  }
+  function observe(fid, summary) {
+    if (saved.fid !== fid) return;
+    const fingerprint = contentKey(summary);
+    if (saved.pending ? saved.pending.key === fingerprint : saved.lastKey === fingerprint) return;
+    saved.lastKey = null; saved.generation++;
+    if (saved.pending) {
+      saved.pending = { fid, summary, key: fingerprint };
+      schedule();
+    }
+    persist();
+  }
+  async function flush() {
+    if (running || !saved.pending) return;
+    const pending = saved.pending, generation = saved.generation;
+    if (!isActive(pending.fid)) { saved.pending = null; saved.lastKey = null; persist(); return; }
+    running = true;
+    try {
+      const result = await post(pending.fid, pending.summary);
+      if (!result || !result.ok) throw new Error('notify not accepted');
+      if (saved.fid === pending.fid) {
+        if (saved.generation === generation) saved.lastKey = result.stale ? null : pending.key;
+        if (saved.pending === pending) saved.pending = null;
+        persist();
+      }
+    } catch (_) {
+      // 실패를 성공으로 처리하지 않는다. 다음 저장/온라인/화면 복귀 때 재시도.
+    } finally {
+      running = false;
+    }
+    // 요청 도중 새 기록이 생겼다면 그 최신값만 이어서 보냄. 같은 실패를 무한 재시도하지 않음.
+    if (saved.pending && saved.pending !== pending) await flush();
+  }
+  return { notify, observe, flush };
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => retryPending());
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) retryPending(); });
 }
 
 // 위젯·잠금화면에 쓰는 요약. 갤럭시 앱 android-app/app/src/main/assets/bridge.js의 summary()와 똑같이 유지할 것
@@ -56,18 +134,22 @@ export function summaryOf(S) {
 }
 
 async function send(fid, summary) {
+  cfgP = cfgP || fetch(new URL('../android-app/push-config.json', import.meta.url), { cache: 'no-cache' })
+    .then(r => (r.ok ? r.json() : null)).catch(() => null);
+  const cfg = await cfgP;
+  if (!cfg || !cfg.worker) { cfgP = null; throw new Error('push config unavailable'); }
+  // 갤럭시 앱 안에서 보낼 때는 자기 휴대폰에는 푸시를 보내지 않게
+  const except = window.BabyNative && window.BabyNative.pushToken ? window.BabyNative.pushToken() : null;
+  const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    cfgP = cfgP || fetch(new URL('../android-app/push-config.json', import.meta.url), { cache: 'no-cache' })
-      .then(r => (r.ok ? r.json() : null)).catch(() => null);
-    const cfg = await cfgP;
-    if (!cfg || !cfg.worker) return;
-    // 갤럭시 앱 안에서 보낼 때는 자기 휴대폰에는 푸시를 보내지 않게
-    const except = window.BabyNative && window.BabyNative.pushToken ? window.BabyNative.pushToken() : null;
-    await fetch(cfg.worker.replace(/\/$/, '') + '/notify', {
+    const response = await fetch(cfg.worker.replace(/\/$/, '') + '/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fid, summary, except: except || null }),
       keepalive: true,
+      signal: controller.signal,
     });
-  } catch (_) {}
+    if (!response.ok) throw new Error('notify HTTP ' + response.status);
+    return await response.json();
+  } finally { clearTimeout(timeout); }
 }

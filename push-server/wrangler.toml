@@ -8,3 +8,10 @@ workers_dev = true
 [[kv_namespaces]]
 binding = "KV"
 id = "KV_ID_PLACEHOLDER"
+
+# 무료 D1: 빈 ID는 배포 workflow가 실제 ID로 교체. 로컬 검증에는 아래 가상 ID 사용.
+[[d1_databases]]
+binding = "DB"
+database_name = "babylog-widget-summaries"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
