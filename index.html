@@ -19,6 +19,7 @@
 <script src="who_lms.js"></script>
 <script src="sleep_rules.js"></script>
 <script src="sleep-colors.js"></script>
+<script src="import-format.js"></script>
 <style>
 /* 레이아웃: 폰 폭 한 열 앱. 위 날짜·요약, 가운데 원형 또는 세로 24시간 + 기록 목록, 아래 큰 기록 버튼과 탭 */
 :root{
@@ -227,7 +228,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.25';
+const VERSION='0.3.26';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -504,7 +505,7 @@ function itemHTML(x){
   const live=(x.type==='sleep'||x.type==='feed')&&x.end===null;
   const sub=x.type==='sleep'||(x.type==='feed'&&x.end!==undefined)?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
   const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
-  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · <span class="tg" style="color:'+(x.type==='feed'?'var(--feed-text)':'var(--poo)')+'">'+esc(tagText(x))+'</span>':''}${x.note?' · <span class="nt">📝 '+esc(x.note)+'</span>':''}${x.src==='piyolog'?' · 삐요로그':''}</span></span></button>`;
+  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · <span class="tg" style="color:'+(x.type==='feed'?'var(--feed-text)':'var(--poo)')+'">'+esc(tagText(x))+'</span>':''}${x.note?' · <span class="nt">📝 '+esc(x.note)+'</span>':''}${x.src==='piyolog'?' · 삐요로그':x.src==='import'?' · '+esc(x.from||'가져옴'):''}</span></span></button>`;
 }
 function gapHTML(g){
   const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
@@ -575,6 +576,7 @@ function renderWelcome(){
   ${installBanner()}
   <button class="btn full" style="height:52px" type="button" data-act="obNext">내 아기 기록 시작하기</button>
   <button class="btn ghost full" type="button" data-act="import">백업·삐요로그 파일 불러오기</button>
+  <button class="btn ghost full" type="button" data-act="otherApp">다른 육아 앱 기록 가져오기</button>
   <button class="linkbtn" type="button" data-act="sample">예시 데이터로 둘러보기</button>
   ${welcomeJoinHTML()}
   <p class="small muted" style="margin:0">이 앱은 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요.</p></div>`;
@@ -864,6 +866,7 @@ function renderSettings(){
   <div class="card panel"><div class="field"><span class="small muted">${window.BabySync&&window.BabySync.status().fid?'가족 공유 중이라 기록이 무료 서버에도 있지만, 실수로 지우면 양쪽에서 같이 지워져요.':'기록은 이 휴대폰에만 저장돼요.'} 휴대폰을 바꾸거나 앱을 지우기 전에, 그리고 가끔 한 번씩 백업 파일을 저장해 두세요. 불러오면 지금 기록과 합쳐지고, 삐요로그에서 옮긴 파일도 "불러오기"로 넣어요.</span></div>
   <div class="field"><span>마지막 백업</span><b class="small" style="${lastBackupOld()?'color:var(--warn)':''}">${(()=>{const t=+pref('lastBackup');const n=t?Math.floor((Date.now()-t)/DAY):0; return t?md(t)+(n?' ('+n+'일 전)':' (오늘)'):'아직 없음'})()}</b></div></div>
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="backup">백업 파일 저장</button><button class="btn ghost" style="flex:1" type="button" data-act="import">불러오기</button></div>
+  <button class="btn ghost full" style="margin-top:8px" type="button" data-act="otherApp">다른 육아 앱 기록 가져오기 (AI로 변환)</button>
   <h2 class="sec">데이터</h2>
   <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
   <p class="small muted" style="margin:4px 0 0">아기로그 ${VERSION} · 기록 ${S.events.length}개 · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--accent)">개인정보처리방침</a></p>`;
@@ -1077,7 +1080,9 @@ async function backup(){
 }
 $('#importFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  try{ const j=JSON.parse(await f.text()); const st=normalize(j.state||j);
+  try{ const txt=await f.text(); let j; try{ j=JSON.parse(txt) }catch(_){ j=BabyImport.extractJSON(txt) }
+    if(BabyImport.isImport(j)) return otherPreview(j);
+    const st=normalize(j.state||j);
     if(!Array.isArray(st.events)) throw new Error('형식');
     if(S.onboarded&&!S.sample&&(S.events.length||S.baby.birth)){
       // 기존 기록이 있으면 합치기 (같은 id는 건너뜀), 비어 있는 아기 정보만 채움
@@ -1088,6 +1093,44 @@ $('#importFile').addEventListener('change',async e=>{
     if(!S.baby.sex) setTimeout(()=>toast('성장곡선을 보려면 성장 탭에서 성별을 골라 주세요'),2400);
   }catch(err){ toast('파일을 읽지 못했어요') }
 });
+
+// ---------- 다른 육아 앱 기록 가져오기 (import-format.js 양식, 변환은 사용자의 AI가 함) ----------
+function otherAppSheet(){
+  openSheet(`<h2>다른 앱 기록 가져오기</h2>
+  <p class="small muted" style="margin:0">삐요로그·베이비타임 같은 다른 육아 앱에서 내보낸 기록을 ChatGPT·Claude 같은 AI가 아기로그 양식으로 바꿔 줘요. 앱마다 양식이 달라도 괜찮아요.</p>
+  <ol class="small" style="margin:0;padding-left:20px;line-height:1.7"><li>아래 <b>AI용 부탁 글 복사</b>를 눌러요</li><li>AI 앱에 붙여넣고, 다른 앱에서 내보낸 파일(PDF·CSV·엑셀·캡처)도 같이 올려요</li><li>AI가 준 답을 아래 칸에 붙여넣거나, 파일로 받았으면 <b>파일 고르기</b></li></ol>
+  <button class="btn full" type="button" id="oaCopy">AI용 부탁 글 복사</button>
+  <textarea id="oaText" rows="5" placeholder="AI가 준 답을 여기에 붙여넣기" style="font-size:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px;font-family:var(--mono);resize:vertical"></textarea>
+  <div class="row"><button class="btn ghost" style="flex:1" type="button" id="oaFile">파일 고르기</button><button class="btn" style="flex:1" type="button" id="oaGo">확인하기</button></div>
+  <p class="small muted" style="margin:0">AI에 아기 기록이 전달되니 이름은 지우고 보내도 돼요. 같은 기록을 두 번 넣어도 겹치지 않고, 이미 여기 적은 기록과 2분 안으로 같은 건 건너뛰어요. 기록이 많아 AI가 한 달씩 나눠 주면 한 번씩 차례로 넣으세요.</p>`,()=>{
+    $('#oaCopy').onclick=()=>{ const txt=BabyImport.prompt(); try{ navigator.clipboard.writeText(txt).then(()=>toast('복사했어요. AI 앱에 붙여넣으세요'),()=>{ $('#oaText').value=txt; $('#oaText').select(); toast('칸에 넣어 두었어요. 길게 눌러 복사하세요') }) }catch(_){ $('#oaText').value=txt; toast('칸에 넣어 두었어요. 길게 눌러 복사하세요') } };
+    $('#oaFile').onclick=()=>$('#importFile').click();
+    $('#oaGo').onclick=()=>{ const v=$('#oaText').value.trim(); if(!v) return toast('AI 답을 먼저 붙여넣어 주세요');
+      let j; try{ j=BabyImport.extractJSON(v) }catch(_){ return toast('AI 답에서 양식을 찾지 못했어요. 답 전체를 붙여넣어 주세요') }
+      otherPreview(j) };
+  });
+}
+function otherPreview(j){
+  let r; try{ r=BabyImport.convert(j,{existing:S.sample?[]:S.events,birth:S.sample?'':S.baby.birth}) }catch(e){ return toast(e.message||'읽지 못했어요') }
+  const ev=r.events, cnt={}; ev.forEach(x=>{ const n=x.type==='feed'?'수유':x.type==='sleep'?'수면':x.type==='diaper'?'기저귀':x.type==='growth'?'성장':'기타'; cnt[n]=(cnt[n]||0)+1 });
+  const why={}; r.skipped.forEach(s=>{ const k=s.reason.replace(/:.*/,''); why[k]=(why[k]||0)+1 });
+  const from=ev.length?Math.min(...ev.map(x=>x.start)):0, to=ev.length?Math.max(...ev.map(x=>x.start)):0;
+  openSheet(`<h2>가져올 기록 확인</h2>
+  <div class="card panel">${r.source?`<div class="field"><span>원래 앱</span><b>${esc(r.source)}</b></div>`:''}
+  <div class="field"><span>가져올 기록</span><b>${ev.length}개</b></div>
+  ${ev.length?`<div class="field"><span>날짜</span><b class="small">${md(from)} ~ ${md(to)}</b></div><div class="field"><span>항목</span><b class="small">${Object.entries(cnt).map(([k,v])=>k+' '+v).join(' · ')}</b></div>`:''}
+  ${r.skipped.length?`<div class="field"><span>건너뜀 ${r.skipped.length}개</span><b class="small" style="text-align:right">${Object.entries(why).map(([k,v])=>esc(k)+' '+v).join('<br>')}</b></div>`:''}</div>
+  ${r.warned.length?`<p class="small" style="margin:0;color:var(--warn)">${r.warned.slice(0,3).map(esc).join('<br>')}${r.warned.length>3?'<br>외 '+(r.warned.length-3)+'개':''}</p>`:''}
+  <p class="small muted" style="margin:0">합친 뒤에도 기록을 눌러 고치거나 지울 수 있어요. 가져온 기록에는 "${esc(r.source||'가져옴')}" 표시가 붙어요.</p>
+  <div class="row"><button class="btn ghost" style="flex:1" type="button" id="opNo">취소</button><button class="btn" style="flex:1" type="button" id="opOk" ${ev.length?'':'disabled'}>합치기</button></div>`,()=>{
+    $('#opNo').onclick=closeSheet;
+    $('#opOk').onclick=()=>{ ev.forEach(x=>{ x.by=DEVICE; S.events.push(x) });
+      if(r.baby) Object.keys(r.baby).forEach(k=>{ if(S.baby[k]===''||S.baby[k]==null) S.baby[k]=r.baby[k] });
+      if(!S.onboarded||S.sample){ if(S.sample) S={...emptyState(),baby:{...emptyBaby(),...(r.baby||{})},events:ev}; S.onboarded=true; S.sample=false; view.tab='today'; view.day=dayStart(Date.now()) }
+      commit('기록 '+ev.length+'개를 가져왔어요');
+      if(!S.baby.birth) setTimeout(()=>toast('설정에서 아기 생일을 넣어 주세요'),2400) };
+  });
+}
 
 // ---------- 이벤트 ----------
 $('#bFeed').onclick=feedSheet; $('#bDiaper').onclick=diaperSheet; $('#bSleep').onclick=sleepAction; $('#bMore').onclick=moreSheet;
@@ -1141,6 +1184,7 @@ $('#app').addEventListener('click',async e=>{
   if(a==='devOff'){ pref('dev','0'); render(); return }
   if(a==='backup') backup();
   if(a==='import') $('#importFile').click();
+  if(a==='otherApp') otherAppSheet();
   if(a==='copy'){const txt=exportText(); const ok=()=>toast('복사했어요. AI 앱에 붙여넣으세요');
     const fallback=()=>{const r=document.createRange(); r.selectNodeContents($('#out')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('텍스트를 선택해 두었어요. 길게 눌러 복사하세요')};
     try{ navigator.clipboard.writeText(txt).then(ok,fallback) }catch(_){ fallback() } }
