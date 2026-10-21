@@ -95,9 +95,9 @@ header h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
 .sleepsum .sleep-green{color:var(--sleep-green)}.sleepsum .sleep-yellow{color:var(--sleep-yellow)}
 .tong{color:var(--sleep-text);font-weight:700}
 .datepick{position:relative;display:inline-block}.datepick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0}.datepick h1::after{content:" ▾";font-size:.6em;color:var(--muted)}
-@keyframes slideL{from{transform:translateX(24px);opacity:.4}to{transform:none;opacity:1}}@keyframes slideR{from{transform:translateX(-24px);opacity:.4}to{transform:none;opacity:1}}
-#app.slideL{animation:slideL .18s ease-out}#app.slideR{animation:slideR .18s ease-out}
-@media (prefers-reduced-motion:reduce){#app.slideL,#app.slideR{animation:none}}
+#app.swiping{overflow-x:clip}#app.swiping>:not(header):not(.adprev){transform:translate3d(var(--sx,0),0,0);will-change:transform}
+#app.swanim>:not(header):not(.adprev){transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){#app.swanim>:not(header):not(.adprev){transition:none}}
 .refpop{position:absolute;left:10px;right:10px;top:42px;z-index:5;margin:0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 .bar .s.live{box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--sleep)}
 .bar .g{position:absolute;left:28px;width:18px;border-radius:4px;background:repeating-linear-gradient(135deg,var(--muted) 0 2px,transparent 2px 6px);opacity:.6}
@@ -231,7 +231,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.28';
+const VERSION='0.3.29';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -1145,19 +1145,26 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeShe
 document.addEventListener('click',e=>{ const q=e.target.closest('[data-popfor]'), open=[...document.querySelectorAll('#app .refpop:not([hidden])')];
   if(!e.target.closest('.refpop')) open.forEach(p=>p.hidden=true);
   if(q){ const p=$(`#app .refpop[data-pop="${q.dataset.popfor}"]`); if(p&&!open.includes(p)) p.hidden=false; e.stopPropagation() } },true);
-// 좌우로 밀어 이전·다음 날(기록 탭은 주) 이동. 화면 가장자리에서 시작한 밀기는 아이폰·갤럭시 뒤로 가기 몸짓이라 건드리지 않음
-(()=>{ let sx=0,sy=0,st=0,on=false; const EDGE=28;
-  $('#app').addEventListener('touchstart',e=>{ on=false; if(e.touches.length!==1||$('#sheetRoot .sheetwrap')) return;
+// 좌우로 밀어 이전·다음 날(기록 탭은 주) 이동. 손가락을 따라 화면이 끌려오고, 충분히 밀면 옆 날짜로 넘어가며, 덜 밀면 제자리로 돌아옴
+// 화면 가장자리에서 시작한 밀기는 아이폰·갤럭시 뒤로 가기 몸짓이라 건드리지 않음
+(()=>{ const app=$('#app'), EDGE=28; let sx=0,sy=0,st=0,dx=0,mode=0,busy=false; // mode 0=대기 1=판단 중 2=가로 끌기
+  const setX=(x,anim)=>{ app.classList.toggle('swanim',!!anim); app.style.setProperty('--sx',x+'px') };
+  const canGo=dir=>view.tab==='today'?(dir>0||view.day<dayStart(Date.now())):(dir>0||(view.weekOff||0)>0); // dir>0 = 이전(오른쪽으로 밀기)
+  const go=dir=>{ if(view.tab==='today') view.day=dir>0?view.day-DAY:Math.min(dayStart(Date.now()),view.day+DAY); else view.weekOff=Math.max(0,(view.weekOff||0)+(dir>0?1:-1)) };
+  const end=()=>{ app.classList.remove('swiping','swanim'); app.style.removeProperty('--sx'); busy=false };
+  app.addEventListener('touchstart',e=>{ mode=0; if(busy||e.touches.length!==1||$('#sheetRoot .sheetwrap')) return;
     if(view.tab!=='today'&&view.tab!=='week') return;
     const t=e.touches[0]; if(t.clientX<EDGE||t.clientX>innerWidth-EDGE) return;
     let el=e.target; for(;el&&el!==document.body;el=el.parentElement){ if(/INPUT|TEXTAREA|SELECT/.test(el.tagName)||el.scrollWidth>el.clientWidth+2&&getComputedStyle(el).overflowX!=='visible') return }
-    sx=t.clientX; sy=t.clientY; st=Date.now(); on=true },{passive:true});
-  $('#app').addEventListener('touchend',e=>{ if(!on) return; on=false; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
-    if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.8||Date.now()-st>700) return;
-    const today=dayStart(Date.now()); let moved=false;
-    if(view.tab==='today'){ if(dx<0&&view.day<today){ view.day=Math.min(today,view.day+DAY); moved=true } else if(dx>0){ view.day-=DAY; moved=true } }
-    else { if(dx<0&&(view.weekOff||0)>0){ view.weekOff--; moved=true } else if(dx>0){ view.weekOff=(view.weekOff||0)+1; moved=true } }
-    if(!moved) return; render(); const app=$('#app'); app.classList.remove('slideL','slideR'); void app.offsetWidth; app.classList.add(dx<0?'slideL':'slideR') },{passive:true});
+    sx=t.clientX; sy=t.clientY; st=Date.now(); dx=0; mode=1 },{passive:true});
+  app.addEventListener('touchmove',e=>{ if(!mode) return; const t=e.touches[0], mx=t.clientX-sx, my=t.clientY-sy;
+    if(mode===1){ if(Math.abs(mx)<8&&Math.abs(my)<8) return; if(Math.abs(mx)>Math.abs(my)*1.2){ mode=2; app.classList.add('swiping') } else { mode=0; return } }
+    e.preventDefault(); dx=mx; const dir=dx>0?1:-1; setX(canGo(dir)?dx:dx/4,false) },{passive:false});
+  const release=()=>{ if(mode!==2){ mode=0; return } mode=0; const w=innerWidth, v=Math.abs(dx)/Math.max(1,Date.now()-st), dir=dx>0?1:-1;
+    if(!canGo(dir)||(Math.abs(dx)<w*.28&&!(v>.45&&Math.abs(dx)>40))){ setX(0,true); setTimeout(end,230); return }
+    busy=true; setX(dir*w,true);
+    setTimeout(()=>{ go(dir); render(); setX(-dir*w*.6,false); void app.offsetWidth; setX(0,true); setTimeout(end,260) },190) };
+  app.addEventListener('touchend',release,{passive:true}); app.addEventListener('touchcancel',release,{passive:true});
 })();
 // 날짜 글자를 누르면 달력: 오늘 탭은 그날로, 기록 탭은 그날이 든 주로 이동
 $('#app').addEventListener('change',e=>{ const i=e.target.closest('[data-pick]'); if(!i||!i.value) return;
