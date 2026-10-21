@@ -228,7 +228,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.26';
+const VERSION='0.3.27';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -1119,6 +1119,7 @@ function otherPreview(j){
   <div class="card panel">${r.source?`<div class="field"><span>원래 앱</span><b>${esc(r.source)}</b></div>`:''}
   <div class="field"><span>가져올 기록</span><b>${ev.length}개</b></div>
   ${ev.length?`<div class="field"><span>날짜</span><b class="small">${md(from)} ~ ${md(to)}</b></div><div class="field"><span>항목</span><b class="small">${Object.entries(cnt).map(([k,v])=>k+' '+v).join(' · ')}</b></div>`:''}
+  ${r.approx?`<div class="field"><span>대략 시각</span><b class="small">${r.approx}개 (그래프 위치로 읽음)</b></div>`:''}
   ${r.skipped.length?`<div class="field"><span>건너뜀 ${r.skipped.length}개</span><b class="small" style="text-align:right">${Object.entries(why).map(([k,v])=>esc(k)+' '+v).join('<br>')}</b></div>`:''}</div>
   ${r.warned.length?`<p class="small" style="margin:0;color:var(--warn)">${r.warned.slice(0,3).map(esc).join('<br>')}${r.warned.length>3?'<br>외 '+(r.warned.length-3)+'개':''}</p>`:''}
   <p class="small muted" style="margin:0">합친 뒤에도 기록을 눌러 고치거나 지울 수 있어요. 가져온 기록에는 "${esc(r.source||'가져옴')}" 표시가 붙어요.</p>

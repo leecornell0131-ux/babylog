@@ -44,3 +44,8 @@ test('extracts JSON from an AI answer with code fences and a trailing note',()=>
 test('prompt lists every kind and the time rule',()=>{
   const p=I.prompt(); Object.keys(I.KINDS).forEach(k=>assert.ok(p.includes('- '+k),k)); assert.match(p,/YYYY-MM-DD HH:MM/);
 });
+test('approximate times from graph reports are kept and counted',()=>{
+  const r=I.convert({records:[{time:'2026-10-20 14:15',kind:'분유',amount:100,approx:true},{time:'2026-10-20 18:00',kind:'분유',amount:100}]},{now});
+  assert.equal(r.approx,1); assert.equal(r.events[0].approx,true); assert.equal(r.events[1].approx,undefined);
+  assert.match(I.prompt(),/"approx":true/);
+});
