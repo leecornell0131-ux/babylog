@@ -10,7 +10,7 @@
 
 const FID = /^[A-HJ-NP-Z2-9]{10}$/;
 const NUM_KEYS = ['lastFeed', 'sleep', 'feed', 'at', 'feedGap', 'lastWake', 'lastDiaper', 'day', 'tFeeds', 'tMl', 'tPee', 'tPoo', 'tSleep'];
-const STR_KEYS = ['lastFeedText', 'feedLabel', 'name', 'lastDiaperText', 'lastFeedAmt', 'lastFeedSub', 'birth'];
+const STR_KEYS = ['lastFeedText', 'feedLabel', 'name', 'lastDiaperText', 'lastFeedAmt', 'lastFeedSub', 'birth', 'sleeps24'];
 const MAX_TOKENS = 10;
 
 export default {
@@ -127,7 +127,8 @@ export function cleanSummary(s) {
   if (!s || typeof s !== 'object') return null;
   const o = {};
   for (const k of NUM_KEYS) o[k] = Number.isFinite(s[k]) ? Math.round(s[k]) : null;
-  for (const k of STR_KEYS) o[k] = typeof s[k] === 'string' ? s[k].slice(0, 40) : null;
+  // sleeps24는 최근 24시간 수면 구간 목록이라 조금 더 길게 둠
+  for (const k of STR_KEYS) o[k] = typeof s[k] === 'string' ? s[k].slice(0, k === 'sleeps24' ? 240 : 40) : null;
   if (!o.at) return null;
   return o;
 }

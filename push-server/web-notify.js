@@ -106,6 +106,11 @@ export function summaryOf(S) {
   const gaps = [];
   for (let i = 1; i < fs.length; i++) { const g = fs[i] - fs[i - 1]; if (g >= 30 * 60e3 && g <= 8 * 3600e3) gaps.push(g); }
   const g8 = gaps.slice(-8);
+  // 최근 24시간 안에 끝난 수면 구간. 시작·끝이 지금부터 몇 분 전인지 "m:120-30,600-480" 꼴로 보내
+  // 위젯이 시간이 흘러도 24시간 합을 다시 계산함 (진행 중 수면은 sleep으로 따로 감)
+  const w0 = now - 24 * 3600e3;
+  const s24 = ev.filter(e => e.type === 'sleep' && e.end != null && e.end > w0 && e.start < now)
+    .map(e => Math.round((now - Math.max(e.start, w0)) / 60e3) + '-' + Math.round((now - Math.min(e.end, now)) / 60e3));
   let wake = 0, tSleep = 0, tFeeds = 0, tMl = 0, tPee = 0, tPoo = 0;
   ev.forEach(e => {
     if (e.type === 'sleep' && e.end != null) {
@@ -130,6 +135,7 @@ export function summaryOf(S) {
     lastDiaper: dp ? dp.start : null,
     lastDiaperText: dp ? (dn[dp.sub] || '기저귀') : null,
     day, tFeeds, tMl, tPee, tPoo, tSleep,
+    sleeps24: 'm:' + s24.join(','),
   };
 }
 
