@@ -18,15 +18,15 @@
     const f = pick(e => e.type === 'feed' && e.start <= now);
     const dp = pick(e => e.type === 'diaper' && e.start <= now);
     // 최근 48시간 수유 간격 평균 (30분~8시간 사이만, 최근 8개)
-    const fs = ev.filter(e => e.type === 'feed' && e.start <= now && e.start > now - 48 * 3600e3).map(e => e.start).sort((a, b) => a - b);
+    const fs = ev.filter(e => e.type === 'feed' && e.start <= now && e.start > now - 50 * 3600e3).map(e => e.start).sort((a, b) => a - b);
     const gaps = [];
     for (let i = 1; i < fs.length; i++) { const g = fs[i] - fs[i - 1]; if (g >= 30 * 60e3 && g <= 8 * 3600e3) gaps.push(g); }
     const g8 = gaps.slice(-8);
-    // 최근 24시간 안에 끝난 수면 구간. 시작·끝이 지금부터 몇 분 전인지 "m:120-30,600-480" 꼴로 보내
-    // 위젯이 시간이 흘러도 24시간 합을 다시 계산함 (진행 중 수면은 sleep으로 따로 감)
-    const w0 = now - 24 * 3600e3;
-    const s24 = ev.filter(e => e.type === 'sleep' && e.end != null && e.end > w0 && e.start < now)
-      .map(e => Math.round((now - Math.max(e.start, w0)) / 60e3) + '-' + Math.round((now - Math.min(e.end, now)) / 60e3));
+    // 최근 50시간 안에 시작해 끝난 수면. 시작·끝이 지금부터 몇 분 전인지 "m:600-120,900-780" 꼴로 보내
+    // 위젯이 '어제 수면'(어제 아침 7시~오늘 아침 7시에 시작한 잠)을 계산함 (진행 중 수면은 sleep으로 따로 감)
+    const w0 = now - 50 * 3600e3;
+    const sl = ev.filter(e => e.type === 'sleep' && e.end != null && e.start >= w0 && e.start < now)
+      .map(e => Math.round((now - e.start) / 60e3) + '-' + Math.round((now - Math.min(e.end, now)) / 60e3));
     let wake = 0, tSleep = 0, tFeeds = 0, tMl = 0, tPee = 0, tPoo = 0;
     ev.forEach(e => {
       if (e.type === 'sleep' && e.end != null) {
@@ -51,7 +51,7 @@
       lastDiaper: dp ? dp.start : null,
       lastDiaperText: dp ? (dn[dp.sub] || '기저귀') : null,
       day, tFeeds, tMl, tPee, tPoo, tSleep,
-      sleeps24: 'm:' + s24.join(','),
+      sleeps: 'm:' + sl.join(','),
     };
   }
 

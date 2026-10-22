@@ -26,7 +26,7 @@ object Widgets {
     private const val PREF = "babylog_widget"
     // 웹앱 요약(bridge.js summary·web-notify.js summaryOf)에서 받는 값
     val NUM_KEYS = listOf("at", "lastFeed", "sleep", "feed", "feedGap", "lastWake", "lastDiaper", "day", "tFeeds", "tMl", "tPee", "tPoo", "tSleep")
-    val STR_KEYS = listOf("lastFeedText", "feedLabel", "lastDiaperText", "name", "lastFeedAmt", "lastFeedSub", "birth", "sleeps24")
+    val STR_KEYS = listOf("lastFeedText", "feedLabel", "lastDiaperText", "name", "lastFeedAmt", "lastFeedSub", "birth", "sleeps")
 
     private val all get() = listOf(QuickWidget(), FeedWidget(), FeedCardWidget(), SleepWidget(), DiaperWidget(), TodayWidget())
 
@@ -95,18 +95,28 @@ object Widgets {
         val tPee = if (fresh) n("tPee") else 0
         val tPoo = if (fresh) n("tPoo") else 0
         val tSleep = (if (fresh) n("tSleep") else 0) + (if (sleep > 0) now - maxOf(sleep, today) else 0)
-        // 최근 24시간 수면 합. 요약에 "m:" 구간 목록이 있을 때만 (옛 웹앱·서버가 보낸 요약이면 null → 오늘 수면을 보여 줌)
-        val s24: Long? = s("sleeps24").takeIf { it.startsWith("m:") }?.let { list ->
+        // 어제 수면: 어제 아침 7시~오늘 아침 7시 사이에 시작한 잠의 합 (자정 넘긴 밤잠은 깰 때까지 통째로).
+        // 아침 7시에만 바뀌고 낮·밤 동안은 그대로. 요약에 "m:" 목록이 있을 때만 (옛 웹앱·서버면 null → 오늘 수면)
+        var yLive = false  // 어제 시작한 잠이 아직 이어지는 중 (아침 7시 넘어서도 자는 중)
+            private set
+        val ySleep: Long? = s("sleeps").takeIf { it.startsWith("m:") }?.let { list ->
             val at = n("at")
-            val w0 = now - 86_400_000L
+            val b1 = Calendar.getInstance().apply {
+                timeInMillis = now
+                if (get(Calendar.HOUR_OF_DAY) < 7) add(Calendar.DAY_OF_MONTH, -1)
+                set(Calendar.HOUR_OF_DAY, 7); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val b0 = (b1.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -1) }.timeInMillis
+            val b = b1.timeInMillis
             var sum = 0L
             for (p in list.removePrefix("m:").split(',')) {
                 val ab = p.split('-')
-                val a = ab.getOrNull(0)?.toLongOrNull() ?: continue
-                val b = ab.getOrNull(1)?.toLongOrNull() ?: continue
-                sum += maxOf(0L, minOf(at - b * 60_000, now) - maxOf(at - a * 60_000, w0))
+                val st = at - (ab.getOrNull(0)?.toLongOrNull() ?: continue) * 60_000
+                val en = at - (ab.getOrNull(1)?.toLongOrNull() ?: continue) * 60_000
+                if (st in b0 until b) sum += maxOf(0L, en - st)
             }
-            sum + (if (sleep > 0) now - maxOf(sleep, w0) else 0)
+            yLive = sleep in b0 until b
+            sum + (if (yLive) now - sleep else 0)
         }
     }
 
@@ -325,7 +335,7 @@ class DiaperWidget : BabyWidget() {
     }
 }
 
-// 5) 오늘 요약 (4×2): 수유 횟수·양, 최근 수유한 지, 최근 24시간 수면 합계, 최근 깬 지
+// 5) 오늘 요약 (4×2): 수유 횟수·양, 최근 수유한 지, 어제 수면 합계, 최근 깬 지
 class TodayWidget : BabyWidget() {
     override val baseW = 250f
     override val baseH = 120f
@@ -335,9 +345,9 @@ class TodayWidget : BabyWidget() {
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
         v.setTextViewText(R.id.w_title, "오늘 · ${d.name}")
         v.setTextViewText(R.id.t_feed, "${d.tFeeds}회" + if (d.tMl > 0) " · ${d.tMl}ml" else "")
-        v.setTextViewText(R.id.l_sleep, if (d.s24 != null) "🌙 24시간 수면" else "🌙 오늘 수면")
-        val slept = d.s24 ?: d.tSleep
-        v.setTextViewText(R.id.t_sleep, if (slept > 0) Widgets.dur(slept) + (if (d.sleep > 0) " 💤" else "") else "기록 없음")
+        v.setTextViewText(R.id.l_sleep, if (d.ySleep != null) "🌙 어제 수면" else "🌙 오늘 수면")
+        val slept = d.ySleep ?: d.tSleep
+        v.setTextViewText(R.id.t_sleep, if (slept > 0) Widgets.dur(slept) + (if (if (d.ySleep != null) d.yLive else d.sleep > 0) " 💤" else "") else "기록 없음")
         // 자는 중이면 잠든 지, 깨어 있으면 마지막으로 깬 지 (1분마다 다시 그림)
         v.setTextViewText(R.id.l_wake, if (d.sleep > 0) "🌙 잠든 지" else "👀 최근 깬 지")
         val since = if (d.sleep > 0) d.sleep else d.lastWake
