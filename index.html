@@ -240,7 +240,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.34';
+const VERSION='0.3.35';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -1194,7 +1194,18 @@ function otherPreview(j){
 }
 
 // ---------- 이벤트 ----------
-$('#bFeed').onclick=feedSheet; $('#bDiaper').onclick=diaperSheet; $('#bSleep').onclick=sleepAction; $('#bMore').onclick=moreSheet;
+// 오늘 탭에서 지난 날짜를 보다가 기록 버튼을 누르면, 그 날짜에 기록할지 한 번 묻기 (실수로 어제에 기록하는 일 방지)
+// 진행 중인 수유 끝·깼어요는 날짜와 상관없어서 묻지 않음
+function dayGuard(fn,skip){ return ()=>{
+  const today=dayStart(Date.now());
+  if(view.tab!=='today'||view.day===today||(skip&&skip())) return fn();
+  const d=view.day, label=`${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일`+(d===today-DAY?' (어제)':'');
+  openSheet(`<h2>지난 날짜에 기록할까요?</h2><p style="margin:0">지금 <b>${label}</b> 기록을 보고 있어요.</p>
+  <button class="btn full" style="height:52px" type="button" id="gToday">오늘로 기록하기</button>
+  <button class="btn ghost full" type="button" id="gPast">${label.replace(' (어제)','')}에 기록하기</button>`,()=>{
+    $('#gToday').onclick=()=>{ closeSheet(); view.day=today; view.scrollLatest=true; render(); fn() };
+    $('#gPast').onclick=()=>{ closeSheet(); fn() } }) } }
+$('#bFeed').onclick=dayGuard(feedSheet,()=>!!liveFeed()); $('#bDiaper').onclick=dayGuard(diaperSheet); $('#bSleep').onclick=dayGuard(sleepAction,()=>!!liveSleep()); $('#bMore').onclick=dayGuard(moreSheet);
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today'){ view.day=dayStart(Date.now()); view.scrollLatest=true } if(view.tab==='week') view.weekOff=0; if(view.tab==='settings') view.setCat=null;
   pref('tab',JSON.stringify({tab:view.tab})); render(); window.scrollTo(0,0)});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
