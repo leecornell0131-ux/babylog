@@ -145,6 +145,14 @@ body:has(#sheetRoot .sheetwrap) .adprev{display:none}
 nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:48px}
 nav.tabs button{background:none;border:0;font-size:13px;color:var(--muted)}
 nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
+.pickwrap{position:fixed;inset:0;z-index:40;background:rgba(10,14,20,.5);display:flex;align-items:flex-end;justify-content:center;padding:0 10px calc(10px + env(safe-area-inset-bottom))}
+.pick{width:100%;max-width:470px;display:flex;flex-direction:column;gap:8px;max-height:82dvh}
+.pickhd{background:var(--card);border-radius:14px;padding:6px 8px 6px 16px;display:flex;align-items:center;justify-content:space-between;color:var(--fg)}
+.picktype{background:none;border:1px solid var(--line);border-radius:10px;min-height:42px;padding:0 12px;font:inherit;font-size:15px;color:var(--accent)}
+.picklist{background:var(--card);border-radius:14px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.pickrow{display:block;width:100%;min-height:54px;padding:0 20px;text-align:left;font:inherit;font-size:19px;color:var(--fg);background:none;border:0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.pickrow.on{color:var(--accent);font-weight:700}
+.pickcancel{background:var(--card);border:0;border-radius:14px;min-height:56px;font:inherit;font-size:17px;font-weight:600;color:var(--accent)}
 .sheetwrap{position:fixed;inset:0;background:rgba(10,14,20,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--card);width:100%;max-width:470px;border-radius:20px 20px 0 0;
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-height:90%;overflow:auto}
@@ -240,7 +248,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.35';
+const VERSION='0.3.36';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -956,7 +964,19 @@ function typableAmt(get,set,{dec=false,unit=''}={}){ const o=$('#amt'); if(!o) r
     inp.value=get(); inp.setAttribute('aria-label',unit?unit+' 단위로 입력':'숫자 입력'); o.hidden=true; o.after(inp); inp.focus(); inp.select();
     let done=false; const fin=ok=>{ if(done) return; done=true; const v=parseFloat(inp.value.replace(',','.')); if(ok&&isFinite(v)) set(v); inp.remove(); o.hidden=false };
     inp.onblur=()=>fin(true); inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur() } else if(e.key==='Escape'){ fin(false) } } };
-  o.onclick=open; o.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open() } } }
+  // ml은 한 손으로 고르기 쉽게 10ml 간격 큰 줄 목록(맨 위에 직접 입력), 나머지는 키패드
+  const pick=unit==='ml'?()=>mlPicker(get(),set,open):open;
+  o.onclick=pick; o.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick() } } }
+function mlPicker(cur,set,typeIt){
+  const vals=[]; for(let v=10;v<=400;v+=10) vals.push(v); const near=Math.min(400,Math.max(10,Math.round(cur/10)*10));
+  const w=document.createElement('div'); w.className='pickwrap'; w.innerHTML=`<div class="pick" role="dialog" aria-modal="true" aria-label="양 고르기">
+    <div class="pickhd"><b>양 고르기</b><button type="button" class="picktype" data-type="1">⌨️ 직접 입력</button></div>
+    <div class="picklist">${vals.map(v=>`<button type="button" class="pickrow${v===near?' on':''}" data-v="${v}">${v}ml${v===cur?' ✓':''}</button>`).join('')}</div>
+    <button type="button" class="pickcancel">취소</button></div>`;
+  document.body.appendChild(w); const close=()=>w.remove();
+  w.onclick=e=>{ const b=e.target.closest('button'); if(e.target===w||b&&b.classList.contains('pickcancel')) return close(); if(!b) return;
+    if(b.dataset.type){ close(); return typeIt() } if(b.dataset.v){ set(+b.dataset.v); close() } };
+  const on=w.querySelector('.pickrow.on'), list=w.querySelector('.picklist'); if(on) list.scrollTop+=on.getBoundingClientRect().top-list.getBoundingClientRect().top-list.clientHeight/2+on.offsetHeight/2 }
 function feedFinishSheet(lf){
   const breast=lf.sub==='breastL'||lf.sub==='breastR'; let ml=lf.ml||(lastOf(x=>x.type==='feed'&&x.ml)||{}).ml||120;
   const finish=()=>{ lf.end=Math.max(Date.now(),lf.start+MIN); lf.min=Math.round((lf.end-lf.start)/MIN); if(!breast) lf.ml=ml; return lf.min };
