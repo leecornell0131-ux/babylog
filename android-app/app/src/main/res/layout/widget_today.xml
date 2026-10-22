@@ -168,6 +168,7 @@
                 android:text="☀️ 최근 깨어 있는 시간"
                 android:includeFontPadding="false"
                 android:maxLines="1"
+                android:ellipsize="end"
                 android:textColor="@color/wake_ink"
                 android:textSize="12sp"
                 android:textStyle="bold" />
