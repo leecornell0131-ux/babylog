@@ -1,5 +1,5 @@
 // 앱 파일을 기기에 저장해 두고 인터넷 없이도 열리게 함. 파일을 바꾸면 VERSION을 올릴 것.
-const VERSION = 'babylog-0.3.36';
+const VERSION = 'babylog-0.3.37';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'firebase-config.js', 'sync.js', 'push-server/web-notify.js', 'who_lms.js', 'sleep_rules.js', 'sleep-colors.js', 'import-format.js',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => {

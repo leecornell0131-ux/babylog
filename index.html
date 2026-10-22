@@ -248,7 +248,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.36';
+const VERSION='0.3.37';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -742,6 +742,24 @@ function growthChart(ind){
   pp.forEach(([m,v])=>s+=`<circle cx="${X(m).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.5" style="fill:var(--pt);stroke:var(--card)" stroke-width="1.5"/>`);
   return s+'</svg>';
 }
+// 성장곡선 아래 하루 수유량(ml) 차트. 가로축(개월)과 여백을 성장곡선과 같게 맞춰 위아래로 비교. WHO 기준이 없어 따로 그림
+// 연한 막대 = 하루 합계, 진한 선 = 7일 평균. 오늘은 아직 끝나지 않아 빼고, ml 기록이 없는 날(모유만 등)도 뺌
+function feedChart(xMax){
+  const birth=new Date(S.baby.birth+'T00:00:00').getTime(), today=dayStart(Date.now()); if(isNaN(birth)) return '';
+  const by={}; S.events.forEach(x=>{ if(x.type!=='feed'||!x.ml) return; const d=dayStart(x.start); if(d>=today||d<birth) return; by[d]=(by[d]||0)+x.ml });
+  const days=Object.keys(by).map(Number).sort((a,b)=>a-b); if(days.length<2) return '';
+  const W=340,Hh=130,L=34,R=10,T=14,B=22, pw=W-L-R, ph=Hh-T-B, ageM=d=>(d-birth)/DAY/MONTH_D;
+  const yMax=Math.max(400,Math.ceil(Math.max(...days.map(d=>by[d]))/200)*200), X=m=>L+m/xMax*pw, Y=v=>T+(1-v/yMax)*ph;
+  const bw=Math.max(1,pw/(xMax*MONTH_D)*.8);
+  let s=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="하루 수유량 변화">`;
+  for(let v=0;v<=yMax;v+=yMax>800?400:200) s+=`<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" style="stroke:var(--soft)"/><text x="${L-4}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${v}</text>`;
+  for(let m=0;m<=xMax;m+=xMax>12?3:1) s+=`<text x="${X(m).toFixed(1)}" y="${Hh-8}" text-anchor="middle">${m}</text>`;
+  s+=`<text x="${L}" y="${T-3}" text-anchor="start">ml/일</text>`;
+  days.forEach(d=>{ const m=ageM(d); if(m>xMax) return; s+=`<rect x="${(X(m)-bw/2).toFixed(1)}" y="${Y(by[d]).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y(0)-Y(by[d])).toFixed(1)}" style="fill:var(--feed);opacity:.28"/>` });
+  const avg=days.map(d=>{ const w=days.filter(x=>x>d-7*DAY&&x<=d); return [ageM(d),w.reduce((a,x)=>a+by[x],0)/w.length] }).filter(([m])=>m<=xMax);
+  s+=`<path d="M${avg.map(([m,v])=>X(m).toFixed(1)+' '+Y(v).toFixed(1)).join('L')}" fill="none" style="stroke:var(--feed)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  return s+'</svg>';
+}
 function renderGrowth(){
   const b=S.baby, ind=view.growth, [name,unit,key]=GLAB[ind];
   if(!b.birth||!b.sex) return `${sampleBanner()}<header><span class="small muted">성장</span><h1>성장곡선</h1></header>
@@ -755,6 +773,9 @@ function renderGrowth(){
   ${last?`<div class="alertline">최근 ${name} <b>${last[key]}${unit}</b> · ${md(last.start)} · ${pctText(ind,last[key],last.start)||'백분위 계산 불가'}</div>`:`<div class="alertline">${name} 기록이 아직 없어요. "측정 기록"으로 넣어 보세요.</div>`}
   <div class="card chart">${growthChart(ind)}</div>
   <div class="legend"><span><i style="background:var(--band1)"></i>3~97백분위</span><span><i style="background:var(--band2)"></i>15~85백분위</span><span><i style="background:var(--median);height:2px"></i>50백분위</span><span><i style="background:var(--pt);border-radius:5px"></i>우리 아기</span></div>
+  ${(()=>{ const pts2=growthPoints(key), birth=new Date(b.birth+'T00:00:00').getTime(), la=pts2.length&&!isNaN(birth)?(pts2[pts2.length-1].start-birth)/DAY/MONTH_D:0, fc=feedChart(la>10?24:12);
+    return fc?`<div class="card chart" style="padding-top:6px"><div class="row between small" style="padding:0 6px"><b style="color:var(--feed-text)">하루 수유량</b><span class="muted">위 그래프와 같은 개월 축</span></div>${fc}</div>
+  <div class="legend"><span><i style="background:var(--feed);opacity:.35"></i>하루 합계</span><span><i style="background:var(--feed);height:3px"></i>7일 평균</span><span>분유·유축 ml만, 오늘 제외</span></div>`:'' })()}
   <p class="small muted" style="margin:0">WHO 아동 성장 기준(2006). 한국 소아청소년 성장도표도 만 3세 미만은 이 기준을 써요. 백분위는 참고용이에요. 곡선을 크게 벗어나거나 갑자기 꺾이면 소아과에 물어보세요.</p>
   ${rows?`<div class="card" style="overflow-x:auto;padding:4px 10px"><table><thead><tr><th>날짜</th><th>몸무게</th><th>키</th><th>머리둘레</th></tr></thead><tbody>${rows}</tbody></table></div>`:''}`;
 }
