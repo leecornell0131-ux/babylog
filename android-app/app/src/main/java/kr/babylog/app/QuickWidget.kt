@@ -312,7 +312,7 @@ class DiaperWidget : BabyWidget() {
     }
 }
 
-// 5) 오늘 요약 (4×2): 수유 횟수·양, 마지막 수유 후 시간, 오늘 수면 합계, 깨어 있는 시간
+// 5) 오늘 요약 (4×2): 수유 횟수·양, 최근 수유한 지, 오늘 수면 합계(0시부터), 최근 깬 지
 class TodayWidget : BabyWidget() {
     override val baseW = 250f
     override val baseH = 120f
@@ -324,7 +324,7 @@ class TodayWidget : BabyWidget() {
         v.setTextViewText(R.id.t_feed, "${d.tFeeds}회" + if (d.tMl > 0) " · ${d.tMl}ml" else "")
         v.setTextViewText(R.id.t_sleep, if (d.tSleep > 0) Widgets.dur(d.tSleep) + (if (d.sleep > 0) " 💤" else "") else "기록 없음")
         // 자는 중이면 잠든 지, 깨어 있으면 마지막으로 깬 지 (1분마다 다시 그림)
-        v.setTextViewText(R.id.l_wake, if (d.sleep > 0) "🌙 잠든 지" else "☀️ 최근 깨어 있는 시간")
+        v.setTextViewText(R.id.l_wake, if (d.sleep > 0) "🌙 잠든 지" else "👀 최근 깬 지")
         val since = if (d.sleep > 0) d.sleep else d.lastWake
         v.setTextViewText(R.id.t_wake, if (since > 0) Widgets.dur(maxOf(0L, d.now - since)) else "기록 없음")
         Widgets.show(v, R.id.w_timer, d.lastFeed > 0)
