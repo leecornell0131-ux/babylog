@@ -41,7 +41,13 @@ export function createNotifier({ storage, isActive, post, setTimer = setTimeout,
     if (parsed && typeof parsed === 'object') Object.assign(saved, parsed);
   } catch (_) {}
   const persist = () => { try { storage.setItem(key, JSON.stringify(saved)); } catch (_) {} };
-  const contentKey = s => JSON.stringify(Object.keys(s).filter(k => k !== 'at').sort().map(k => [k, s[k]]));
+  // sleeps는 "몇 분 전" 목록이라 시간만 흘러도 글자가 바뀜 → 절대 분으로 바꿔 비교해야 같은 내용에 알림을 다시 안 보냄
+  const absSleeps = s => {
+    if (typeof s.sleeps !== 'string' || !s.sleeps.startsWith('m:')) return s.sleeps;
+    const ref = Math.floor(s.at / 60e3);
+    return s.sleeps.slice(2).split(',').filter(Boolean).map(p => p.split('-').map(x => ref - Number(x)).join('-')).join(',');
+  };
+  const contentKey = s => JSON.stringify(Object.keys(s).filter(k => k !== 'at').sort().map(k => [k, k === 'sleeps' ? absSleeps(s) : s[k]]));
   const schedule = () => { clearTimer(timer); timer = setTimer(flush, 1500); };
   function notify(fid, summary) {
     if (!isActive(fid)) return;

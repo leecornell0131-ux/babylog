@@ -71,3 +71,9 @@ test('storage denied still allows an in-memory send', async () => {
     isActive: () => true, post: async () => { sent++; return { ok: true }; }, setTimer: () => 0, clearTimer() {} });
   q.notify(fid, summary(100)); await q.flush(); assert.equal(sent, 1);
 });
+test('sleeps written as minutes-ago count as the same content when only time passed', async () => {
+  const f = fixture(), m = 60e3, t = 1000 * m;
+  f.q.notify(fid, { ...summary(t), sleeps: 'm:60-30' }); await f.tick(); assert.equal(f.calls.length, 1);
+  f.q.notify(fid, { ...summary(t + m + 5), sleeps: 'm:61-31' }); await f.tick(); assert.equal(f.calls.length, 1);
+  f.q.notify(fid, { ...summary(t + 2 * m), sleeps: 'm:62-20' }); await f.tick(); assert.equal(f.calls.length, 2);
+});
