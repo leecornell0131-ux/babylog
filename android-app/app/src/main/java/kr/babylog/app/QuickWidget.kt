@@ -100,7 +100,7 @@ object Widgets {
         var yLive = false  // 어제 시작한 잠이 아직 이어지는 중 (아침 7시 넘어서도 자는 중)
             private set
         val ySleep: Long? = s("sleeps").takeIf { it.startsWith("m:") }?.let { list ->
-            val at = n("at")
+            val at = n("at") / 60_000 * 60_000  // 요약도 분 단위로 내린 시각끼리 뺀 값이라 같은 기준으로 되돌림
             val b1 = Calendar.getInstance().apply {
                 timeInMillis = now
                 if (get(Calendar.HOUR_OF_DAY) < 7) add(Calendar.DAY_OF_MONTH, -1)

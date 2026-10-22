@@ -109,9 +109,11 @@ export function summaryOf(S) {
   // 최근 50시간 안에 시작해 끝난 수면. 시작·끝이 지금부터 몇 분 전인지 "m:600-120,900-780" 꼴로 보내
   // 위젯이 '어제 수면'(어제 아침 7시~오늘 아침 7시에 시작한 잠)을 계산함 (진행 중 수면은 sleep으로 따로 감)
   const w0 = now - 50 * 3600e3;
+  // 분 단위로 내린 시각끼리 빼서 정확한 정수로 보냄 (반올림하면 7시 정각 잠이 경계를 넘나들 수 있음). 위젯도 at을 분 단위로 내려 되돌림
+  const mAgo = t => Math.floor(now / 60e3) - Math.floor(t / 60e3);
   const sl = ev.filter(e => e.type === 'sleep' && e.end != null && e.start >= w0 && e.start < now)
     .sort((x, y) => y.start - x.start)  // 최근 것부터 (길면 서버가 오래된 쪽을 버림)
-    .map(e => Math.round((now - e.start) / 60e3) + '-' + Math.round((now - Math.min(e.end, now)) / 60e3));
+    .map(e => mAgo(e.start) + '-' + mAgo(Math.min(e.end, now)));
   let wake = 0, tSleep = 0, tFeeds = 0, tMl = 0, tPee = 0, tPoo = 0;
   ev.forEach(e => {
     if (e.type === 'sleep' && e.end != null) {
