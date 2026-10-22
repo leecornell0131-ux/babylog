@@ -149,9 +149,13 @@ nav.tabs button[aria-current="page"]{color:var(--fg);font-weight:700}
 .sheet{background:var(--card);width:100%;max-width:470px;border-radius:20px 20px 0 0;
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-height:90%;overflow:auto}
 .sheet h2{margin:0;font-size:18px}
-.setgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;grid-auto-rows:minmax(max(104px,calc((100dvh - 330px)/4)),auto)}
-.settile{border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--fg);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:12px 14px;text-align:left;font:inherit;min-width:0}
-.settile .ic{font-size:26px;line-height:1}.settile b{font-size:16px}.settile .small{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-width:100%}
+.setlist{display:flex;flex-direction:column;gap:6px}
+.setrow{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.sethead{display:flex;align-items:center;gap:12px;width:100%;min-height:max(52px,calc((100dvh - 330px)/8 - 6px));padding:6px 14px;background:none;border:0;color:var(--fg);font:inherit;text-align:left}
+.sethead .ic{font-size:21px;line-height:1;width:30px;text-align:center}.sethead .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:0}.sethead b{font-size:15px}
+.sethead .small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sethead .chev{font-size:22px;color:var(--muted);transition:transform .2s;line-height:1}.setrow.open .chev{transform:rotate(90deg)}
+.setbody{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}.setbody .card{background:var(--bg)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .tile{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;padding:6px}
 .tile{min-height:76px}.tile .ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:20px;line-height:1;background:var(--bg)}
@@ -236,7 +240,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.33';
+const VERSION='0.3.34';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -867,12 +871,9 @@ const SET_CATS=[
 ];
 const setCats=()=>SET_CATS.filter(c=>c[0]!=='voice'||(window.BabyNative&&BabyNative.voiceHelp));
 function renderSettings(){
-  const b=S.baby, cats=setCats(), cat=cats.find(c=>c[0]===view.setCat);
+  const b=S.baby, cats=setCats();
   const footer=`  <p class="small muted" style="margin:4px 4px 0">아기로그 ${VERSION} · 기록 ${S.events.length}개 · 의학적 진단을 하지 않아요. 걱정되는 증상이 있으면 소아과에 문의하세요. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--accent)">개인정보처리방침</a></p>`;
-  if(!cat) return `${sampleBanner()}<header><span class="small muted">설정</span><h1>무엇을 바꿀까요</h1></header>
-  <div class="setgrid">${cats.map(([k,ic,n,sum])=>`<button class="settile" type="button" data-setcat="${k}"><span class="ic">${ic}</span><b>${n}</b><span class="small muted"${k==='backup'&&lastBackupOld()?' style="color:var(--warn)"':''}>${sum()}</span></button>`).join('')}</div>
-  ${footer}`;
-  const body={
+  const body=k=>({
     baby:`  <div class="card panel">
     <label class="field" for="sName">이름 또는 애칭<input type="text" id="sName" value="${esc(b.name)}" style="width:150px"></label>
     <label class="field" for="sBirth">태어난 날<input type="date" id="sBirth" value="${esc(b.birth)}"></label>
@@ -909,9 +910,12 @@ function renderSettings(){
     dev:`  ${pref('dev')==='1'?`<div class="card panel"><label class="field" for="adsOn">광고 표시<input type="checkbox" id="adsOn" ${pref('ads')!=='0'?'checked':''}></label>
     <div class="field"><span class="small muted">개발 테스터용이에요. 광고는 스토어에서 받은 앱에만 나와요.</span><button class="linkbtn" type="button" data-act="devOff">개발자 모드 끄기</button></div></div>`:`<div class="card panel" style="padding:12px 14px"><div class="row"><input type="text" id="devCode" placeholder="개발자 코드" autocapitalize="off" autocomplete="off" style="flex:1"><button class="btn ghost" type="button" data-act="devCode">확인</button></div></div>`}
 `,
-  }[cat[0]];
-  return `${sampleBanner()}<header class="row" style="gap:6px"><button class="iconbtn" type="button" data-act="setBack" aria-label="설정 목록으로">${ICON.prev}</button><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">설정</span><h1>${cat[2]} ${cat[1]}</h1></div></header>
-  ${body}`;
+  })[k];
+  // 목록 한 줄씩, 오른쪽 › 를 누르면 그 자리에서 펼치고 다시 누르면 닫음 (한 번에 하나만 펼침)
+  return `${sampleBanner()}<header><span class="small muted">설정</span><h1>무엇을 바꿀까요</h1></header>
+  <div class="setlist">${cats.map(([k,ic,n,sum])=>{ const open=view.setCat===k;
+    return `<section class="setrow${open?' open':''}" id="set-${k}"><button class="sethead" type="button" data-setcat="${k}" aria-expanded="${open}"><span class="ic">${ic}</span><span class="tx"><b>${n}</b><span class="small muted"${k==='backup'&&lastBackupOld()?' style="color:var(--warn)"':''}>${sum()}</span></span><span class="chev" aria-hidden="true">›</span></button>${open?`<div class="setbody">${body(k)}</div>`:''}</section>` }).join('')}</div>
+  ${footer}`;
 }
 // 세로 차트 길이를 오른쪽 기록 목록 길이에 맞춤 (기록이 적으면 최소 480px)
 function fitBar(){ const tr=$('#app .day .track'), li=$('#app .day .list'); if(!tr||!li) return;
@@ -1227,7 +1231,7 @@ $('#app').addEventListener('change',e=>{ const i=e.target.closest('[data-pick]')
 $('#app').addEventListener('click',async e=>{
   const t=e.target.closest('button'); if(!t) return;
   if(t.dataset.ev) return evSheet(t.dataset.ev);
-  if(t.dataset.setcat){ view.setCat=t.dataset.setcat; render(); window.scrollTo(0,0); return }
+  if(t.dataset.setcat){ const k=t.dataset.setcat; view.setCat=view.setCat===k?null:k; render(); const r=$('#set-'+k); if(r&&view.setCat) r.scrollIntoView({block:'nearest',behavior:'smooth'}); return }
   if(t.dataset.tabgo){view.tab=t.dataset.tabgo;return render()}
   if(t.dataset.goday){ view.tab='today'; view.day=+t.dataset.goday; render(); window.scrollTo(0,0); return }
   if(t.dataset.themeSet){ const k=t.dataset.themeSet; pref('theme',k); if(k==='auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=k; return render() }
@@ -1259,7 +1263,6 @@ $('#app').addEventListener('click',async e=>{
     try{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)); h=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('') }catch(_){}
     // 공개 저장소라 코드 원문 대신 SHA-256 해시로 비교
     if(h==='f9f40d77657a9dfff29bbfba10471c821bb4c5ef571613c11765fb64e63baa6a'){ pref('dev','1'); if(pref('ads')===null) pref('ads','1'); render(); toast('개발자 모드를 켰어요') } else toast('코드가 맞지 않아요'); return }
-  if(a==='setBack'){ view.setCat=null; render(); window.scrollTo(0,0); return }
   if(a==='voiceHelp'){ pref('voiceTip','1'); try{ BabyNative.voiceHelp() }catch(_){} return }
   if(a==='voiceTipOff'){ pref('voiceTip','1'); return render() }
   if(a==='devOff'){ pref('dev','0'); render(); return }
