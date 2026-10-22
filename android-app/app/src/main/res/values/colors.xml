@@ -15,4 +15,6 @@
     <color name="sleep_ink">#7457D6</color>
     <color name="diaper_ink">#23917F</color>
     <color name="poo_ink">#9A6533</color>
+    <color name="btn_wake">#FFF1D6</color>
+    <color name="wake_ink">#B7791F</color>
 </resources>
