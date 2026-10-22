@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { generateKeyPairSync } from 'node:crypto';
 
 const source = await readFile(new URL('../push-server/worker.js', import.meta.url), 'utf8');
-const { default: worker } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const { default: worker, cleanSummary } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const migration = await readFile(new URL('../push-server/migrations/0001_summaries.sql', import.meta.url), 'utf8');
 const fid = 'AAAAAAAAAA';
 function fixture(d1 = true) {
@@ -101,4 +101,13 @@ test('transient FCM failure is not falsely acknowledged and same-at retry remain
     const r = await f.notify(100); assert.equal(r.status, 200); assert.equal((await r.json()).sent, 1);
     assert.equal(sends, 2);
   } finally { globalThis.fetch = original; }
+});
+
+test('cleanSummary는 수면 구간 목록을 구간 단위로만 잘라 숫자가 바뀌지 않음', () => {
+  const list = 'm:' + Array.from({ length: 90 }, (_, i) => `${1000 + i * 10}-${995 + i * 10}`).join(',');
+  const o = cleanSummary({ at: 1, sleeps: list });
+  assert.ok(o.sleeps.length <= 600);
+  assert.ok(o.sleeps.slice(2).split(',').every(p => /^\d+-\d+$/.test(p) && list.includes(p)));
+  assert.equal(cleanSummary({ at: 1, sleeps: 'm:1-2,bad,3-4' }).sleeps, 'm:1-2,3-4');
+  assert.equal(cleanSummary({ at: 1 }).sleeps, null);
 });

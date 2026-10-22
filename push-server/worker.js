@@ -127,8 +127,18 @@ export function cleanSummary(s) {
   if (!s || typeof s !== 'object') return null;
   const o = {};
   for (const k of NUM_KEYS) o[k] = Number.isFinite(s[k]) ? Math.round(s[k]) : null;
-  // sleeps는 최근 50시간 수면 구간 목록이라 조금 더 길게 둠
-  for (const k of STR_KEYS) o[k] = typeof s[k] === 'string' ? s[k].slice(0, k === 'sleeps' ? 240 : 40) : null;
+  for (const k of STR_KEYS) o[k] = typeof s[k] === 'string' ? s[k].slice(0, 40) : null;
+  // sleeps는 최근 50시간 수면 구간 목록이라 길게 두되, 구간 하나가 중간에 잘려 다른 숫자가 되지 않게 구간 단위로 자름
+  if (typeof s.sleeps === 'string' && s.sleeps.startsWith('m:')) {
+    let out = 'm:';
+    for (const p of s.sleeps.slice(2).split(',')) {
+      if (!/^\d{1,5}-\d{1,5}$/.test(p)) continue;
+      const next = out === 'm:' ? out + p : out + ',' + p;
+      if (next.length > 600) break;
+      out = next;
+    }
+    o.sleeps = out;
+  }
   if (!o.at) return null;
   return o;
 }
