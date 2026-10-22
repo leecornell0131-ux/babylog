@@ -248,7 +248,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.37';
+const VERSION='0.3.38';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -1114,12 +1114,14 @@ function evSheet(id){
   openSheet(`<h2>기록 수정</h2><div class="card panel" style="background:var(--bg)">${itemHTML(x).replace('<button','<div').replace(/<\/button>$/,'</div>')}</div>
   <label class="field" for="eTime">${x.type==='sleep'?'시작 시각':'시각'}<input type="time" id="eTime" value="${hm(x.start)}"></label>
   ${x.type==='sleep'&&x.end?`<label class="field" for="eEnd">깬 시각<input type="time" id="eEnd" value="${hm(x.end)}"></label>`:''}
-  ${x.type==='feed'&&x.sub!=='breastL'&&x.sub!=='breastR'?`<label class="field" for="eMl">양 (ml)<input type="number" inputmode="numeric" id="eMl" value="${x.ml??''}" style="width:90px"></label>`:''}
+  ${x.type==='feed'&&x.sub!=='breastL'&&x.sub!=='breastR'?`<label class="field" for="eMl">양 (ml)<input type="text" inputmode="numeric" pattern="[0-9]*" readonly id="eMl" value="${x.ml??''}" style="width:90px;cursor:pointer;text-align:center"></label>`:''}
   ${x.type==='sleep'?`<div class="field"><span>구분</span><div class="chips">${[['auto','자동 ('+(autoKind(x)==='night'?'밤잠':'낮잠')+')'],['night','밤잠'],['nap','낮잠']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${(x.kind||'auto')===k}" data-kind="${k}">${n}</button>`).join('')}</div></div>`:''}
   ${x.type==='diaper'?`<div class="chips">${[['pee','소변'],['poo','대변'],['both','둘 다']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${x.sub===k}" data-dsub="${k}">${n}</button>`).join('')}</div>`:''}
   <label class="field" for="eNote">메모<input type="text" id="eNote" value="${esc(x.note||'')}" placeholder="그 밖에 남길 말" style="width:180px"></label>
   ${x.type==='feed'?tagChipsHTML('feed',x.tags||[],'특이사항 (없으면 정상 수유)'):x.type==='diaper'?tagChipsHTML('poo',x.tags||[],'대변 상태 (없으면 정상 변)'):''}
   <div class="row"><button class="btn" style="flex:1" type="button" id="eSave">저장</button><button class="btn ghost" style="flex:1" type="button" id="eDel">삭제</button></div>`,()=>{
+    // 수정 화면의 양도 처음 기록할 때처럼 10ml 큰 줄 목록에서 고르기 (목록 위 "직접 입력"을 누르면 키패드)
+    const em=$('#eMl'); if(em) em.onclick=()=>{ if(!em.readOnly) return; mlPicker(+em.value||120,v=>{em.value=Math.min(500,Math.max(1,Math.round(v)))},()=>{ em.readOnly=false; em.focus(); em.select() }) };
     let dsub=x.sub, kind=x.kind||'auto'; const tags=[...(x.tags||[])]; bindTags(tags);
     const tb=$('#sw .tagbox[data-tg="poo"]'); if(tb) tb.hidden=dsub==='pee'; $('#sw').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ kind=b.dataset.kind; $('#sw').querySelectorAll('[data-kind]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
     $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)); if(tb) tb.hidden=dsub==='pee' });
