@@ -120,6 +120,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             }
         }
         if r == "notready" { return nil }
+        // 'ok'만 오면 아기 정보를 아직 안 넣어서 기록하지 않은 것 (bridge.js)
+        if r == "ok" { return "먼저 앱에서 아기 정보를 넣어 주세요" }
         return r.hasPrefix("ok:") ? String(r.dropFirst(3)) : ""
     }
 
