@@ -33,8 +33,8 @@ enum NativeSync {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: refreshTask, using: nil) { task in
             schedule()
             let work = Task {
-                let before = SharedStore.summary?.at ?? 0
-                if let s = await RemoteSummary.newest(), s.at > before { apply(s, canStart: false) }
+                // 위젯이 먼저 받아 저장한 요약일 수도 있어서 새로 받았는지와 상관없이 맞춤 (같으면 아무것도 안 바뀜)
+                if let s = await RemoteSummary.newest() { apply(s, canStart: false) }
                 task.setTaskCompleted(success: true)
             }
             task.expirationHandler = { work.cancel() }

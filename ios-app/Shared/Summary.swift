@@ -94,7 +94,9 @@ enum RemoteSummary {
     static func newest() async -> BabySummary? {
         let local = SharedStore.summary
         guard let fid = local?.fid, !fid.isEmpty, var remote = await fetch(fid: fid) else { return local }
-        guard remote.at > (local?.at ?? 0) else { return local }
+        // 받는 사이에 앱이 더 새 기록을 저장했거나 가족코드가 바뀌었을 수 있으니 다시 읽어 확인
+        let now = SharedStore.summary
+        guard now?.fid == fid, remote.at > (now?.at ?? 0) else { return now }
         remote.fid = fid
         SharedStore.summary = remote
         return remote
