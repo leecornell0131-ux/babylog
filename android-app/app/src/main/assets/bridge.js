@@ -82,6 +82,8 @@
   // at: 버튼을 누른 시각 (잠금화면에서 누르고 나중에 앱을 연 경우 그 시각으로 기록)
   // ml: 'feed_ml'(음성 "수유 120")에서 먹은 양
   window.__babyQuick = function (a, at, ml) {
+    // "feed_ml:120"처럼 양을 동작 이름에 붙여 보내도 같음
+    if (/^feed_ml:\d+$/.test(a)) { ml = +a.slice(8); a = 'feed_ml'; }
     var A = window.BabyApp;
     if (!A) return 'notready';
     if (A.state.sample || A.state.onboarded === false) { A.toast('먼저 앱에서 아기 정보를 넣어 주세요'); return 'ok'; }
