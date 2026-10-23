@@ -249,7 +249,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.41';
+const VERSION='0.3.43';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -906,18 +906,24 @@ const setCats=()=>SET_CATS;
 function voiceSetHTML(){
   const hasApp=!!(window.BabyNative&&BabyNative.voiceHelp), ios=iosVoice();
   if(!hasApp) return `<div class="card panel"><div class="vbox"><span class="small">음성 명령은 아이폰 앱·갤럭시 앱에서만 쓸 수 있어요. 사파리로 연 웹에서는 아직 안 돼요.</span><span class="small muted">아이폰 앱: "시리야, 아기로그 아기 깼어" · 갤럭시 앱: "하이 빅스비, 아기깼어 열어"</span></div></div>`;
-  const cmds=[['🌙','아기 잠듦','잠든 시각 기록'],['☀️','아기 깼어','자는 기록 끝내기'],['🍼','수유 시작','지난번과 같은 수유로 타이머'],['✅','수유 끝','진행 중인 수유 끝내기'],['💧','소변 기록','기저귀 소변'],['💩','대변 기록','기저귀 대변']];
+  // 갤럭시 앱 0.1.50부터(PR #26) 수유시작·수유끝 대신 '수유기록' 하나 (몇 ml인지 앱이 다시 물음). 앱 빌드 번호는 UA의 BabylogAndroid/<번호>
+  // 아이폰 앱 0.2.3부터(PR #27) "수유 120"처럼 양을 같이 말함 (BabyNative.voiceFeed 'ml')
+  const gbuild=+((navigator.userAgent.match(/BabylogAndroid\/(\d+)/)||[])[1]||0), feedAsk=!ios&&gbuild>=50, iosMl=ios&&BabyNative.voiceFeed==='ml';
+  const cmds=[['🌙','아기 잠듦','잠든 시각 기록'],['☀️','아기 깼어','자는 기록 끝내기'],
+    ...(iosMl?[['🍼','수유 120','먹은 양(ml)을 같이 말해요. 양 없이 "수유"만 말하면 다시 물어요']]:feedAsk?[['🍼','수유 기록','몇 ml인지 다시 물어요']]:[['🍼','수유 시작','지난번과 같은 수유로 타이머'],['✅','수유 끝','진행 중인 수유 끝내기']]),
+    ['💧','소변 기록','기저귀 소변'],['💩','대변 기록','기저귀 대변']];
   const say=w=>ios?`"시리야, 아기로그 ${w.replace(' 기록','')}"`:`"하이 빅스비, ${w.replace(/ /g,'')} 열어"`;
   return `<div class="card panel"><div class="vbox">
     <span class="small muted">이렇게 말하면 손 안 대고 기록돼요. 따로 설정하지 않아도 돼요.</span>
     <div class="vcmds">${cmds.map(c=>`<div class="vcmd"><span class="vic">${c[0]}</span><span><b>${say(c[1])}</b><br><span class="small muted">${c[2]}</span></span></div>`).join('')}</div>
     ${ios?`<span class="small muted">🔒 화면이 잠겨 있으면 Face ID로 잠금을 풀어야 기록돼요.</span>
-    <span class="small muted">✂️ 단축어 앱에서 이름을 "아기 깼어"로 바꾸면 "시리야, 아기 깼어"만 말해도 돼요.</span>`
+    ${iosMl?`<span class="small muted">🏷️ 아래 버튼에서 "Siri에 추가"를 누르면 "시리야, ${esc(S.baby.name||'아기')} 깼어"처럼 아기 이름으로 부를 수 있어요.</span>`
+    :`<span class="small muted">✂️ 단축어 앱에서 이름을 "아기 깼어"로 바꾸면 "시리야, 아기 깼어"만 말해도 돼요.</span>`}`
     :`<span class="small muted">🗣️ 구글 어시스턴트: "헤이 구글, 아기깼어 열어"</span>
     <span class="small muted">✂️ 빅스비 빠른 명령어로 만들면 "하이 빅스비, 아기 깼어"만 말해도 돼요.</span>
     <span class="small muted">🔒 잠긴 화면에서 잠금 해제를 요구하면 빅스비 설정의 "잠금 상태에서 사용"을 켜 주세요.</span>`}
-    <span class="small muted">수유 양을 말로 넣는 기능("분유 120")은 아직 없어요.</span>
-    <button class="btn ghost" type="button" data-act="voiceHelp">${ios?'단축어 설정 방법 보기':'빠른 명령어 설정 방법 보기'}</button></div></div>`;
+    ${feedAsk||iosMl?'':'<span class="small muted">수유 양을 말로 넣는 기능("분유 120")은 아직 없어요.</span>'}
+    <button class="btn ghost" type="button" data-act="voiceHelp">${iosMl?'아기 이름으로 Siri에 추가하기':ios?'단축어 설정 방법 보기':'빠른 명령어 설정 방법 보기'}</button></div></div>`;
 }
 function renderSettings(){
   const b=S.baby, cats=setCats();

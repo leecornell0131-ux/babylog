@@ -58,6 +58,18 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>kr.babylog.app.voice.stop_sleep</string>
+		<string>kr.babylog.app.voice.sleep_start</string>
+		<string>kr.babylog.app.voice.feed_ask</string>
+		<string>kr.babylog.app.voice.pee</string>
+		<string>kr.babylog.app.voice.poo</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>"아기 수유"처럼 말로 수유를 기록할 때 먹은 양을 듣는 데 써요.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>말한 수유 양(예: 120)을 알아듣는 데 써요.</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

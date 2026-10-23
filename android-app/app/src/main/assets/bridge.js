@@ -80,7 +80,10 @@
 
   // 위젯·알림 버튼으로 들어온 동작
   // at: 버튼을 누른 시각 (잠금화면에서 누르고 나중에 앱을 연 경우 그 시각으로 기록)
-  window.__babyQuick = function (a, at) {
+  // ml: 'feed_ml'(음성 "수유 120")에서 먹은 양
+  window.__babyQuick = function (a, at, ml) {
+    // "feed_ml:120"처럼 양을 동작 이름에 붙여 보내도 같음
+    if (/^feed_ml:\d+$/.test(a)) { ml = +a.slice(8); a = 'feed_ml'; }
     var A = window.BabyApp;
     if (!A) return 'notready';
     if (A.state.sample || A.state.onboarded === false) { A.toast('먼저 앱에서 아기 정보를 넣어 주세요'); return 'ok'; }
@@ -112,6 +115,23 @@
           if (last && last.ml && !/^breast/.test(fe.sub)) fe.ml = last.ml;
           S.events.push(fe);
           msg = '수유 시작을 기록했어요';
+        }
+      } else if (a === 'feed_ml') {
+        // 음성 "수유 120": 지금 시각에 그 양으로 끝난 수유 하나. 종류는 지난번 분유·유축과 같게(모유였으면 분유).
+        // 수유 타이머가 돌고 있으면 그걸 그 양으로 끝냄
+        var n = Math.round(+ml), lf2 = live('feed'), prev = null;
+        S.events.forEach(function (e) { if (e.type === 'feed' && e.end !== null && (!prev || e.start > prev.start)) prev = e; });
+        var sub = prev && (prev.sub === 'formula' || prev.sub === 'pump') ? prev.sub : 'formula';
+        var nm = { formula: '분유', pump: '유축 수유', breastL: '모유', breastR: '모유' };
+        var dup = S.events.some(function (e) { return e.type === 'feed' && (e.start === now || e.end === now) && +e.ml === n; });
+        if (!(n >= 1 && n <= 500)) msg = '수유 양을 알아듣지 못했어요';
+        else if (dup) msg = '이미 기록했어요'; // 같은 기록이 두 번 넘어온 것 (갤럭시 잠금 상태 저장분)
+        else if (lf2 && lf2.start <= now) {
+          lf2.end = Math.max(now, lf2.start + 60000); lf2.ml = n; lf2.min = Math.round((lf2.end - lf2.start) / 60000);
+          msg = (nm[lf2.sub] || '수유') + ' ' + n + 'ml 기록했어요';
+        } else {
+          S.events.push({ id: id, type: 'feed', sub: sub, start: now, ml: n, note: '' });
+          msg = nm[sub] + ' ' + n + 'ml 기록했어요';
         }
       } else if (a === 'stop_feed') {
         // 진행 중 수유(end가 null인 feed)를 웹앱이 지원하게 되면 그대로 끝냄
