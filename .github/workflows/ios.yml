@@ -12,6 +12,7 @@ on:
     paths:
       - 'ios-app/**'
       - 'android-app/app/src/main/assets/bridge.js'
+      - '.github/workflows/ios.yml'
   workflow_dispatch:
 
 jobs:
@@ -19,6 +20,13 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
+
+      # Codemagic은 xcode: latest라 여기서도 러너에 있는 가장 새 Xcode로 맞춤 (버전마다 Swift 컴파일 결과가 다름)
+      - name: Use newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app | grep -v -i beta | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
 
       - name: Generate Xcode project
         working-directory: ios-app
@@ -33,9 +41,10 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build
 
-      - name: Build for device (unsigned)
+      # TestFlight 빌드처럼 Release로 (최적화 켠 컴파일에서만 나는 오류도 잡게)
+      - name: Build for device (Release, unsigned)
         working-directory: ios-app
         run: |
-          xcodebuild -project Babylog.xcodeproj -scheme Babylog \
+          xcodebuild -project Babylog.xcodeproj -scheme Babylog -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO build

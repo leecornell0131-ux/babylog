@@ -112,6 +112,13 @@ struct VoiceSettingsView: View {
     @ObservedObject var model: VoiceModel
     @Environment(\.dismiss) var dismiss
 
+    // 한 식에 ?? 와 + 를 섞으면 Xcode가 형 추론을 못 끝냄 (Codemagic 빌드 실패) → 나눠서 씀
+    private func phrase(_ c: VoiceCommand) -> String {
+        let fallback: String = VoiceCommand.babyName + " " + c.words
+        let said: String = model.added[c.activityType]?.invocationPhrase ?? fallback
+        return "\"\(said)\""
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -119,7 +126,7 @@ struct VoiceSettingsView: View {
                     ForEach(VoiceCommand.all) { c in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("\"" + (model.added[c.activityType]?.invocationPhrase ?? VoiceCommand.babyName + " " + c.words) + "\"").font(.headline)
+                                Text(phrase(c)).font(.headline)
                                 Text(c.help).font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
