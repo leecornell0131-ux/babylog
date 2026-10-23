@@ -123,7 +123,9 @@
         S.events.forEach(function (e) { if (e.type === 'feed' && e.end !== null && (!prev || e.start > prev.start)) prev = e; });
         var sub = prev && (prev.sub === 'formula' || prev.sub === 'pump') ? prev.sub : 'formula';
         var nm = { formula: '분유', pump: '유축 수유', breastL: '모유', breastR: '모유' };
+        var dup = S.events.some(function (e) { return e.type === 'feed' && e.start === now && +e.ml === n; });
         if (!(n >= 1 && n <= 500)) msg = '수유 양을 알아듣지 못했어요';
+        else if (dup) msg = '이미 기록했어요'; // 같은 기록이 두 번 넘어온 것 (갤럭시 잠금 상태 저장분)
         else if (lf2 && lf2.start <= now) {
           lf2.end = Math.max(now, lf2.start + 60000); lf2.ml = n; delete lf2.min;
           msg = (nm[lf2.sub] || '수유') + ' ' + n + 'ml 기록했어요';
