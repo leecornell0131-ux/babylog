@@ -248,7 +248,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.38';
+const VERSION='0.3.39';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -937,6 +937,7 @@ function renderSettings(){
     data:`  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
 `,
     dev:`  ${pref('dev')==='1'?`<div class="card panel"><label class="field" for="adsOn">광고 표시<input type="checkbox" id="adsOn" ${pref('ads')!=='0'?'checked':''}></label>
+    <div class="field"><span>오늘 이 휴대폰 사용량<br><span class="small muted">${(()=>{const u=window.BabySync&&BabySync.usage&&BabySync.usage(); return u?`Firestore 읽기 ${u.reads.toLocaleString()} · 쓰기 ${u.writes.toLocaleString()} (대략)`:'가족 공유를 켜면 세요'})()}</span></span><a class="linkbtn" href="usage.html" target="_blank" rel="noopener">전체 사용량 보기</a></div>
     <div class="field"><span class="small muted">개발 테스터용이에요. 광고는 스토어에서 받은 앱에만 나와요.</span><button class="linkbtn" type="button" data-act="devOff">개발자 모드 끄기</button></div></div>`:`<div class="card panel" style="padding:12px 14px"><div class="row"><input type="text" id="devCode" placeholder="개발자 코드" autocapitalize="off" autocomplete="off" style="flex:1"><button class="btn ghost" type="button" data-act="devCode">확인</button></div></div>`}
 `,
   })[k];

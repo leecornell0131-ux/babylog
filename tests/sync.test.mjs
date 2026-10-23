@@ -28,7 +28,7 @@ async function fixture(shared = true) {
   vm.runInNewContext(source.slice(source.indexOf("const LS = 'babylog-sync-v1'"))
     .replaceAll("import('./push-server/web-notify.js')", 'Promise.resolve(notifyModule)'), context);
   await tick();
-  return { S, app, snapshots, commits, notifications, observations,
+  return { S, app, snapshots, commits, notifications, observations, usage: () => context.window.BabySync.usage(),
     async save() { context.window.BabySync.local(S); for (const [id, f] of [...timers]) { timers.delete(id); f(); } await tick(); } };
 }
 test('401 changed records notify once only after both batches succeed', async () => {
@@ -61,4 +61,15 @@ test('unshared save and UI refresh use no server paths', async () => {
   const f = await fixture(false); f.S.events.push({ id: 'local', start: 3, type: 'diaper' }); await f.save();
   for (let i = 0; i < 20; i++) f.app.refresh();
   assert.equal(f.snapshots.length, 0); assert.equal(f.commits.length, 0); assert.equal(f.notifications.length, 0);
+});
+test('usage counter: uploads count writes, server snapshots count reads, cache snapshots are free', async () => {
+  const f = await fixture();
+  f.snapshots[0].cb({ metadata: { fromCache: true }, docChanges: () => [] });
+  f.snapshots[0].cb({ metadata: { fromCache: false }, docChanges: () => [] });
+  f.S.events.push({ id: 'a', type: 'diaper', start: 5 }, { id: 'b', type: 'diaper', start: 6 }); await f.save();
+  f.commits[0].resolve(); await tick();
+  const u = f.usage();
+  assert.equal(u.writes, 2);
+  assert.equal(u.reads, 2 + 1); // 빈 첫 조회 1 + 규칙 확인 1, 올리기 규칙 확인 1
+  assert.match(u.day, /^\d{4}-\d{2}-\d{2}$/);
 });

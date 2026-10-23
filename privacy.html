@@ -26,7 +26,7 @@ a{color:var(--accent)}
 <main>
 <p class="muted"><a href="./">← 아기로그로 돌아가기</a></p>
 <h1>아기로그 개인정보처리방침</h1>
-<p class="muted">시행일 2026년 10월 20일</p>
+<p class="muted">시행일 2026년 10월 23일</p>
 
 <div class="card">
 <p><b>한눈에 보기</b></p>
@@ -45,6 +45,7 @@ a{color:var(--accent)}
 <tr><td>항상</td><td>아기 정보(이름 또는 애칭, 태어난 날, 성별, 출생·현재 체중, 키, 머리둘레, 조산 여부·출산 예정일, 수유 형태), 기록(수유·수면·기저귀·이유식·체온·약·병원 등 기타 기록, 메모), 앱 설정</td><td>기록, 통계·성장곡선 표시, 내보내기 글 만들기</td><td>이용자의 휴대폰(앱 저장공간)</td></tr>
 <tr><td>가족 공유를 켠 경우</td><td>위 아기 정보와 기록, 가족코드(10자리 무작위), 기기마다 자동으로 만들어지는 익명 사용자 ID, 기록한 기기 구분값</td><td>같은 가족코드를 넣은 휴대폰끼리 기록 맞추기</td><td>Google Firebase(Cloud Firestore, 익명 인증)</td></tr>
 <tr><td>가족 공유 + 갤럭시 앱 위젯을 쓰는 경우</td><td>가족코드, 위젯용 요약(아기 이름·태어난 날, 마지막 수유·기저귀·수면 시각과 내용, 오늘 횟수와 합계), 갤럭시 앱 푸시 알림 주소(FCM 토큰)</td><td>다른 휴대폰에서 기록하면 홈 화면 위젯과 잠금화면 타이머를 바로 바꾸기</td><td>Cloudflare Workers(KV 저장소), Google Firebase Cloud Messaging</td></tr>
+<tr><td>가족 공유를 켠 경우</td><td>사용량 숫자(날짜, 가족코드, 휴대폰마다 만든 무작위 번호, 그날 서버를 읽고 쓴 횟수, 알림 서버 요청 횟수). 기록 내용·아기 정보는 들어가지 않아요</td><td>무료 서버 한도를 넘지 않도록 사용량 확인 (60일 뒤 자동 삭제, 운영자 화면에는 가족코드 앞 2자리만 표시)</td><td>Cloudflare Workers(D1 저장소)</td></tr>
 <tr><td>스토어에서 받은 광고 포함 버전</td><td>광고 ID 등 기기 식별자, 광고 표시·클릭 정보 (Google이 처리)</td><td>광고 표시와 부정 클릭 방지</td><td>Google AdMob</td></tr>
 </table></div>
 <p>사진, 연락처, 위치, 마이크는 사용하지 않아요. 갤럭시 앱은 잠금화면 타이머를 띄우기 위해 알림 권한만 요청해요.</p>
@@ -53,6 +54,7 @@ a{color:var(--accent)}
 <ul>
 <li><b>휴대폰에 저장된 정보</b>: 이용자가 지울 때까지 보관해요. 설정 &gt; 데이터 &gt; "모든 기록 지우기"나 앱 삭제(아이폰은 홈 화면 앱과 Safari 데이터 삭제)로 지워져요.</li>
 <li><b>가족 공유 서버</b>: 기록을 하나 지우면 서버에서도 내용이 지워지고 "지워짐" 표시만 남아요. 가족에서 나가면 그 휴대폰은 더 이상 가족 정보를 받지 않아요. 가족 전체의 서버 정보를 지우고 싶으면 아래 문의처로 가족코드를 알려 주세요. 확인 후 지체 없이 삭제해요.</li>
+<li><b>사용량 숫자</b>: 60일이 지나면 자동으로 지워져요.</li>
 <li><b>위젯 알림 서버</b>: 요약은 새 기록이 올 때마다 덮어써지고, 푸시 주소는 가족에서 나가거나 앱을 지우면 지워져요. 삭제 요청도 위 방법과 같아요.</li>
 </ul>
 
@@ -96,7 +98,7 @@ a{color:var(--accent)}
 
 <h2 lang="en">Summary in English</h2>
 <div class="card" lang="en">
-<p>Babylog has no accounts. Baby details and logs stay on the device. Only if the user turns on family sharing are they stored in Google Firebase (Cloud Firestore with anonymous sign-in) so that phones with the same family code stay in sync; the Galaxy app's widget feature also stores a short summary and a push token on Cloudflare Workers and uses Firebase Cloud Messaging. Store builds may show Google AdMob banner ads; health logs are never sent to ad networks or used for personalised ads. The app never sends data to AI services; the export feature only copies text. Users can delete any record in the app; to delete family server data, email leecornell0131@gmail.com with the family code.</p>
+<p>Babylog has no accounts. Baby details and logs stay on the device. Only if the user turns on family sharing are they stored in Google Firebase (Cloud Firestore with anonymous sign-in) so that phones with the same family code stay in sync; the Galaxy app's widget feature also stores a short summary and a push token on Cloudflare Workers and uses Firebase Cloud Messaging. With family sharing on, the app also sends daily usage counts (family code, a random device number, read/write and request counts, no log content) to the same Cloudflare server to keep within free quotas; they are deleted after 60 days. Store builds may show Google AdMob banner ads; health logs are never sent to ad networks or used for personalised ads. The app never sends data to AI services; the export feature only copies text. Users can delete any record in the app; to delete family server data, email leecornell0131@gmail.com with the family code.</p>
 </div>
 </main>
 </body>

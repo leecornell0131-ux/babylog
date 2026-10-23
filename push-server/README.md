@@ -8,6 +8,13 @@
 2. 서버는 같은 가족코드로 등록된 갤럭시 앱에 FCM 푸시를 보내요. 갤럭시 앱은 앱이 꺼져 있어도 위젯과 잠금화면 타이머를 바로 바꿔요.
 3. 푸시가 늦거나 막혔을 때를 대비해 갤럭시 앱은 15분마다 `/summary`로 마지막 요약을 확인해요.
 
+## 사용량 보기 (가족별)
+
+- 서버는 받은 요청 수를 가족코드별로 1분씩 모아 D1 `usage_req`에 저장해요.
+- 각 휴대폰(웹앱 `sync.js`)은 자기가 쓴 Firestore 읽기·쓰기를 세어 몇 시간에 한 번 `/usage`로 보내요(`usage_app`, 숫자만, 60일 뒤 삭제).
+- 대시보드: https://leecornell0131-ux.github.io/babylog/usage.html (`GET /usage`, 가족코드는 앞 2자리만)
+- 매일 점검: `.github/workflows/usage-check.yml`이 한국 9:15·20:00에 확인하고, 한도의 50%를 넘으면 "사용량 경보" 이슈를 올려 이메일이 와요. 단계와 계산은 `usage-levels.js`.
+
 ## 비용: 0원 (카드 등록 없음)
 
 | 서비스 | 무료 한도 (공식 문서) | 우리 사용량 |
@@ -30,7 +37,9 @@
 | `worker.js` | 서버 코드 (`/register`, `/unregister`, `/notify`, `/summary`) |
 | `wrangler.toml` | 배포 설정 (KV id는 배포 때 채움) |
 | `android-config.mjs` | 배포 때 Firebase에서 갤럭시 앱 설정을 가져와 `push-config.json`을 만듦 |
-| `web-notify.js` | 웹앱이 기록을 올린 뒤 부르는 함수 (`notifyFamily(fid, state)`) |
+| `web-notify.js` | 웹앱이 기록을 올린 뒤 부르는 함수 (`notifyFamily(fid, state)`), 사용량 보내기 (`sendUsage`) |
+| `usage-levels.js` | 경보 단계·수용 인원 계산 (대시보드와 매일 점검이 같이 씀) |
+| `usage-check.mjs` | 매일 점검 스크립트 |
 
 ## 보안
 

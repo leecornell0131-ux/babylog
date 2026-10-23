@@ -6,11 +6,12 @@ import { generateKeyPairSync } from 'node:crypto';
 
 const source = await readFile(new URL('../push-server/worker.js', import.meta.url), 'utf8');
 const { default: worker, cleanSummary } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
-const migration = await readFile(new URL('../push-server/migrations/0001_summaries.sql', import.meta.url), 'utf8');
+const migration = (await readFile(new URL('../push-server/migrations/0001_summaries.sql', import.meta.url), 'utf8'))
+  + (await readFile(new URL('../push-server/migrations/0002_usage.sql', import.meta.url), 'utf8'));
 const fid = 'AAAAAAAAAA';
 function fixture(d1 = true) {
   const values = new Map(), counts = { get: 0, put: 0 };
-  const env = { KV: {
+  const env = { USAGE_FLUSH_MS: 0, KV: {
     async get(k) { counts.get++; return JSON.parse(values.get(k) || 'null'); },
     async put(k, v) { counts.put++; values.set(k, v); },
   } };
@@ -20,6 +21,7 @@ function fixture(d1 = true) {
     env.DB = { prepare(query) { return { bind(...args) { return {
       async first() { return sql.prepare(query).get(...args) || null; },
       async run() { const r = sql.prepare(query).run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
+      async all() { return { results: sql.prepare(query).all(...args) }; },
     }; } }; } };
   }
   const request = (path, body, method = body ? 'POST' : 'GET') => worker.fetch(new Request('https://test.invalid' + path, {
@@ -110,4 +112,35 @@ test('cleanSummary는 수면 구간 목록을 구간 단위로만 잘라 숫자�
   assert.ok(o.sleeps.slice(2).split(',').every(p => /^\d+-\d+$/.test(p) && list.includes(p)));
   assert.equal(cleanSummary({ at: 1, sleeps: 'm:1-2,bad,3-4' }).sleeps, 'm:1-2,3-4');
   assert.equal(cleanSummary({ at: 1 }).sleeps, null);
+});
+
+test('usage: requests counted per family, family code masked in report', async () => {
+  const f = fixture();
+  await f.notify(100); await f.request('/summary?fid=' + fid); await f.request('/summary?fid=' + fid);
+  await f.request('/');
+  const j = await (await f.request('/usage?fid=' + fid)).json();
+  const today = j.days[0];
+  assert.equal(today.families, 1); assert.equal(today.otherReq, 1);
+  assert.equal(today.top[0].req, 3); assert.equal(today.top[0].me, true);
+  assert.ok(!JSON.stringify(j).includes(fid), 'full family code must not be exposed');
+  assert.equal(j.limits.fsReads, 50000);
+});
+test('usage: app reports keep the larger cumulative value and reject bad input', async () => {
+  const f = fixture();
+  const day = new Date().toISOString().slice(0, 10);
+  const send = b => f.request('/usage', { fid, day, dev: 'abcd1234', reads: 10, writes: 2, ...b });
+  assert.equal((await send({})).status, 200);
+  await send({ reads: 40, writes: 1 });
+  await send({ dev: 'zzzz9999', reads: 5, writes: 5 });
+  assert.equal((await send({ day: '2020-01-01' })).status, 400);
+  assert.equal((await send({ dev: 'BAD!' })).status, 400);
+  assert.equal((await send({ reads: -1 })).status, 400);
+  const t = (await (await f.request('/usage')).json()).days[0];
+  assert.equal(t.reads, 45); assert.equal(t.writes, 7); assert.equal(t.top[0].devs, 2); assert.equal(t.sharedFamilies, 1);
+});
+test('usage counting never breaks the widget API when tables are missing', async () => {
+  const f = fixture();
+  const broken = { ...f.env, DB: { prepare(q) { if (/usage_/.test(q)) throw new Error('no such table'); return f.env.DB.prepare(q); } } };
+  const r = await worker.fetch(new Request('https://test.invalid/summary?fid=' + fid), broken);
+  assert.equal(r.status, 200);
 });
