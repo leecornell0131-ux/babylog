@@ -13,7 +13,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     // 갤럭시 앱의 BabyNative(안드로이드 기능)를 아이폰 쪽으로 이어 주는 대역.
     // bridge.js(갤럭시와 같은 파일)가 부르는 이름만 받음. 광고(adZone)처럼 아이폰에 없는 기능은
-    // 이름이 없어야 웹앱이 해당 메뉴를 숨김. 음성 명령(voiceHelp)은 아이폰에선 Siri 사용법 (platform 'ios'로 웹앱이 문구를 바꿈)
+    // 이름이 없어야 웹앱이 해당 메뉴를 숨김. 음성 명령(voiceHelp)은 아이폰에선 Siri 사용법 (platform 'ios'로 웹앱이 문구를 바꿈, voiceFeed 'ml'=0.2.3부터 "수유 120")
     private static let shim = """
     if (location.host === '\(host)' && !window.BabyNative) (function () {
       var post = function (m) { window.webkit.messageHandlers.babyNative.postMessage(m); };
@@ -24,7 +24,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         copy: function (text) { post({ t: 'copy', text: String(text) }); },
         reload: function () { post('reload'); },
         voiceHelp: function () { post('voiceHelp'); },
-        platform: 'ios'
+        platform: 'ios',
+        voiceFeed: 'ml'
       };
       window.BabyNative = impl;
     })();
