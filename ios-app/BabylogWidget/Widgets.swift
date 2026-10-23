@@ -161,7 +161,8 @@ struct TickClock: View {
     }
 }
 
-// 기록 버튼 (갤럭시 WidgetBtn: 둥근 색 상자, 진한 글자)
+// 기록 버튼 (갤럭시 WidgetBtn: 둥근 색 상자, 진한 글자).
+// 수면은 켜고 끄는 "sleep" 대신 sleep_start/stop_sleep: 아이폰 위젯은 배우자 기록이 늦게(15분쯤) 반영돼서 화면과 반대로 기록되지 않게
 struct WButton: View {
     let title: String
     let bg: Color
@@ -219,7 +220,7 @@ struct QuickView: View {
                 WButton(title: s.feedAt != nil ? "🍼 수유 끝" : "🍼 수유", bg: Palette.feedBg, action: s.feedAt != nil ? "stop_feed" : "feed")
                 WButton(title: "💧 소변", bg: Palette.diaperBg, action: "pee")
                 WButton(title: "💩 대변", bg: Palette.pooBg, action: "poo")
-                WButton(title: s.sleepAt != nil ? "☀️ 깼어요" : "🌙 잠듦", bg: Palette.sleepBg, action: "sleep")
+                WButton(title: s.sleepAt != nil ? "☀️ 깼어요" : "🌙 잠듦", bg: Palette.sleepBg, action: s.sleepAt != nil ? "stop_sleep" : "sleep_start")
             }
             .frame(height: 44)
         }
@@ -401,7 +402,7 @@ struct SleepView: View {
                     Text(sub(s)).font(.system(size: 13)).foregroundStyle(Palette.sub).lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                WButton(title: s.sleepAt != nil ? "☀️ 깼어요" : "🌙 잠듦", bg: Palette.sleepBg, action: "sleep", size: 15)
+                WButton(title: s.sleepAt != nil ? "☀️ 깼어요" : "🌙 잠듦", bg: Palette.sleepBg, action: s.sleepAt != nil ? "stop_sleep" : "sleep_start", size: 15)
                     .frame(height: 40)
             }
             .padding(12)
