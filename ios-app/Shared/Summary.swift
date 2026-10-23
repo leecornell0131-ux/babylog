@@ -25,6 +25,7 @@ struct BabySummary: Codable, Equatable {
     var tPoo: Double?
     var tSleep: Double?
     var fid: String?            // 가족코드 (가족 공유를 켰을 때만)
+    var sleeps: String?         // 최근 50시간 끝난 수면 "m:시작-끝,…" (지금부터 몇 분 전). 어제 수면 계산용
 
     static func date(_ ms: Double?) -> Date? { ms.map { Date(timeIntervalSince1970: $0 / 1000) } }
 
@@ -40,7 +41,7 @@ struct BabySummary: Codable, Equatable {
         lastFeedSub: "formula", birth: nil, feedGap: 3 * 3600 * 1000, lastWake: (Date().timeIntervalSince1970 - 2700) * 1000,
         lastDiaper: (Date().timeIntervalSince1970 - 3600) * 1000, lastDiaperText: "소변",
         day: Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 * 1000,
-        tFeeds: 5, tMl: 600, tPee: 4, tPoo: 1, tSleep: 6 * 3600 * 1000, fid: nil)
+        tFeeds: 5, tMl: 600, tPee: 4, tPoo: 1, tSleep: 6 * 3600 * 1000, fid: nil, sleeps: nil)
 }
 
 // 앱과 위젯이 같이 읽는 저장소.
@@ -68,6 +69,13 @@ enum SharedStore {
                                 kSecMatchLimit as String: kSecMatchLimitOne]
         var out: AnyObject?
         return SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess ? out as? Data : nil
+    }
+
+    static func delete(account: String) {
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                kSecAttrService as String: service,
+                                kSecAttrAccount as String: account]
+        SecItemDelete(q as CFDictionary)
     }
 
     static var summary: BabySummary? {
@@ -130,5 +138,24 @@ enum Fmt {
         let days = (cal.dateComponents([.day], from: cal.startOfDay(for: b), to: cal.startOfDay(for: now)).day ?? 0) + 1
         if days < 100 { return "\(days)일" }
         return "\(cal.dateComponents([.month], from: b, to: now).month ?? 0)개월"
+    }
+}
+
+// 위젯 버튼으로 누른 기록. 위젯이 저장해 두고 앱이 열리면 꺼내서 웹앱에 넣음 (누른 시각 그대로)
+enum PendingAction {
+    static let note = Notification.Name("babylog.pending")
+    private struct Item: Codable { let action: String; let at: Double }
+
+    static func save(_ action: String, at: Date) {
+        if let d = try? JSONEncoder().encode(Item(action: action, at: at.timeIntervalSince1970)) { SharedStore.save(d, account: "pending") }
+    }
+
+    // 10분 넘게 지난 것은 버림 (앱이 안 열려서 남은 것)
+    static func take() -> (action: String, at: Date)? {
+        guard let d = SharedStore.load(account: "pending") else { return nil }
+        SharedStore.delete(account: "pending")
+        guard let i = try? JSONDecoder().decode(Item.self, from: d) else { return nil }
+        let at = Date(timeIntervalSince1970: i.at)
+        return Date().timeIntervalSince(at) < 600 ? (i.action, at) : nil
     }
 }

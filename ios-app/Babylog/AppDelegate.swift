@@ -14,7 +14,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         w.rootViewController = WebViewController()
         w.makeKeyAndVisible()
         window = w
+        NotificationCenter.default.addObserver(forName: PendingAction.note, object: nil, queue: .main) { [weak self] _ in self?.runPending() }
         return true
+    }
+
+    // 위젯 버튼으로 누른 기록 (앱이 열릴 때, 늦게 저장된 경우를 위해 조금 뒤에도 한 번 더)
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        runPending()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.runPending() }
+    }
+
+    func runPending() {
+        guard let p = PendingAction.take() else { return }
+        (window?.rootViewController as? WebViewController)?.runAction(p.action, at: p.at)
     }
 
     // 위젯·잠금화면 버튼 (babylog://do/동작)
