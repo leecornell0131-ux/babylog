@@ -148,6 +148,22 @@ export function summaryOf(S) {
   };
 }
 
+// 이 휴대폰이 센 하루 Firestore 읽기·쓰기 횟수를 알림 서버에 보냄 (sync.js가 몇 시간에 한 번 부름). 숫자만 보냄.
+export async function sendUsage(u) {
+  const base = await workerUrl().catch(() => null);
+  if (!base) return false;
+  const r = await fetch(base + '/usage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u), keepalive: true });
+  return r.ok;
+}
+
+async function workerUrl() {
+  cfgP = cfgP || fetch(new URL('../android-app/push-config.json', import.meta.url), { cache: 'no-cache' })
+    .then(r => (r.ok ? r.json() : null)).catch(() => null);
+  const cfg = await cfgP;
+  if (!cfg || !cfg.worker) { cfgP = null; throw new Error('push config unavailable'); }
+  return cfg.worker.replace(/\/$/, '');
+}
+
 async function send(fid, summary) {
   cfgP = cfgP || fetch(new URL('../android-app/push-config.json', import.meta.url), { cache: 'no-cache' })
     .then(r => (r.ok ? r.json() : null)).catch(() => null);

@@ -31,6 +31,38 @@ try { Object.assign(st, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(st)); } catch (_) {} };
 
 let state = 'off', error = '', busy = false, unsubs = [];
+
+// ---------- 사용량 세기 (대략값) ----------
+// Firebase 콘솔은 전체 합계만 보여 줘서, 이 휴대폰이 쓴 Firestore 읽기·쓰기를 스스로 세어 알림 서버에 몇 시간에 한 번 보냄.
+// 보내는 것: 가족코드, 휴대폰 무작위 번호, 날짜, 읽기·쓰기 횟수뿐. 기록 내용·아기 정보는 보내지 않음.
+// 하루 = UTC 날짜(한국 아침 9시 시작). 셈은 요금 규칙을 따라 대략 맞춤: 받은 문서 1개 = 읽기 1, 빈 결과도 읽기 1,
+// 규칙의 가족 확인(exists) = 읽기 1, 올린 문서 1개 = 쓰기 1.
+const UL = 'babylog-usage-v1';
+const today = () => new Date().toISOString().slice(0, 10);
+let use = { dev: null, day: today(), reads: 0, writes: 0, prev: null, sentAt: 0 };
+try { Object.assign(use, JSON.parse(localStorage.getItem(UL) || '{}')); } catch (_) {}
+if (!use.dev) { const a = new Uint32Array(2); crypto.getRandomValues(a); use.dev = Array.from(a, n => n.toString(36).padStart(7, '0').slice(-7)).join(''); }
+let useTimer = null;
+function tally(reads, writes = 0) {
+  const d = today();
+  if (use.day !== d) { use.prev = use.reads || use.writes ? { day: use.day, reads: use.reads, writes: use.writes } : null; use.day = d; use.reads = 0; use.writes = 0; use.sentAt = 0; }
+  use.reads += reads; use.writes += writes;
+  try { localStorage.setItem(UL, JSON.stringify(use)); } catch (_) {}
+  clearTimeout(useTimer); useTimer = setTimeout(reportUsage, 5000);
+}
+async function reportUsage() {
+  const fid = st.fid; if (!fid) return;
+  const sends = [];
+  if (use.prev) sends.push(use.prev);
+  if ((use.reads || use.writes) && Date.now() - use.sentAt > 3 * 3600e3) sends.push({ day: use.day, reads: use.reads, writes: use.writes });
+  if (!sends.length) return;
+  const m = await import('./push-server/web-notify.js').catch(() => null); if (!m || !m.sendUsage) return;
+  for (const u of sends) {
+    if (!await m.sendUsage({ fid, dev: use.dev, ...u }).catch(() => false)) return;
+    if (u === use.prev) use.prev = null; else use.sentAt = Date.now();
+    try { localStorage.setItem(UL, JSON.stringify(use)); } catch (_) {}
+  }
+}
 const inflight = {}; // 올리는 중인 기록 {id: 정렬JSON}
 const setState = (s, e = '') => { state = s; error = e; App.refresh(); };
 
@@ -87,7 +119,9 @@ async function push(S) {
     chunk.forEach(([id, c, data]) => { inflight[id] = c; b.set(F.doc(db, 'families', fid, 'events', id), data); });
     const withMeta = i === 0 && metaChanged;
     if (withMeta) { inflight.__meta = m; b.update(F.doc(db, 'families', fid), { meta: JSON.parse(m), mu: F.serverTimestamp(), mby: me }); }
+    tally(1); // 규칙의 가족 확인 (한 번에 올리는 묶음당 1번)
     commits.push(b.commit().then(() => {
+      tally(0, chunk.length + (withMeta ? 1 : 0));
       if (st.fid !== fid) return;
       chunk.forEach(([id, c]) => { st.synced[id] = c; if (inflight[id] === c) delete inflight[id]; });
       if (withMeta) { st.meta = m; if (inflight.__meta === m) delete inflight.__meta; }
@@ -123,7 +157,12 @@ function listen() {
   // 서버 시각이 조금 어긋나도 놓치지 않도록 5분 겹쳐서 받음 (같은 기록은 다시 받아도 무해)
   const since = F.Timestamp.fromMillis(Math.max(0, st.cursor - 5 * 60000));
   const q = F.query(F.collection(db, 'families', fid, 'events'), F.where('u', '>', since), F.orderBy('u'));
+  let firstEv = true, firstMeta = true;
   unsubs.push(F.onSnapshot(q, snap => {
+    if (!snap.metadata.fromCache) {
+      const n = snap.docChanges().filter(ch => !ch.doc.metadata.hasPendingWrites).length;
+      tally(firstEv ? Math.max(1, n) + 1 : n); firstEv = false;
+    }
     const changes = snap.docChanges().filter(ch => ch.type !== 'removed' && !ch.doc.metadata.hasPendingWrites);
     if (!changes.length) {
       if (!snap.metadata.fromCache) { if (state !== 'on') setState('on'); recoverWidget(fid); }
@@ -155,6 +194,7 @@ function listen() {
     if (!snap.metadata.fromCache) recoverWidget(fid, true);
   }, e => setState('err', errText(e))));
   unsubs.push(F.onSnapshot(F.doc(db, 'families', fid), snap => {
+    if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) { tally(firstMeta ? 2 : 1); firstMeta = false; }
     const d = snap.data(); if (!d || !d.meta || snap.metadata.hasPendingWrites) return;
     const m = canon(d.meta); if (m === st.meta) return;
     st.meta = m; persist();
@@ -171,6 +211,7 @@ async function begin(fid) {
 
 window.BabySync = {
   status: () => ({ fid: st.fid, state, error, busy }),
+  usage: () => ({ day: use.day, reads: use.reads, writes: use.writes, prev: use.prev, sentAt: use.sentAt }),
   local,
   async create() {
     busy = true; error = ''; App.refresh();
@@ -178,6 +219,7 @@ window.BabySync = {
       const me = await uid(), fid = code(), S = App.state;
       await F.setDoc(F.doc(db, 'families', fid), { createdBy: me, createdAt: F.serverTimestamp(), meta: JSON.parse(metaOf(S)), mu: F.serverTimestamp(), mby: me });
       await F.setDoc(F.doc(db, 'families', fid, 'members', me), { joinedAt: F.serverTimestamp() });
+      tally(1, 2);
       await begin(fid); st.meta = metaOf(S); persist();
       App.toast('가족을 만들었어요. 초대코드를 배우자에게 보내세요');
     } catch (e) { error = errText(e); state = 'err'; }
@@ -192,6 +234,7 @@ window.BabySync = {
       await F.setDoc(F.doc(db, 'families', fid, 'members', me), { joinedAt: F.serverTimestamp() });
       // 가족의 아기 정보를 먼저 받아 이 휴대폰 값으로 덮어쓰지 않게 함
       const fam = await F.getDoc(F.doc(db, 'families', fid));
+      tally(3, 1);
       st = { fid, cursor: 0, synced: {}, meta: null };
       if (fam.exists() && fam.data().meta) {
         const meta = fam.data().meta; st.meta = canon(meta);
@@ -211,5 +254,5 @@ window.BabySync = {
   },
 };
 
-if (st.fid) { state = 'off'; listen(); push(App.state); }
+if (st.fid) { state = 'off'; listen(); push(App.state); setTimeout(reportUsage, 8000); }
 App.refresh();
