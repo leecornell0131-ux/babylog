@@ -24,6 +24,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.runPending() }
     }
 
+    // 설정 > 음성 명령에서 만든 "루나 깼어" 같은 Siri 단축어 (VoiceSettings.swift)
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        guard let c = VoiceCommand.find(userActivity.activityType) else { return false }
+        Task { @MainActor in await c.run() }
+        return true
+    }
+
     func runPending() {
         guard let p = PendingAction.take() else { return }
         (window?.rootViewController as? WebViewController)?.runAction(p.action, at: p.at)
