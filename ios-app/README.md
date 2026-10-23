@@ -9,7 +9,15 @@
   - 백업 파일 저장은 공유 창으로 떠서 "파일에 저장"이나 카톡으로 보낼 수 있어요.
   - 다른 사이트 링크는 Safari로 열려요. 인터넷이 없으면 "다시 열기" 화면이 떠요.
   - 앱으로 돌아올 때마다 `BabyApp.refresh()`로 배우자 기록을 다시 그려요.
-- **아직 없는 것**: 홈 화면 위젯, Siri, 잠금화면 타이머(Live Activity), 광고. 위젯·Siri·Live Activity는 Mac에서 Xcode로 만들어야 해서 Mac 확보 전까지 보류예요. 광고(AdMob)는 스토어 출시 때 붙여요.
+- 위젯 (홈 화면을 길게 누르고 + → 아기로그)
+  - 마지막 수유(작은 크기): 마지막 수유 시각·양, 지난 시간, 평소 간격으로 본 다음 수유 시각
+  - 수면(작은 크기): 자는 중이면 잔 시간, 깨어 있으면 깬 뒤 시간. 위젯을 누르면 "깼어요/잠들었어요"가 바로 기록돼요
+  - 오늘 요약(중간 크기): 오늘 수유 횟수·양, 수면 합계, 소변·대변 횟수
+  - 빠른 기록(중간 크기): 수유·소변·대변·수면 버튼
+  - 잠금화면 위젯: 마지막 수유, 수면 (잠금화면을 길게 누르고 사용자화 → 잠금화면 → 위젯 추가)
+- 잠금화면·다이내믹 아일랜드 타이머(Live Activity): 수면 중·수유 중이면 시간이 흘러가고 "깼어요"/"수유 끝" 버튼이 있어요. 버튼을 누르면 Face ID 뒤 앱이 열리며 그 시각으로 기록돼요.
+- 배우자 기록: 앱을 열어 둘 때는 바로, 앱이 꺼져 있으면 위젯이 15분쯤마다 알림 서버(`push-server` `/summary`)에서 최신 요약을 받아 바뀌어요. 아이폰은 갤럭시처럼 푸시로 즉시 바꾸려면 Apple 푸시 키가 필요해서 지금은 이 방식이에요.
+- **아직 없는 것**: Siri, 광고. 광고(AdMob)는 스토어 출시 때 붙여요.
 
 ## 주의: 기록 저장 공간이 Safari와 따로예요
 
@@ -18,7 +26,7 @@
 
 ## 빌드하는 곳
 
-- `codemagic.yaml`(저장소 맨 위): Codemagic 무료 구간(Mac 클라우드)에서 서명하고 TestFlight에 올려요. 자동 시작은 꺼 두었어요. 아이폰 쪽 코드(`ios-app/`)가 바뀔 때만 Codemagic에서 "Start new build"를 누르면 돼요.
+- `codemagic.yaml`(저장소 맨 위): Codemagic 무료 구간(Mac 클라우드)에서 서명하고 TestFlight에 올려요. main에 아이폰 쪽 코드(`ios-app/`, `bridge.js`, `codemagic.yaml`)가 바뀌어 올라오면 자동으로 빌드해요. 웹앱만 바뀌면 빌드하지 않아요.
 - `.github/workflows/ios.yml`: 코드가 빌드되는지만 GitHub Actions(공개 저장소라 무료)에서 확인해요. 서명·업로드는 안 해요.
 - Xcode 프로젝트는 `project.yml`로 빌드할 때 만들어요(XcodeGen). 그래서 `.xcodeproj`는 저장소에 없어요.
 
@@ -38,3 +46,9 @@
 | `<a download>` 백업 저장 | 공유 창으로 넘김 |
 | `alert`·`confirm`·`prompt` | 아이폰 알림창 |
 | 사용자 에이전트 `BabylogIOS/빌드번호` | 웹앱이 아이폰 앱인지 알고 싶을 때 |
+
+웹앱과 잇는 코드는 갤럭시 앱의 `android-app/app/src/main/assets/bridge.js`를 그대로 넣어요(빌드 때 같이 묶음). 아이폰 쪽 `window.BabyNative`는 `update`·`shareFile`·`shareText`·`copy`만 있어요(광고 `adZone`, 빅스비 `voiceHelp`는 없어서 웹앱이 그 메뉴를 숨김). bridge.js에서 `BabyNative`의 새 기능을 부르면 `WebViewController.swift`의 대역에도 넣어야 해요.
+
+## 위젯 서명
+
+위젯은 앱과 따로 App ID(`kr.babylog.app.widget`)와 배포 프로필이 필요해요. `codemagic.yaml`의 "위젯 서명 준비" 단계가 Codemagic에 연결한 API 키로 없으면 만들고 있으면 받아 써요. 앱과 위젯은 공유 키체인(`kr.babylog.shared`)으로 요약을 나눠서 App Group 설정이 필요 없어요.
