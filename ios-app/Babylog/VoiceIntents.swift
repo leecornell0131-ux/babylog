@@ -136,7 +136,18 @@ struct BabyShortcuts: AppShortcutsProvider {
 enum VoiceRunner {
     static var web: WebViewController? { (UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? WebViewController }
 
+    // Siri가 같은 명령을 짧은 사이에 두 번 실행하는 경우가 있어(앱을 여는 명령), 5초 안의 같은 명령은 한 번만 기록하고 같은 답을 돌려줌
+    private static var recent: [String: (at: Date, task: Task<String, Never>)] = [:]
+
     static func run(_ action: String, ml: Int? = nil) async -> String {
+        let key = action + ":" + (ml.map(String.init) ?? "")
+        if let r = recent[key], Date().timeIntervalSince(r.at) < 5 { return await r.task.value }
+        let task = Task { await record(action, ml: ml) }
+        recent[key] = (Date(), task)
+        return await task.value
+    }
+
+    private static func record(_ action: String, ml: Int?) async -> String {
         let at = Date()
         // 앱이 막 켜졌으면 웹앱이 준비될 때까지 기다림 (최대 10초)
         for _ in 0..<20 {

@@ -93,8 +93,10 @@
     A.applyRemote(function (S) {
       var live = function (t) { var r = null; S.events.forEach(function (e) { if (e.type === t && e.end === null && (!r || e.start > r.start)) r = e; }); return r; };
       if (a === 'pee' || a === 'poo' || a === 'both') {
-        S.events.push({ id: id, type: 'diaper', sub: a, start: now, note: '' });
-        msg = '기저귀를 기록했어요';
+        // 같은 명령이 두 번 넘어오면(Siri가 두 번 실행, 잠금 상태 저장분 등) 1분 안의 같은 기저귀는 다시 넣지 않음
+        var dd = S.events.some(function (e) { return e.type === 'diaper' && e.sub === a && Math.abs(e.start - now) < 60000; });
+        if (dd) msg = '방금 기록했어요';
+        else { S.events.push({ id: id, type: 'diaper', sub: a, start: now, note: '' }); msg = '기저귀를 기록했어요'; }
       } else if (a === 'sleep_start') {
         // 음성 명령 "아기잠듦": 이미 자는 중이면 그대로 둠 (위젯 '잠듦' 버튼처럼 끝내지 않음)
         if (live('sleep')) msg = '이미 자는 중이에요';
