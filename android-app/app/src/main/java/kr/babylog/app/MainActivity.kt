@@ -186,7 +186,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun quick(a: String, at: Long) = "window.__babyQuick?__babyQuick(${JSONObject.quote(a)},$at):'notready'"
+    // "feed_ml:120"은 bridge.js에 __babyQuick('feed_ml', at, 120)으로 넘김 (아이폰 Siri "수유 120"과 같은 형식)
+    private fun quick(a: String, at: Long): String {
+        val ml = a.removePrefix("feed_ml:").takeIf { a.startsWith("feed_ml:") }
+        val act = if (ml != null) "feed_ml" else a
+        return "window.__babyQuick?__babyQuick(${JSONObject.quote(act)},$at${if (ml != null) ",$ml" else ""}):'notready'"
+    }
 
     // bridge.js가 돌려준 'ok:수면 40분 기록했어요'에서 문구만
     private fun said(r: String) = runCatching { org.json.JSONArray("[$r]").getString(0) }.getOrDefault("").substringAfter("ok:", "")
