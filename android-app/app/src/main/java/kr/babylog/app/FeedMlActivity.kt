@@ -31,8 +31,10 @@ class FeedMlActivity : Activity() {
         fun parseMl(s: String): Int? {
             Regex("\\d{1,3}").find(s)?.value?.toIntOrNull()?.let { return it.takeIf { n -> n in 5..400 } }
             val dig = mapOf('일' to 1, '이' to 2, '삼' to 3, '사' to 4, '오' to 5, '육' to 6, '칠' to 7, '팔' to 8, '구' to 9)
+            // "백이십이요"·"백이요"처럼 끝에 붙는 "이요/요/예요"는 숫자가 아님 (안 떼면 122·102로 읽힘)
+            val t = s.trim().replace(Regex("\\s*(이에요|이예요|이요|예요|에요|요)$"), "")
             var total = 0; var cur = 0; var any = false
-            for (c in s) {
+            for (c in t) {
                 when {
                     c in dig -> { cur = dig.getValue(c); any = true }
                     c == '백' -> { total += (if (cur == 0) 1 else cur) * 100; cur = 0; any = true }
