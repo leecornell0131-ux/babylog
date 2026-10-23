@@ -127,7 +127,7 @@
         if (!(n >= 1 && n <= 500)) msg = '수유 양을 알아듣지 못했어요';
         else if (dup) msg = '이미 기록했어요'; // 같은 기록이 두 번 넘어온 것 (갤럭시 잠금 상태 저장분)
         else if (lf2 && lf2.start <= now) {
-          lf2.end = Math.max(now, lf2.start + 60000); lf2.ml = n; delete lf2.min;
+          lf2.end = Math.max(now, lf2.start + 60000); lf2.ml = n; lf2.min = Math.round((lf2.end - lf2.start) / 60000);
           msg = (nm[lf2.sub] || '수유') + ' ' + n + 'ml 기록했어요';
         } else {
           S.events.push({ id: id, type: 'feed', sub: sub, start: now, ml: n, note: '' });

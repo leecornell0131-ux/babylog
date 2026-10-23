@@ -204,13 +204,13 @@ final class FeedListener {
     private var task: SFSpeechRecognitionTask?
     private var heard = ""
     private var finished = true
-    private var at = Date()
+    private var session = 0   // 이전에 물어본 것의 늦은 응답·시간 초과가 새로 물어본 것을 끝내지 않게
 
     func start() {
         guard finished else { return }
         finished = false
+        session += 1
         heard = ""
-        at = Date()
         SFSpeechRecognizer.requestAuthorization { st in
             AVAudioApplication.requestRecordPermission { mic in
                 Task { @MainActor in
@@ -234,19 +234,21 @@ final class FeedListener {
         guard (try? engine.start()) != nil else { return fallback("마이크를 쓸 수 없어요. 화면에서 양을 골라 주세요") }
         self.engine = engine
         request = req
+        let id = session
         task = rec.recognitionTask(with: req) { r, err in
             Task { @MainActor in
+                guard id == self.session, !self.finished else { return }
                 if let r { self.heard = r.bestTranscription.formattedString }
                 if r?.isFinal == true || err != nil { return self.finish() }
                 // 숫자를 알아들었고 1.2초 동안 더 바뀌지 않으면 끝냄 ("백" 다음에 "이십"이 이어질 수 있어서)
                 let now = self.heard
                 if FeedListener.amount(in: now) != nil {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in if self?.heard == now { self?.finish() } }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in if self?.session == id, self?.heard == now { self?.finish() } }
                 }
             }
         }
         // 6초 안에 대답이 없으면 끝냄
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in self?.finish() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in if self?.session == id { self?.finish() } }
     }
 
     private func finish() {
