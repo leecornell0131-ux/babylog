@@ -6,10 +6,12 @@ on:
   push:
     paths:
       - 'ios-app/**'
+      - 'android-app/app/src/main/assets/bridge.js'
       - '.github/workflows/ios.yml'
   pull_request:
     paths:
       - 'ios-app/**'
+      - 'android-app/app/src/main/assets/bridge.js'
   workflow_dispatch:
 
 jobs:
@@ -29,4 +31,11 @@ jobs:
         run: |
           xcodebuild -project Babylog.xcodeproj -scheme Babylog \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+
+      - name: Build for device (unsigned)
+        working-directory: ios-app
+        run: |
+          xcodebuild -project Babylog.xcodeproj -scheme Babylog \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO build

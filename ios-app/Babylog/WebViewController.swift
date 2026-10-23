@@ -9,12 +9,35 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     private var web: WKWebView!
     private var downloadNames: [ObjectIdentifier: URL] = [:]
+    private var pending: [(String, Date)] = [] // 페이지가 준비되기 전에 들어온 위젯·잠금화면 버튼
+
+    // 갤럭시 앱의 BabyNative(안드로이드 기능)를 아이폰 쪽으로 이어 주는 대역.
+    // bridge.js(갤럭시와 같은 파일)가 부르는 이름만 받음. 광고(adZone)·빅스비 음성(voiceHelp)처럼 아이폰에 없는 기능은
+    // 이름이 없어야 웹앱이 해당 메뉴를 숨김
+    private static let shim = """
+    if (location.host === '\(host)' && !window.BabyNative) (function () {
+      var post = function (m) { window.webkit.messageHandlers.babyNative.postMessage(m); };
+      var impl = {
+        update: function (s) { post({ t: 'update', s: String(s) }); },
+        shareFile: function (name, type, b64) { post({ t: 'shareFile', name: String(name), b64: String(b64) }); },
+        shareText: function (text) { post({ t: 'shareText', text: String(text) }); },
+        copy: function (text) { post({ t: 'copy', text: String(text) }); },
+        reload: function () { post('reload'); }
+      };
+      window.BabyNative = impl;
+    })();
+    """
 
     override func loadView() {
         let config = WKWebViewConfiguration()
         // 기록(localStorage)이 앱을 껐다 켜도 남게 기본 저장소를 씀 (앱을 지우면 같이 지워짐)
         config.websiteDataStore = .default()
         config.userContentController.add(self, name: "babyNative")
+        config.userContentController.addUserScript(WKUserScript(source: Self.shim, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        if let f = Bundle.main.url(forResource: "bridge", withExtension: "js"), let js = try? String(contentsOf: f, encoding: .utf8) {
+            let guarded = "if (location.host === '\(Self.host)') {\n" + js + "\n}"
+            config.userContentController.addUserScript(WKUserScript(source: guarded, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        }
         let ver = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
         config.applicationNameForUserAgent = "BabylogIOS/\(ver)"
 
@@ -50,6 +73,27 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리)
     @objc private func becameActive() {
         web.evaluateJavaScript("window.BabyApp&&BabyApp.refresh()", completionHandler: nil)
+    }
+
+    // MARK: 위젯·잠금화면 버튼 → 웹앱에 기록 (갤럭시 앱 runAction과 같음)
+
+    func runAction(_ action: String, at: Date) {
+        let allowed: Set<String> = ["feed", "feed_start", "stop_feed", "sleep", "sleep_start", "stop_sleep", "pee", "poo", "both"]
+        guard allowed.contains(action) else { return }
+        let ms = Int64(at.timeIntervalSince1970 * 1000)
+        web.evaluateJavaScript("window.__babyQuick?__babyQuick('\(action)',\(ms)):'notready'") { [weak self] r, _ in
+            if (r as? String) ?? "notready" == "notready" { self?.pending.append((action, at)) }
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard webView.url?.host == Self.host else { return }
+        let todo = pending
+        pending.removeAll()
+        // 웹앱이 기록을 다 불러올 때까지 잠깐 기다렸다가 넣음
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            todo.forEach { self?.runAction($0.0, at: $0.1) }
+        }
     }
 
     // MARK: 페이지 이동
@@ -112,7 +156,34 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.body as? String == "reload" {
             web.load(URLRequest(url: Self.startURL))
+            return
         }
+        guard let m = message.body as? [String: Any], let t = m["t"] as? String else { return }
+        switch t {
+        case "update":
+            if let s = m["s"] as? String { NativeSync.update(json: s, appActive: UIApplication.shared.applicationState == .active) }
+        case "shareFile":
+            guard let b64 = m["b64"] as? String, let data = Data(base64Encoded: b64) else { return }
+            let name = (m["name"] as? String).flatMap { $0.isEmpty ? nil : ($0 as NSString).lastPathComponent } ?? "babylog.json"
+            let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let file = dir.appendingPathComponent(name)
+            guard (try? data.write(to: file)) != nil else { return }
+            share([file])
+        case "shareText":
+            if let text = m["text"] as? String { share([text]) }
+        case "copy":
+            UIPasteboard.general.string = m["text"] as? String
+        default:
+            break
+        }
+    }
+
+    private func share(_ items: [Any]) {
+        guard presentedViewController == nil else { return }
+        let sheet = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        sheet.popoverPresentationController?.sourceView = view
+        present(sheet, animated: true)
     }
 
     // MARK: 백업 파일 저장 → 공유 창(파일 앱에 저장, 카톡 보내기 등)
@@ -127,9 +198,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     func downloadDidFinish(_ download: WKDownload) {
         guard let file = downloadNames.removeValue(forKey: ObjectIdentifier(download)) else { return }
-        let sheet = UIActivityViewController(activityItems: [file], applicationActivities: nil)
-        sheet.popoverPresentationController?.sourceView = view
-        present(sheet, animated: true)
+        share([file])
     }
 
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
