@@ -118,7 +118,8 @@ async function handle(req, env, url, cors) {
 }
 
 // ---------- 사용량 ----------
-// 요청마다 D1에 쓰면 D1 무료 쓰기(하루 10만 행)를 요청 수만큼 써 버림 → 이 서버 인스턴스 안에서 모았다가 1분에 한 번 가족별 한 줄씩 저장.
+// 요청마다 D1에 쓰면 D1 무료 쓰기(하루 10만 행)를 요청 수만큼 써 버림 → 이 서버 인스턴스 안에서 모았다가 10분에 한 번 가족별 한 줄씩 저장.
+// (위젯 15분 확인이 가족마다 계속 오므로 1분 간격으로는 거의 줄지 않음. 10분이면 가족당 하루 최대 144행)
 // 인스턴스가 저장 전에 내려가면 몇 개 빠질 수 있어 실제보다 조금 적게 나올 수 있음 (Cloudflare 대시보드 전체 합계와 비교용).
 const pend = new Map();
 let lastFlush = 0;
@@ -130,7 +131,7 @@ function count(fid) {
 async function flushCounts(env, force = false) { // USAGE_FLUSH_MS는 시험용
   if (!env.DB || !pend.size) return;
   const now = Date.now();
-  if (!force && now - lastFlush < (env.USAGE_FLUSH_MS ?? 60e3)) return;
+  if (!force && now - lastFlush < (env.USAGE_FLUSH_MS ?? 600e3)) return;
   lastFlush = now;
   const day = utcDay(now), rows = [...pend]; pend.clear();
   try {

@@ -10,7 +10,7 @@
 
 ## 사용량 보기 (가족별)
 
-- 서버는 받은 요청 수를 가족코드별로 1분씩 모아 D1 `usage_req`에 저장해요.
+- 서버는 받은 요청 수를 가족코드별로 10분씩 모아 D1 `usage_req`에 저장해요.
 - 각 휴대폰(웹앱 `sync.js`)은 자기가 쓴 Firestore 읽기·쓰기를 세어 몇 시간에 한 번 `/usage`로 보내요(`usage_app`, 숫자만, 60일 뒤 삭제).
 - 대시보드: https://leecornell0131-ux.github.io/babylog/usage.html (`GET /usage`, 가족코드는 앞 2자리만)
 - 매일 점검: `.github/workflows/usage-check.yml`이 한국 9:15·20:00에 확인하고, 한도의 50%를 넘으면 "사용량 경보" 이슈를 올려 이메일이 와요. 단계와 계산은 `usage-levels.js`.
