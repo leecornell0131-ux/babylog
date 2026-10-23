@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 앱과 위젯이 같이 쓰는 키체인 (Summary.swift SharedStore). 별도 설정 없이 같은 팀 앱끼리 공유됨 -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)kr.babylog.shared</string>
+	</array>
+</dict>
+</plist>
