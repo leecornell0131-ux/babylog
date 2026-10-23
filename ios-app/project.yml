@@ -3,11 +3,13 @@
 name: Babylog
 options:
   bundleIdPrefix: kr.babylog
+  # Siri 음성 명령(VoiceIntents.swift)의 말이 한국어로 등록되게
+  developmentLanguage: ko
   deploymentTarget:
     iOS: "17.0"
 settings:
   base:
-    MARKETING_VERSION: "0.2.1"
+    MARKETING_VERSION: "0.2.2"
     CURRENT_PROJECT_VERSION: "1"
     VERSIONING_SYSTEM: apple-generic
     SWIFT_VERSION: "5.0"

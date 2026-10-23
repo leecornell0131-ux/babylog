@@ -248,7 +248,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.39';
+const VERSION='0.3.40';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -623,12 +623,14 @@ function renderWelcome(){
 }
 // 갤럭시 앱 음성 기록 안내: 튜토리얼 마지막 단계와 오늘 탭에 한 번. 초대코드로 바로 들어온 배우자는 튜토리얼을 건너뛰므로 오늘 탭에서도 보여 줌
 // 빅스비/구글 어시스턴트는 따로 설정 없이 "아기깼어 열어"로 바로 되고, 빠른 명령어(더 짧게 말하기)와 잠금 상태 사용만 휴대폰 설정이 필요함
+// 아이폰 앱은 Siri, 갤럭시 앱은 빅스비·구글 어시스턴트 (BabyNative.platform은 아이폰 앱만 'ios')
+const iosVoice=()=>!!(window.BabyNative&&BabyNative.platform==='ios');
 function voiceTipHTML(inTutorial){
   if(!(window.BabyNative&&BabyNative.voiceHelp)||(!inTutorial&&pref('voiceTip')==='1')) return '';
   return `<div class="card panel" style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;text-align:left;width:100%">
     <b>🎙️ 말로도 기록할 수 있어요</b>
-    <span class="small">"하이 빅스비, 아기깼어 열어"처럼 말하면 손 안 대고 기록돼요. 따로 설정하지 않아도 돼요.</span>
-    <span class="small muted">"아기 깼어"처럼 더 짧게 말하기, 화면이 잠긴 채로 쓰기는 휴대폰에서 한 번 설정해야 해요.</span>
+    <span class="small">${iosVoice()?'"시리야, 아기로그 아기 깼어"':'"하이 빅스비, 아기깼어 열어"'}처럼 말하면 손 안 대고 기록돼요. 따로 설정하지 않아도 돼요.</span>
+    <span class="small muted">${iosVoice()?'"시리야, 아기 깼어"처럼 더 짧게 말하려면 단축어 앱에서 한 번 설정해야 해요.':'"아기 깼어"처럼 더 짧게 말하기, 화면이 잠긴 채로 쓰기는 휴대폰에서 한 번 설정해야 해요.'}</span>
     <div class="row"><button class="btn ghost" type="button" data-act="voiceHelp">설정 방법 보기</button>${inTutorial?'':'<button class="linkbtn" type="button" data-act="voiceTipOff">닫기</button>'}</div></div>`;
 }
 
@@ -894,7 +896,7 @@ const SET_CATS=[
   ['family','👨‍👩‍👧','가족 공유',()=>{ const st=window.BabySync&&window.FIREBASE_CONFIG?window.BabySync.status():null; return !st?'꺼져 있음':!st.fid?'초대코드로 함께 기록':st.state==='on'?'연결됨':'연결 안 됨' }],
   ['backup','💾','백업·가져오기',()=>{ const t=+pref('lastBackup'); return t?'마지막 백업 '+md(t):'아직 백업 없음' }],
   ['screen','🎨','화면',()=>({auto:'자동',light:'라이트',dark:'다크'})[pref('theme')||'auto']+' · '+(view.order==='desc'?'최신이 위':'최신이 아래')],
-  ['voice','🎙️','음성 명령',()=>'빅스비·구글 어시스턴트'],
+  ['voice','🎙️','음성 명령',()=>iosVoice()?'Siri':'빅스비·구글 어시스턴트'],
   ['data','🗂️','데이터',()=>'기록 '+S.events.length+'개'],
   ['dev','🛠️','개발자',()=>pref('dev')==='1'?'켜짐 · 광고 '+(pref('ads')!=='0'?'표시':'숨김'):'코드 입력'],
 ];
@@ -932,7 +934,7 @@ function renderSettings(){
   <div class="field"><span>오늘 기록 순서</span><div class="chips">${[['asc','최신이 아래'],['desc','최신이 위']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${view.order===k}" data-order="${k}">${n}</button>`).join('')}</div></div></div>
   <p class="small muted" style="margin:0 4px">자동은 휴대폰의 라이트·다크 설정을 따라가요. "최신이 아래"는 세로 차트처럼 위에서 아래로 시간이 흘러요.</p>
 `,
-    voice:`  <div class="card panel"><div class="field"><span class="small muted">말로 잠듦·깼어요·수유·기저귀를 기록해요. 빅스비 빠른 명령어·잠금 상태 사용 설정도 여기 있어요.</span><button class="btn ghost" type="button" data-act="voiceHelp">사용법 보기</button></div></div>
+    voice:`  <div class="card panel"><div class="field"><span class="small muted">말로 잠듦·깼어요·수유·기저귀를 기록해요. ${iosVoice()?'더 짧게 말하기(단축어) 설정도':'빅스비 빠른 명령어·잠금 상태 사용 설정도'} 여기 있어요.</span><button class="btn ghost" type="button" data-act="voiceHelp">사용법 보기</button></div></div>
 `,
     data:`  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
 `,

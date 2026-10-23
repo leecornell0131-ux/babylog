@@ -12,8 +12,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private var pending: [(String, Date)] = [] // 페이지가 준비되기 전에 들어온 위젯·잠금화면 버튼
 
     // 갤럭시 앱의 BabyNative(안드로이드 기능)를 아이폰 쪽으로 이어 주는 대역.
-    // bridge.js(갤럭시와 같은 파일)가 부르는 이름만 받음. 광고(adZone)·빅스비 음성(voiceHelp)처럼 아이폰에 없는 기능은
-    // 이름이 없어야 웹앱이 해당 메뉴를 숨김
+    // bridge.js(갤럭시와 같은 파일)가 부르는 이름만 받음. 광고(adZone)처럼 아이폰에 없는 기능은
+    // 이름이 없어야 웹앱이 해당 메뉴를 숨김. 음성 명령(voiceHelp)은 아이폰에선 Siri 사용법 (platform 'ios'로 웹앱이 문구를 바꿈)
     private static let shim = """
     if (location.host === '\(host)' && !window.BabyNative) (function () {
       var post = function (m) { window.webkit.messageHandlers.babyNative.postMessage(m); };
@@ -22,10 +22,34 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         shareFile: function (name, type, b64) { post({ t: 'shareFile', name: String(name), b64: String(b64) }); },
         shareText: function (text) { post({ t: 'shareText', text: String(text) }); },
         copy: function (text) { post({ t: 'copy', text: String(text) }); },
-        reload: function () { post('reload'); }
+        reload: function () { post('reload'); },
+        voiceHelp: function () { post('voiceHelp'); },
+        platform: 'ios'
       };
       window.BabyNative = impl;
     })();
+    """
+
+    // 설정 > 음성 명령 > 사용법 보기 (갤럭시 assets/voice_help.txt의 아이폰판)
+    static let voiceHelp = """
+    손 안 대고 말로 기록할 수 있어요. 따로 설정하지 않아도 돼요. 기록하면 "수면 1시간 5분 기록했어요"처럼 Siri가 알려 줘요.
+
+    [이렇게 말해요]
+    · "시리야, 아기로그 아기 잠듦": 잠든 시각 기록
+    · "시리야, 아기로그 아기 깼어": 자는 기록 끝내기
+    · "시리야, 아기로그 수유 시작": 지난번과 같은 수유로 타이머 시작
+    · "시리야, 아기로그 수유 끝": 진행 중인 수유 끝내기
+    · "시리야, 아기로그 소변" / "대변": 기저귀 기록
+
+    [더 짧게 말하기: 한 번만 설정]
+    1. 단축어 앱을 열고 아래 "앱 단축어"에서 아기로그를 눌러요.
+    2. 아기깼어를 길게 누르고 + (나의 단축어에 추가)를 눌러요.
+    3. 나의 단축어에서 그 단축어 이름을 "아기 깼어"로 바꿔요.
+    이제 "시리야, 아기 깼어"만 말하면 돼요. 나머지도 같은 방법이에요.
+
+    [알아 둘 점]
+    · 화면이 잠겨 있으면 Face ID로 잠금을 풀어야 기록돼요.
+    · 수유 양을 말로 넣는 기능("분유 120")은 아직 없어요. 지난번과 같은 양으로 시작돼요.
     """
 
     override func loadView() {
@@ -84,6 +108,19 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         web.evaluateJavaScript("window.__babyQuick?__babyQuick('\(action)',\(ms)):'notready'") { [weak self] r, _ in
             if (r as? String) ?? "notready" == "notready" { self?.pending.append((action, at)) }
         }
+    }
+
+    // 음성 명령용: 웹앱이 준비됐으면 기록하고 결과 문구("수면 1h 05m 기록했어요")를, 아직이면 nil
+    func tryAction(_ action: String, at: Date) async -> String? {
+        guard isViewLoaded else { return nil }
+        let ms = Int64(at.timeIntervalSince1970 * 1000)
+        let r: String = await withCheckedContinuation { c in
+            web.evaluateJavaScript("window.__babyQuick?__babyQuick('\(action)',\(ms)):'notready'") { r, _ in
+                c.resume(returning: (r as? String) ?? "notready")
+            }
+        }
+        if r == "notready" { return nil }
+        return r.hasPrefix("ok:") ? String(r.dropFirst(3)) : ""
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -156,6 +193,12 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.body as? String == "reload" {
             web.load(URLRequest(url: Self.startURL))
+            return
+        }
+        if message.body as? String == "voiceHelp" {
+            let a = UIAlertController(title: "음성 명령 사용법", message: Self.voiceHelp, preferredStyle: .alert)
+            a.addAction(UIAlertAction(title: "확인", style: .default))
+            presentOr(a) {}
             return
         }
         guard let m = message.body as? [String: Any], let t = m["t"] as? String else { return }
