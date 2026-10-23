@@ -113,6 +113,14 @@
           S.events.push(fe);
           msg = '수유 시작을 기록했어요';
         }
+      } else if (/^feed_ml:\d{1,3}$/.test(a)) {
+        // 음성 명령 "수유기록": 말한 양으로 지금 시각 수유 기록 (종류는 지난번과 같게, 모유였으면 분유로)
+        var ml = +a.slice(8), lf1 = null;
+        S.events.forEach(function (e) { if (e.type === 'feed' && (!lf1 || e.start > lf1.start)) lf1 = e; });
+        var sub = lf1 && (lf1.sub === 'formula' || lf1.sub === 'pump') ? lf1.sub : 'formula';
+        var dup = S.events.some(function (e) { return e.type === 'feed' && e.start === now && e.ml === ml; }); // 같은 저장분을 두 번 넣지 않게
+        if (dup) msg = '수유를 기록했어요';
+        else if (ml >= 5 && ml <= 400) { S.events.push({ id: id, type: 'feed', sub: sub, start: now, ml: ml, note: '' }); msg = (sub === 'pump' ? '유축 ' : '분유 ') + ml + 'ml 기록했어요'; }
       } else if (a === 'stop_feed') {
         // 진행 중 수유(end가 null인 feed)를 웹앱이 지원하게 되면 그대로 끝냄
         var lf = live('feed');

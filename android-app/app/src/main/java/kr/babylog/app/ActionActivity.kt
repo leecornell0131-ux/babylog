@@ -13,14 +13,13 @@ class ActionActivity : Activity() {
         val VOICE = mapOf(
             "kr.babylog.app.VoiceSleep" to "sleep_start",
             "kr.babylog.app.VoiceWake" to "stop_sleep",
-            "kr.babylog.app.VoiceFeed" to "feed_start",
-            "kr.babylog.app.VoiceFeedEnd" to "stop_feed",
+            "kr.babylog.app.VoiceFeed" to "feed_ml",
             "kr.babylog.app.VoicePee" to "pee",
             "kr.babylog.app.VoicePoo" to "poo",
         )
         val SAID = mapOf(
             "sleep_start" to "잠듦", "stop_sleep" to "깼어요", "feed_start" to "수유 시작",
-            "stop_feed" to "수유 끝", "pee" to "소변", "poo" to "대변",
+            "stop_feed" to "수유 끝", "feed_ml" to "수유", "pee" to "소변", "poo" to "대변",
         )
     }
 
@@ -29,6 +28,12 @@ class ActionActivity : Activity() {
         val voice = VOICE[intent.component?.className]
         // 음성 이름표로 열렸으면 이름표에 정해진 동작만 씀 (다른 앱이 붙여 보낸 값은 무시)
         val a = voice ?: intent.getStringExtra(MainActivity.EXTRA_ACTION)
+        if (a == "feed_ml") {
+            // "수유기록": 몇 ml인지 묻는 화면으로 (잠금 상태에서도 뜸)
+            startActivity(Intent(this, FeedMlActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            finish()
+            return
+        }
         val at = System.currentTimeMillis()
         if (a != null && voice != null && getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
             // 잠금 상태에서 음성으로 부르면 앱을 열지 않고 기록 (잠금화면 "깼어요"와 같은 방식).

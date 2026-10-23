@@ -9,8 +9,9 @@ import java.util.Locale
 object Speak {
     private var tts: TextToSpeech? = null
 
-    fun say(ctx: Context, text: String) {
-        if (text.isBlank()) return
+    // then: 다 읽은 뒤(또는 읽지 못했을 때) 부름 — 읽고 나서 듣기 시작할 때 씀
+    fun say(ctx: Context, text: String, then: (() -> Unit)? = null) {
+        if (text.isBlank()) { then?.invoke(); return }
         // 화면 글자는 "1h 05m"이지만 소리로는 "1시간 5분"으로 읽음
         val said = Regex("(\\d+)h (\\d+)m").replace(text) { r ->
             val h = r.groupValues[1].toInt(); val m = r.groupValues[2].toInt()
@@ -20,12 +21,12 @@ object Speak {
         var t: TextToSpeech? = null
         t = TextToSpeech(ctx.applicationContext) { st ->
             val s = t ?: return@TextToSpeech
-            if (st != TextToSpeech.SUCCESS) return@TextToSpeech
+            if (st != TextToSpeech.SUCCESS) { then?.invoke(); return@TextToSpeech }
             s.language = Locale.KOREAN
             s.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(id: String?) {}
-                override fun onDone(id: String?) { s.shutdown(); if (tts === s) tts = null }
-                @Deprecated("old") override fun onError(id: String?) { s.shutdown(); if (tts === s) tts = null }
+                override fun onDone(id: String?) { s.shutdown(); if (tts === s) tts = null; then?.invoke() }
+                @Deprecated("old") override fun onError(id: String?) { s.shutdown(); if (tts === s) tts = null; then?.invoke() }
             })
             s.speak(said, TextToSpeech.QUEUE_FLUSH, null, "babylog")
         }

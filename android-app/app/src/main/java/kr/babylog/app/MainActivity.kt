@@ -40,6 +40,8 @@ class MainActivity : Activity() {
         const val EXTRA_VOICE = "babylog_voice"
         // 웹앱에 넘겨도 되는 동작 (밖에서 들어온 다른 값은 버림)
         val ACTIONS = setOf("feed", "feed_start", "stop_feed", "sleep", "sleep_start", "stop_sleep", "pee", "poo", "both")
+        // "feed_ml:120"처럼 양이 붙은 음성 수유 기록도 받음
+        fun isAction(a: String) = a in ACTIONS || Regex("feed_ml:\\d{1,3}").matches(a)
         private const val REQ_FILE = 41
         // 떠 있는 화면 (잠금화면 "깼어요"를 바로 웹앱에 넣을 때 씀)
         var live: java.lang.ref.WeakReference<MainActivity>? = null
@@ -174,7 +176,7 @@ class MainActivity : Activity() {
             val o = stops.optJSONObject(i) ?: continue
             val a = o.optString("a")
             val at = o.optLong("at")
-            if (a !in ACTIONS) { StopReceiver.done(this, a, at); continue }
+            if (!isAction(a)) { StopReceiver.done(this, a, at); continue }
             web.evaluateJavascript(quick(a, at)) { r ->
                 if (r?.contains("ok") == true) {
                     StopReceiver.done(this, a, at)
@@ -191,7 +193,7 @@ class MainActivity : Activity() {
 
     // voice: 음성 명령이면 "수면 40분 기록했어요"처럼 결과를 소리로도 알려 줌 (bridge.js가 'ok:문구'로 돌려줌)
     private fun runAction(a: String, at: Long, voice: Boolean = false) {
-        if (a !in ACTIONS) return
+        if (!isAction(a)) return
         web.evaluateJavascript(quick(a, at)) { r ->
             if (r?.contains("notready") != false) pending.add(Triple(a, at, voice)) // 페이지가 아직 안 열렸으면 열린 뒤 실행
             else if (voice) Speak.say(this, said(r))
@@ -261,7 +263,9 @@ class MainActivity : Activity() {
         fun voiceHelp() = runOnUiThread {
             android.app.AlertDialog.Builder(this@MainActivity)
                 .setTitle("음성 명령 사용법")
-                .setMessage(assets.open("voice_help.txt").bufferedReader().readText())
+                // {이름}은 앱에 저장된 아기 이름으로 ("루나 깼어"처럼 부르는 빠른 명령어 예시)
+                .setMessage(assets.open("voice_help.txt").bufferedReader().readText()
+                    .replace("{이름}", Widgets.Data(this@MainActivity).name.ifBlank { "아기" }))
                 .setPositiveButton("확인", null)
                 .show()
         }

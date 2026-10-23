@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 음성 명령 "수유기록"에서 몇 ml인지 말로 듣기 (처음 한 번 허용) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Android 16 이상: 진행 중 타이머를 잠금화면 위쪽(실시간 정보)으로 올려 보여 달라고 요청 -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
@@ -31,6 +33,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 음성 명령 "수유기록": 몇 ml인지 묻고 듣는 화면 (잠금 상태에서도 뜸) -->
+        <activity
+            android:name=".FeedMlActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/AppTheme" />
 
         <activity
             android:name=".ActionActivity"
@@ -65,18 +76,7 @@
         </activity-alias>
         <activity-alias
             android:name=".VoiceFeed"
-            android:label="수유시작"
-            android:icon="@mipmap/ic_launcher"
-            android:exported="true"
-            android:targetActivity=".ActionActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".VoiceFeedEnd"
-            android:label="수유끝"
+            android:label="수유기록"
             android:icon="@mipmap/ic_launcher"
             android:exported="true"
             android:targetActivity=".ActionActivity">
