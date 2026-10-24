@@ -249,7 +249,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.43';
+const VERSION='0.3.44';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -751,11 +751,13 @@ function feedChart(xMax){
   const birth=new Date(S.baby.birth+'T00:00:00').getTime(), today=dayStart(Date.now()); if(isNaN(birth)) return '';
   const by={}; S.events.forEach(x=>{ if(x.type!=='feed'||!x.ml) return; const d=dayStart(x.start); if(d>=today||d<birth) return; by[d]=(by[d]||0)+x.ml });
   const days=Object.keys(by).map(Number).sort((a,b)=>a-b); if(days.length<2) return '';
-  const W=340,Hh=130,L=34,R=10,T=14,B=22, pw=W-L-R, ph=Hh-T-B, ageM=d=>(d-birth)/DAY/MONTH_D;
+  const W=340,Hh=180,L=34,R=10,T=14,B=22, pw=W-L-R, ph=Hh-T-B, ageM=d=>(d-birth)/DAY/MONTH_D;
   const yMax=Math.max(400,Math.ceil(Math.max(...days.map(d=>by[d]))/200)*200), X=m=>L+m/xMax*pw, Y=v=>T+(1-v/yMax)*ph;
   const bw=Math.max(1,pw/(xMax*MONTH_D)*.8);
   let s=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="하루 수유량 변화">`;
-  for(let v=0;v<=yMax;v+=yMax>800?400:200) s+=`<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" style="stroke:var(--soft)"/><text x="${L-4}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${v}</text>`;
+  // 눈금: 1200ml 이하는 100마다 선·200마다 숫자, 그 위는 200마다 선·400마다 숫자
+  const minor=yMax>1200?200:100, major=minor*2;
+  for(let v=0;v<=yMax;v+=minor){ const y=Y(v).toFixed(1); s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" style="stroke:var(--${v%major?'soft':'line'})"${v%major?' stroke-dasharray="2 3"':''}/>`+(v%major?'':`<text x="${L-4}" y="${(+y+3).toFixed(1)}" text-anchor="end">${v}</text>`) }
   for(let m=0;m<=xMax;m+=xMax>12?3:1) s+=`<text x="${X(m).toFixed(1)}" y="${Hh-8}" text-anchor="middle">${m}</text>`;
   s+=`<text x="${L}" y="${T-3}" text-anchor="start">ml/일</text>`;
   days.forEach(d=>{ const m=ageM(d); if(m>xMax) return; s+=`<rect x="${(X(m)-bw/2).toFixed(1)}" y="${Y(by[d]).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y(0)-Y(by[d])).toFixed(1)}" style="fill:var(--feed);opacity:.28"/>` });
