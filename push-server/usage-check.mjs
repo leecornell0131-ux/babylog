@@ -37,7 +37,27 @@ async function firebaseActual() {
   } catch (e) { console.log('Firebase 실제값 건너뜀: ' + e.message); return null; }
 }
 
+// Cloudflare가 직접 센 요청 수(한도 판정 기준). API 토큰에 Account Analytics 읽기 권한이 있어야 함. 없으면 건너뜀.
+async function cloudflareActual(day) {
+  const token = process.env.CLOUDFLARE_API_TOKEN, account = process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!token || !account) return null;
+  try {
+    const query = `query($a: String!, $d: Date!) { viewer { accounts(filter: {accountTag: $a}) {
+      workersInvocationsAdaptive(limit: 100, filter: {date: $d}) { sum { requests } } } } }`;
+    const j = await fetch('https://api.cloudflare.com/client/v4/graphql', { method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { a: account, d: day } }) }).then(x => x.json());
+    if (j.errors && j.errors.length) throw new Error(j.errors[0].message);
+    const rows = j.data.viewer.accounts[0].workersInvocationsAdaptive;
+    return rows.reduce((s, r) => s + r.sum.requests, 0);
+  } catch (e) { console.log('Cloudflare 실제값 건너뜀: ' + e.message); return null; }
+}
+
 const real = await firebaseActual();
+const cfY = await cloudflareActual(yday.day), cfT = await cloudflareActual(today.day);
+// 대시보드 숫자보다 Cloudflare 숫자가 크면 그걸로 판정 (한도는 Cloudflare 숫자로 막힘)
+if (cfY != null) { yday.cfReq = cfY; yday.req = Math.max(yday.req, cfY); }
+if (cfT != null) { today.cfReq = cfT; today.req = Math.max(today.req, cfT); }
 const lines = [];
 const row = (label, d) => {
   const p = percents(d, L), lv = level(worst(p));
@@ -46,6 +66,7 @@ const row = (label, d) => {
 };
 lines.push('| 하루 | Firebase 읽기 | Firebase 쓰기 | 알림 서버 요청 | 공유 가족 | 단계 |', '|---|---|---|---|---|---|');
 const y = row('어제(마감)', yday), t = row('오늘(진행 중)', today);
+for (const d of [yday, today]) if (d.cfReq != null) lines.push(`(${d.day} 알림 서버 요청은 Cloudflare 집계 ${n(d.cfReq)}회 기준)`);
 if (real) {
   const rr = real.reads / L.fsReads * 100, rw = real.writes / L.fsWrites * 100;
   lines.push('', `Firebase가 직접 센 최근 24시간: 읽기 **${n(real.reads)}** (${Math.round(rr)}%) · 쓰기 **${n(real.writes)}** (${Math.round(rw)}%)`);

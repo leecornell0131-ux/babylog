@@ -118,28 +118,37 @@ async function handle(req, env, url, cors) {
 }
 
 // ---------- 사용량 ----------
-// 요청마다 D1에 쓰면 D1 무료 쓰기(하루 10만 행)를 요청 수만큼 써 버림 → 이 서버 인스턴스 안에서 모았다가 10분에 한 번 가족별 한 줄씩 저장.
-// (위젯 15분 확인이 가족마다 계속 오므로 1분 간격으로는 거의 줄지 않음. 10분이면 가족당 하루 최대 144행)
-// 인스턴스가 저장 전에 내려가면 몇 개 빠질 수 있어 실제보다 조금 적게 나올 수 있음 (Cloudflare 대시보드 전체 합계와 비교용).
+// 요청마다 D1에 쓰면 D1 무료 쓰기(하루 10만 행)를 요청 수만큼 써 버림 → 이 서버 인스턴스 안에서 최대 20초 모았다가 가족별 한 줄씩 저장.
+// 응답 뒤에도 저장이 끝날 때까지 인스턴스를 붙잡아 둠(waitUntil, 최대 30초 허용). 예전처럼 10분씩 모으면 그사이 인스턴스가
+// 내려가 숫자를 잃어 Cloudflare 대시보드보다 40%쯤 적게 나왔음(10/25 확인).
 const pend = new Map();
-let lastFlush = 0;
+let lastFlush = 0, waiting = null;
 export const utcDay = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
 function count(fid) {
   const k = FID.test(fid || '') ? fid : '-';
   pend.set(k, (pend.get(k) || 0) + 1);
 }
-async function flushCounts(env, force = false) { // USAGE_FLUSH_MS는 시험용
-  if (!env.DB || !pend.size) return;
-  const now = Date.now();
-  if (!force && now - lastFlush < (env.USAGE_FLUSH_MS ?? 600e3)) return;
-  lastFlush = now;
-  const day = utcDay(now), rows = [...pend]; pend.clear();
+function flushCounts(env) { // USAGE_FLUSH_MS는 시험용
+  if (!env.DB || !pend.size) return Promise.resolve();
+  const every = env.USAGE_FLUSH_MS ?? 20e3, left = lastFlush + every - Date.now();
+  if (left <= 0) return writeCounts(env);
+  // 곧 저장할 예정이 이미 있으면 그걸 같이 기다림 (이 요청 숫자도 그때 함께 저장됨)
+  if (!waiting) waiting = new Promise(r => setTimeout(r, left)).then(() => { waiting = null; return writeCounts(env); });
+  return waiting;
+}
+async function writeCounts(env) {
+  if (!pend.size) return;
+  lastFlush = Date.now();
+  const day = utcDay(lastFlush), rows = [...pend]; pend.clear();
   try {
     const st = env.DB.prepare(`INSERT INTO usage_req (day, fid, req) VALUES (?1, ?2, ?3)
       ON CONFLICT(day, fid) DO UPDATE SET req = req + excluded.req`);
     const stmts = rows.map(([fid, n]) => st.bind(day, fid, n));
-    if (env.DB.batch) await env.DB.batch(stmts); else for (const s of stmts) await s.run();
-  } catch (_) {} // 표가 아직 없거나 D1 한도 초과: 세기만 건너뜀
+    if (env.DB.batch) await env.DB.batch(stmts); else for (const x of stmts) await x.run();
+  } catch (_) {
+    // 표가 아직 없거나 D1이 잠시 실패: 다음 저장 때 다시 시도 (한 인스턴스 안에서 가족 수만큼만 쌓임)
+    for (const [fid, n] of rows) pend.set(fid, (pend.get(fid) || 0) + n);
+  }
 }
 async function prune(env) {
   const old = utcDay(Date.now() - KEEP_DAYS * 864e5);

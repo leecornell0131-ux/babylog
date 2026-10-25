@@ -144,3 +144,15 @@ test('usage counting never breaks the widget API when tables are missing', async
   const r = await worker.fetch(new Request('https://test.invalid/summary?fid=' + fid), broken);
   assert.equal(r.status, 200);
 });
+test('usage: requests inside the wait window are saved without a later request (no loss on instance shutdown)', async () => {
+  const f = fixture(); f.env.USAGE_FLUSH_MS = 50;
+  const waits = [];
+  const ctx = { waitUntil: p => waits.push(p) };
+  const other = 'BBBBBBBBBB';
+  const hit = () => worker.fetch(new Request('https://test.invalid/summary?fid=' + other), f.env, ctx);
+  await hit(); await hit(); await hit();
+  await Promise.all(waits); // 런타임은 응답 뒤에도 이 약속이 끝날 때까지 인스턴스를 유지함
+  f.env.USAGE_FLUSH_MS = 0;
+  const t = (await (await f.request('/usage?fid=' + other)).json()).days[0];
+  assert.equal(t.top.find(x => x.me).req, 3);
+});
