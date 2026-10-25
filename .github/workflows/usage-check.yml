@@ -23,6 +23,8 @@ jobs:
       - name: Read usage
         env:
           FCM_SA: ${{ secrets.FCM_SERVICE_ACCOUNT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node push-server/usage-check.mjs
       - name: Alert by GitHub issue (email)
         if: hashFiles('usage-alert.md') != ''
