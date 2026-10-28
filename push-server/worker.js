@@ -2,7 +2,7 @@
 // 한 휴대폰에서 기록하면 웹앱이 /notify로 요약을 보내고, 이 서버가 같은 가족의 갤럭시 앱에 FCM 푸시를 보내
 // 홈 화면 위젯과 잠금화면 타이머를 몇 초 안에 바꿈. 기록 자체는 다루지 않고 위젯용 요약(시각 몇 개)만 받음.
 //
-// 저장: KV t:<가족코드> = 푸시 주소 목록. DB(D1) summaries = 마지막 요약, usage_req·usage_app = 가족별 하루 사용량(숫자만).
+// 저장: KV t:<가족코드> = 푸시 주소 목록. DB(D1) summaries = 마지막 요약, usage_req·usage_app = 가족별 하루 사용량(숫자만), usage_tester = 베타 테스터 번호별 하루 사용량(숫자만).
 // DB 바인딩 없는 기존 배포는 KV s:<가족코드> 유지. D1 전환 시 옛 요약을 지우지 않고 이관.
 // 보안: 가족코드(10자리 무작위)를 아는 사람만 쓸 수 있음. Firestore 규칙과 같은 기준.
 //
@@ -50,27 +50,18 @@ async function handle(req, env, url, cors) {
       return json(await usageReport(env, Math.min(31, Math.max(1, +url.searchParams.get('days') || 14)), url.searchParams.get('fid') || ''), 200, cors);
     }
 
+    // 베타 테스터별 사용량 (운영자 화면 testers.html). 테스터 번호와 숫자뿐, 가족코드는 공유 여부만 알려 줌.
+    if (req.method === 'GET' && url.pathname === '/testers') {
+      if (!env.DB) return json({ error: 'no db' }, 503, cors);
+      return json(await testerReport(env, Math.min(60, Math.max(1, +url.searchParams.get('days') || 28))), 200, cors);
+    }
+
     if (req.method !== 'POST') return json({ error: 'method' }, 405, cors);
     const body = await req.json().catch(() => null);
     count(body && body.fid);
+    if (body && url.pathname === '/usage') return postUsage(env, body, cors);
     if (!body || !FID.test(body.fid || '')) return json({ error: 'fid' }, 400, cors);
     const fid = body.fid;
-
-    if (url.pathname === '/usage') {
-      if (!env.DB) return json({ ok: true, stored: false }, 200, cors);
-      const day = String(body.day || ''), dev = String(body.dev || '');
-      const reads = Math.round(+body.reads), writes = Math.round(+body.writes);
-      const ok = n => Number.isFinite(n) && n >= 0 && n < 1e7;
-      // 이틀 넘게 지난 날짜나 미래 날짜는 받지 않음 (휴대폰 시계가 틀린 경우)
-      const age = (Date.parse(utcDay()) - Date.parse(day)) / 864e5;
-      if (!DAY.test(day) || !DEV.test(dev) || !ok(reads) || !ok(writes) || !(age >= 0 && age <= 2)) return json({ error: 'usage' }, 400, cors);
-      // 같은 날 여러 번 보내면 누적값이라 큰 값만 남김
-      await env.DB.prepare(`INSERT INTO usage_app (day, fid, dev, reads, writes, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        ON CONFLICT(day, fid, dev) DO UPDATE SET reads = MAX(reads, excluded.reads), writes = MAX(writes, excluded.writes), at = excluded.at`)
-        .bind(day, fid, dev, reads, writes, Date.now()).run();
-      if (Math.random() < 0.02) await prune(env);
-      return json({ ok: true }, 200, cors);
-    }
 
     if (url.pathname === '/register') {
       const token = cleanToken(body.token);
@@ -150,11 +141,53 @@ async function writeCounts(env) {
     for (const [fid, n] of rows) pend.set(fid, (pend.get(fid) || 0) + n);
   }
 }
+// 휴대폰이 센 하루 사용량. 가족 공유 휴대폰은 가족코드와 함께(usage_app),
+// 베타 테스터 코드를 넣은 휴대폰은 테스터 번호(tc)와 그날 남긴 기록 개수(ev)도 함께(usage_tester, 가족 공유 안 해도 보냄).
+async function postUsage(env, body, cors) {
+  const fid = String(body.fid || ''), shared = FID.test(fid), tc = Math.round(+body.tc);
+  const isTester = Number.isInteger(tc) && tc >= 1 && tc <= 99;
+  if (!shared && !(isTester && !body.fid)) return json({ error: 'fid' }, 400, cors);
+  if (!env.DB) return json({ ok: true, stored: false }, 200, cors);
+  const day = String(body.day || ''), dev = String(body.dev || '');
+  const reads = Math.round(+body.reads), writes = Math.round(+body.writes), ev = Math.round(+(body.ev || 0));
+  const ok = n => Number.isFinite(n) && n >= 0 && n < 1e7;
+  // 이틀 넘게 지난 날짜나 미래 날짜는 받지 않음 (휴대폰 시계가 틀린 경우)
+  const age = (Date.parse(utcDay()) - Date.parse(day)) / 864e5;
+  if (!DAY.test(day) || !DEV.test(dev) || !ok(reads) || !ok(writes) || !ok(ev) || !(age >= 0 && age <= 2)) return json({ error: 'usage' }, 400, cors);
+  // 같은 날 여러 번 보내면 누적값이라 큰 값만 남김
+  if (shared) await env.DB.prepare(`INSERT INTO usage_app (day, fid, dev, reads, writes, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+    ON CONFLICT(day, fid, dev) DO UPDATE SET reads = MAX(reads, excluded.reads), writes = MAX(writes, excluded.writes), at = excluded.at`)
+    .bind(day, fid, dev, reads, writes, Date.now()).run();
+  if (isTester) await env.DB.prepare(`INSERT INTO usage_tester (day, tc, dev, fam, ev, reads, writes, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+    ON CONFLICT(day, tc, dev) DO UPDATE SET fam = excluded.fam, ev = MAX(ev, excluded.ev), reads = MAX(reads, excluded.reads), writes = MAX(writes, excluded.writes), at = excluded.at`)
+    .bind(day, tc, dev, shared ? fid.slice(0, 2) : '', ev, reads, writes, Date.now()).run().catch(() => null);
+  if (Math.random() < 0.02) await prune(env);
+  return json({ ok: true }, 200, cors);
+}
+// 테스터 번호별: 쓴 날짜 목록(날짜마다 기록 개수·읽기·쓰기), 휴대폰 수, 마지막으로 보낸 시각, 가족 공유(가족코드 앞 2자리)
+export async function testerReport(env, days) {
+  const from = utcDay(Date.now() - (days - 1) * 864e5);
+  let rows = [];
+  try { rows = (await env.DB.prepare('SELECT day, tc, dev, fam, ev, reads, writes, at FROM usage_tester WHERE day >= ?1').bind(from).all()).results || []; } catch (_) {}
+  const by = {};
+  for (const r of rows) {
+    const t = by[r.tc] || (by[r.tc] = { tc: r.tc, devs: new Set(), fam: '', last: 0, days: {} });
+    t.devs.add(r.dev); if (r.fam) t.fam = r.fam; t.last = Math.max(t.last, r.at);
+    const d = t.days[r.day] || (t.days[r.day] = { day: r.day, ev: 0, reads: 0, writes: 0 });
+    d.ev += r.ev; d.reads += r.reads; d.writes += r.writes;
+  }
+  const testers = Object.values(by).sort((a, b) => a.tc - b.tc).map(t => ({
+    tc: t.tc, devs: t.devs.size, fam: t.fam, last: t.last,
+    days: Object.values(t.days).sort((a, b) => (a.day < b.day ? 1 : -1)),
+  }));
+  return { now: Date.now(), today: utcDay(), from, testers };
+}
 async function prune(env) {
   const old = utcDay(Date.now() - KEEP_DAYS * 864e5);
   try {
     await env.DB.prepare('DELETE FROM usage_req WHERE day < ?1').bind(old).run();
     await env.DB.prepare('DELETE FROM usage_app WHERE day < ?1').bind(old).run();
+    await env.DB.prepare('DELETE FROM usage_tester WHERE day < ?1').bind(old).run();
   } catch (_) {}
 }
 // 날짜별 합계 + 날짜별 가족 목록(가족코드는 앞 2자리만). fid를 주면 그 가족 줄에 me 표시.
