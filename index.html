@@ -249,7 +249,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.45';
+const VERSION='0.3.46';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -497,9 +497,11 @@ function fixLive(st){
 // 진행 중 수유 = type 'feed' + end:null (갤럭시 위젯·잠금화면이 이 형태를 읽음)
 function liveFeed(){return lastOf(x=>x.type==='feed'&&x.end===null)}
 function lastOf(f){ let best=null; for(const x of S.events) if(f(x)&&(!best||x.start>best.start)) best=x; return best }
-// 같은 기록이 두 기기에서 5분 안에 들어오면 묻기
+// 같은 기록이 두 기기에서 5분 안에 들어오면 묻기.
+// 가족에게서 받은 기록·위젯 기록은 by가 없어서(받을 때 지워짐) 예전엔 by 있는 기록끼리만 비교해 두 휴대폰 중복을 못 잡았음.
+// 이제 by가 다르면(한쪽이 없어도) 묻기
 function dupPairs(d){
-  const list=evOfDay(d).filter(x=>x.by&&x.type!=='growth'), out=[];
+  const list=evOfDay(d).filter(x=>x.type!=='growth'), out=[];
   for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++){ const a=list[i], b=list[j];
     if(b.start-a.start>5*MIN) break;
     if(a.by!==b.by&&a.type===b.type&&(a.sub||'')===(b.sub||'')){ const k=[a.id,b.id].sort().join('|'); if(!S.dups[k]) out.push({a,b,k}) } }
@@ -564,6 +566,14 @@ function gapHTML(g){
   <span class="small">이 시간에 켜 둔 항목의 기록이 하나도 없어요. 어떻게 된 건가요?</span>
   <div class="row"><button class="btn ghost" style="flex:1;font-size:14px;white-space:nowrap;padding:0 8px" type="button" data-gap="${g.key}" data-st="slept" data-s="${g.start}" data-e="${g.end}">쭉 잤어요</button><button class="btn ghost" style="flex:1;font-size:14px;white-space:nowrap;padding:0 8px" type="button" data-gap="${g.key}" data-st="missed">기록 못 했어요</button></div></div>`;
 }
+// 두 휴대폰에서 같이 '잠듦'을 누른 수면을 합칠 때 끝 시각 고르기: 늦게 시작한 잠 뒤에 끝난 것 중 가장 이른 깸.
+// 하나만 '깼어요'로 끝나고 다른 하나가 계속 돌다 나중에 끝난 경우(남은 쪽이 몇 시간 긴 낮잠이 됨) 먼저 깬 시각이 맞음.
+// fixLive가 다음 잠 시작에 맞춰 끝낸 쪽은 빼고, 끝난 게 없으면 자는 중으로 둠
+function mergeSleep(keepId,dropId){
+  const a=S.events.find(x=>x.id===keepId), b=S.events.find(x=>x.id===dropId);
+  if(!a||!b||a.type!=='sleep'||b.type!=='sleep') return;
+  const late=Math.max(a.start,b.start), ends=[a.end,b.end].filter(e=>e!=null&&e>late+MIN);
+  a.start=Math.min(a.start,b.start); a.end=ends.length?Math.min(...ends):null }
 function dupHTML(p){
   return `<div class="dup"><b>같은 기록인가요?</b>
   <div class="small" style="display:flex;flex-direction:column;gap:2px"><span class="row between"><span>${esc(evTitle(p.a))}</span><span class="muted">${hm(p.a.start)}</span></span><span class="row between"><span>${esc(evTitle(p.b))}</span><span class="muted">${hm(p.b.start)}</span></span></div>
@@ -1373,7 +1383,7 @@ $('#app').addEventListener('click',async e=>{
   if(t.dataset.wmode){ view.weekMode=t.dataset.wmode; pref('weekMode',view.weekMode); return render() }
   if(t.dataset.gind){ view.growth=t.dataset.gind; return render() }
   if(t.dataset.sex){ S.baby.sex=t.dataset.sex; save(); return render() }
-  if(t.dataset.dup){ S.dups[t.dataset.dup]=1; if(t.dataset.drop){ S.events=S.events.filter(x=>x.id!==t.dataset.drop) } return commit(t.dataset.drop?'하나로 합쳤어요':'') }
+  if(t.dataset.dup){ S.dups[t.dataset.dup]=1; if(t.dataset.drop){ mergeSleep(t.dataset.keep,t.dataset.drop); S.events=S.events.filter(x=>x.id!==t.dataset.drop) } return commit(t.dataset.drop?'하나로 합쳤어요':'') }
   if(t.dataset.gap!==undefined){ const k=t.dataset.gap, st=t.dataset.st;
     if(!st) delete S.gaps[k]; else { S.gaps[k]=st; if(st==='slept') S.events.push({id:uid(),type:'sleep',start:+t.dataset.s,end:+t.dataset.e,fromGap:k,by:DEVICE}) }
     if(!st) S.events=S.events.filter(x=>x.fromGap!==k);
