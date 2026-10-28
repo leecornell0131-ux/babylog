@@ -171,7 +171,7 @@ export async function usageReport(env, days, myFid) {
   };
   // 직접 집계(없거나 표가 아직 없으면 빈 목록)
   let actual = [];
-  try { actual = (await env.DB.prepare('SELECT day, cf_req, fs_reads, fs_writes, at FROM usage_actual WHERE day >= ?1').bind(from).all()).results || []; } catch (_) {}
+  try { actual = (await env.DB.prepare('SELECT day, cf_req, fs_reads, fs_writes, est_req, at FROM usage_actual WHERE day >= ?1').bind(from).all()).results || []; } catch (_) {}
   const act = Object.fromEntries(actual.map(a => [a.day, a]));
   for (const r of req.results || []) { row(r.day, r.fid).req += r.req; byDay[r.day].req += r.req; }
   for (const r of app.results || []) {
@@ -183,10 +183,13 @@ export async function usageReport(env, days, myFid) {
   const out = Object.values(byDay).sort((a, b) => (a.day < b.day ? 1 : -1)).map(d => {
     const fams = Object.values(d.families).filter(f => f.fid !== '-');
     const other = d.families['-'], a = act[d.day], done = d.day < utcDay();
-    // 하루 사용량 = 직접 집계와 (자체 집계 × 보정 비율) 중 큰 값. 마감된 날에 직접 집계가 있으면 그 값이 기준.
-    const eff = (est, real, k) => Math.round(Math.max(real ?? 0, real != null && done ? est : est * calib[k]));
+    // 하루 사용량: 마감된 날에 직접 집계가 있으면 그 값 그대로(콘솔과 같은 숫자).
+    // 오늘은 직접 집계와 (자체 집계 × 보정 비율) 중 큰 값.
+    const eff = (est, real, k) => Math.round(real != null && done ? real : Math.max(real ?? 0, est * calib[k]));
+    // Cloudflare 요청 오늘: 마지막 직접 집계 + 그 뒤로 서버가 더 센 만큼(매시간 집계 사이를 채움)
+    const req = a && a.cf_req != null && !done && a.est_req != null ? a.cf_req + Math.max(0, d.req - a.est_req) : eff(d.req, a && a.cf_req, 'req');
     return {
-      day: d.day, req: eff(d.req, a && a.cf_req, 'req'), reads: eff(d.reads, a && a.fs_reads, 'reads'), writes: eff(d.writes, a && a.fs_writes, 'writes'),
+      day: d.day, req, reads: eff(d.reads, a && a.fs_reads, 'reads'), writes: eff(d.writes, a && a.fs_writes, 'writes'),
       est: { req: d.req, reads: d.reads, writes: d.writes },
       actual: a ? { req: a.cf_req, reads: a.fs_reads, writes: a.fs_writes, at: a.at } : null,
       families: fams.length, sharedFamilies: fams.filter(f => f.reads || f.writes).length,

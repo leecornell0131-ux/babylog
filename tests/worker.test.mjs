@@ -10,6 +10,8 @@ const migration = (await readFile(new URL('../push-server/migrations/0001_summar
   + (await readFile(new URL('../push-server/migrations/0002_usage.sql', import.meta.url), 'utf8'))
   + (await readFile(new URL('../push-server/migrations/0003_usage_actual.sql', import.meta.url), 'utf8'))
   + (await readFile(new URL('../push-server/migrations/0004_usage_monthly.sql', import.meta.url), 'utf8'));
+// 열 추가 마이그레이션은 wrangler가 한 번만 실행함
+const alters = await readFile(new URL('../push-server/migrations/0005_usage_actual_est.sql', import.meta.url), 'utf8');
 const fid = 'AAAAAAAAAA';
 function fixture(d1 = true) {
   const values = new Map(), counts = { get: 0, put: 0 };
@@ -20,6 +22,7 @@ function fixture(d1 = true) {
   if (d1) {
     const sql = new DatabaseSync(':memory:');
     sql.exec(migration); sql.exec(migration); // 재배포 때 다시 실행해도 기존 행/테이블을 지우지 않음.
+    sql.exec(alters);
     env.DB = { prepare(query) { return { bind(...args) { return {
       async first() { return sql.prepare(query).get(...args) || null; },
       async run() { const r = sql.prepare(query).run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
@@ -172,6 +175,18 @@ test('usage: direct counts from Cloudflare/Firebase override and calibrate the s
   assert.equal(j.calib.reads, 1.8); assert.equal(j.calib.writes, 1.5);
   assert.equal(t.reads, 90); assert.equal(t.writes, 15); // 오늘: 자체 집계 × 어제 비율
   assert.equal(t.est.reads, 50);
+});
+test('usage: a closed day shows the Cloudflare count exactly, today adds what the server counted since', async () => {
+  const f = fixture();
+  const day = i => new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+  const q = (sql, ...a) => f.env.DB.prepare(sql).bind(...a).run();
+  await q('INSERT INTO usage_req (day, fid, req) VALUES (?1, ?2, ?3)', day(1), fid, 341);
+  await q('INSERT INTO usage_req (day, fid, req) VALUES (?1, ?2, ?3)', day(0), fid, 224);
+  await q('INSERT INTO usage_actual (day, cf_req, at) VALUES (?1, ?2, 1)', day(1), 333);
+  await q('INSERT INTO usage_actual (day, cf_req, est_req, at) VALUES (?1, ?2, ?3, 1)', day(0), 207, 210);
+  const j = await (await f.request('/usage')).json();
+  assert.equal(j.days.find(d => d.day === day(1)).req, 333); // 자체 집계(341)가 더 커도 콘솔 숫자
+  assert.equal(j.days.find(d => d.day === day(0)).req, 207 + (224 - 210));
 });
 test('calibration falls back to 1.5x for Firestore and clamps to 1..3', () => {
   assert.deepEqual(calibration([], {}, '2026-10-25'), { req: 1, reads: 1.5, writes: 1.5 });

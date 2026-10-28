@@ -65,9 +65,12 @@ async function saveActual(day, req, fs) {
     const db = (list.result || []).find(d => d.name === 'babylog-widget-summaries');
     if (!db) throw new Error('D1을 못 찾음');
     const r = await cfApi(`/accounts/${cfAccount}/d1/database/${db.uuid}/query`, {
-      sql: `INSERT INTO usage_actual (day, cf_req, fs_reads, fs_writes, at) VALUES (?1, ?2, ?3, ?4, ?5)
+      // est_req = 이 순간 서버가 센 요청 수. 오늘 숫자를 '직접 집계 + 그 뒤로 더 센 만큼'으로 이어 붙일 때 씀.
+      sql: `INSERT INTO usage_actual (day, cf_req, fs_reads, fs_writes, at, est_req)
+        VALUES (?1, ?2, ?3, ?4, ?5, (SELECT SUM(req) FROM usage_req WHERE day = ?1))
         ON CONFLICT(day) DO UPDATE SET cf_req = COALESCE(excluded.cf_req, cf_req), fs_reads = COALESCE(excluded.fs_reads, fs_reads),
-        fs_writes = COALESCE(excluded.fs_writes, fs_writes), at = excluded.at`,
+        fs_writes = COALESCE(excluded.fs_writes, fs_writes), at = excluded.at,
+        est_req = CASE WHEN excluded.cf_req IS NULL THEN est_req ELSE excluded.est_req END`,
       params: [day, req, fs ? fs.reads : null, fs ? fs.writes : null, Date.now()],
     });
     if (!r.success) throw new Error(JSON.stringify(r.errors).slice(0, 200));
@@ -86,7 +89,7 @@ async function codemagicMonth() {
   if (!token) { console.log('Codemagic 건너뜀: CODEMAGIC_API_TOKEN 없음'); return null; }
   try {
     const month = new Date().toISOString().slice(0, 7), from = Date.parse(month + '-01T00:00:00Z');
-    let minutes = 0, count = 0, skip = 0;
+    let seconds = 0, count = 0, skip = 0;
     for (let page = 0; page < 20; page++) {
       const j = await fetch(`https://api.codemagic.io/builds?skip=${skip}`, { headers: { 'x-auth-token': token } }).then(x => x.json());
       const builds = j.builds || [];
@@ -96,14 +99,14 @@ async function codemagicMonth() {
         const st = Date.parse(b.startedAt || b.createdAt || 0);
         if (st < from) { older = true; continue; }
         if (!b.startedAt) continue;
-        // Codemagic은 시작~끝을 분 단위로 올림해서 셈
+        // Codemagic 결제 화면은 빌드 시간(초)을 다 더한 뒤 분 단위로 내림해서 보여 줌 (10/28 콘솔 133분과 대조)
         const end = Date.parse(b.finishedAt || new Date().toISOString());
-        minutes += Math.ceil(Math.max(0, end - st) / 60e3); count++;
+        seconds += Math.max(0, end - st) / 1e3; count++;
       }
       if (older) break;
       skip += builds.length;
     }
-    return { month, minutes, count };
+    return { month, minutes: Math.floor(seconds / 60), count };
   } catch (e) { console.log('Codemagic 건너뜀: ' + e.message); return null; }
 }
 async function saveMonthly(m) {
