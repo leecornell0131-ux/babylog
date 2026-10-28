@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>베타 테스터 현황</title>
+<style>
+:root{
+  --bg:#F3F5F8; --card:#FFFFFF; --fg:#1B2430; --muted:#5B6472; --line:#E2E6EC; --soft:#EEF0F4; --accent:#3B49B8;
+  --ok:#1F7A3A; --watch:#926B00; --prepare:#C2410C; --act:#B3261E;
+  --ok-soft:#E5F3E9; --watch-soft:#FBF3D9; --prepare-soft:#FCE9DE; --act-soft:#FBEAE8;
+  --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37; --accent:#9AA6F5;
+  --ok:#7FD39A; --watch:#E8C65A; --prepare:#F0A566; --act:#F2B8B5;
+  --ok-soft:#1E3326; --watch-soft:#3A3220; --prepare-soft:#3D2A1E; --act-soft:#3A2224; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+main{max-width:720px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:22px;margin:4px 0 2px}
+h2{font-size:16px;margin:22px 4px 8px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.card{background:var(--card);border-radius:14px;padding:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+button{font:inherit;color:inherit;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 12px}
+button[aria-pressed="true"]{background:var(--accent);color:var(--card);border-color:var(--accent)}
+.status{border-left:6px solid var(--c);background:var(--cs)}
+.status b{color:var(--c)}
+.l-ok{--c:var(--ok);--cs:var(--ok-soft)} .l-watch{--c:var(--watch);--cs:var(--watch-soft)}
+.l-prepare{--c:var(--prepare);--cs:var(--prepare-soft)} .l-act{--c:var(--act);--cs:var(--act-soft)}
+.gauge .num{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.meter{height:8px;border-radius:4px;background:var(--soft);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--c);border-radius:4px}
+.big{font-size:28px;font-weight:700}
+.chart{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:6px;border-bottom:1px solid var(--line);position:relative}
+.chart .b{flex:1;background:var(--c);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.chart .line{position:absolute;left:0;right:0;border-top:1px dashed var(--line)}
+.chart .line span{position:absolute;right:0;top:-16px;font-size:11px;color:var(--muted)}
+.days{display:flex;gap:4px;font-size:11px;color:var(--muted);margin-top:4px}
+.days span{flex:1;text-align:center;white-space:nowrap;overflow:visible;width:0}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);font-size:14px}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl th{font-weight:600;color:var(--muted);font-size:12px}
+.tag{font-size:11px;padding:1px 6px;border-radius:6px;background:var(--accent);color:var(--card);margin-left:4px}
+.scroll{overflow-x:auto}
+.err{color:var(--act)}
+.dots{display:flex;gap:2px}
+.dots i{width:9px;height:9px;border-radius:2px;background:var(--soft)}
+.dots i.on{background:var(--ok)}
+.memo{width:96px;font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+.l-quiet td{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <div class="row" style="justify-content:space-between">
+    <div><h1>베타 테스터 현황</h1><div class="small muted" id="when">불러오는 중…</div></div>
+    <button type="button" id="reload">새로고침</button>
+  </div>
+  <div id="sum" class="grid" style="margin-top:12px"></div>
+  <h2>테스터별</h2>
+  <div class="card scroll"><table class="tbl" id="tbl"></table></div>
+  <h2>읽는 법</h2>
+  <div class="card small">
+    <p style="margin-top:0">번호는 테스터 코드(LN07-…의 07)예요. 누가 몇 번인지는 운영자만 가진 코드표로 맞춰 보세요. <b>메모 칸</b>에 적은 이름·동호수는 이 브라우저에만 저장되고 서버로 가지 않아요.</p>
+    <p>• <b>14일</b> 칸: 왼쪽이 13일 전, 오른쪽이 오늘. 초록 = 그날 앱을 쓴 날.<br>• <b>오늘 기록</b>: 오늘 이 사람 휴대폰에서 남긴 기록 개수(수유·수면·기저귀 등). 가족 둘 다 테스터면 각자 따로 세요.<br>• <b>가족</b>: 가족 공유 중이면 가족코드 앞 2자리. 같은 글자면 한 가족이에요.<br>• <b>읽기·쓰기</b>: 오늘 Firebase를 쓴 횟수(대략). 무료 한도 전체는 <a href="usage.html" style="color:var(--accent)">사용량 대시보드</a>에서 봐요.</p>
+    <p style="margin-bottom:0">하루 = 한국 시각 아침 9시~다음 날 아침 9시. 휴대폰은 앱을 쓰는 동안 3시간에 한 번쯤 숫자를 보내서, 방금 남긴 기록은 늦게 보일 수 있어요. 3일 넘게 안 보이는 테스터는 앱을 지웠거나 코드를 안 넣었을 수 있어요.</p>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MEMO = 'babylog-testers-memo';
+let memo = {}; try { memo = JSON.parse(localStorage.getItem(MEMO) || '{}'); } catch (_) {}
+const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 60 ? m + '분 전' : m < 1440 ? Math.round(m / 60) + '시간 전' : Math.round(m / 1440) + '일 전'; };
+async function load() {
+  $('#when').textContent = '불러오는 중…';
+  try {
+    const cfg = await fetch('android-app/push-config.json', { cache: 'no-cache' }).then(r => r.json());
+    const d = await fetch(cfg.worker.replace(/\/$/, '') + '/testers?days=28', { cache: 'no-store' }).then(r => r.json());
+    render(d);
+  } catch (e) { $('#when').innerHTML = '<span class="err">불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.</span>'; }
+}
+function render(d) {
+  const day = (n) => new Date(Date.parse(d.today) - n * 864e5).toISOString().slice(0, 10);
+  const last14 = Array.from({ length: 14 }, (_, i) => day(13 - i)), last7 = new Set(last14.slice(7));
+  const rows = d.testers.map(t => {
+    const by = Object.fromEntries(t.days.map(x => [x.day, x]));
+    const today = by[d.today] || { ev: 0, reads: 0, writes: 0 };
+    const act7 = t.days.filter(x => last7.has(x.day) && (x.ev || x.reads || x.writes)).length;
+    const ev7 = t.days.filter(x => last7.has(x.day)).reduce((a, x) => a + x.ev, 0);
+    return { ...t, by, today, act7, ev7, quiet: Date.now() - t.last > 3 * 864e5 };
+  });
+  const active = rows.filter(r => !r.quiet).length, fams = new Set(rows.filter(r => r.fam).map(r => r.fam)).size;
+  $('#when').textContent = `${new Date(d.now).toLocaleString('ko-KR')} 기준 · 최근 ${d.from} 이후`;
+  $('#sum').innerHTML = [
+    ['등록한 테스터', rows.length + '명'], ['최근 3일 안에 쓴 사람', active + '명'],
+    ['가족 공유 가족', fams + '가족'], ['오늘 남긴 기록', rows.reduce((a, r) => a + r.today.ev, 0) + '개'],
+  ].map(([k, v]) => `<div class="card"><div class="small muted">${k}</div><div class="big">${v}</div></div>`).join('');
+  $('#tbl').innerHTML = `<tr><th>번호</th><th style="text-align:left">메모</th><th style="text-align:left">14일</th><th>7일 중</th><th>오늘 기록</th><th>7일 기록</th><th>가족</th><th>휴대폰</th><th>오늘 읽기·쓰기</th><th>마지막</th></tr>`
+    + (rows.length ? rows.map(r => `<tr class="${r.quiet ? 'l-quiet' : ''}"><td><b>${String(r.tc).padStart(2, '0')}</b></td>
+      <td style="text-align:left"><input class="memo" data-tc="${r.tc}" value="${esc(memo[r.tc] || '')}" placeholder="이름·동호수"></td>
+      <td style="text-align:left"><span class="dots">${last14.map(x => `<i class="${r.by[x] && (r.by[x].ev || r.by[x].reads || r.by[x].writes) ? 'on' : ''}" title="${x}"></i>`).join('')}</span></td>
+      <td>${r.act7}일</td><td>${r.today.ev}</td><td>${r.ev7}</td><td>${r.fam ? esc(r.fam) : '안 씀'}</td><td>${r.devs}</td>
+      <td>${r.today.reads.toLocaleString()} · ${r.today.writes.toLocaleString()}</td><td>${ago(r.last)}</td></tr>`).join('')
+      : '<tr><td colspan="10" style="text-align:left" class="muted">아직 코드를 넣은 테스터가 없어요.</td></tr>');
+}
+$('#tbl').addEventListener('input', e => { const t = e.target.dataset.tc; if (!t) return; memo[t] = e.target.value; try { localStorage.setItem(MEMO, JSON.stringify(memo)); } catch (_) {} });
+$('#reload').onclick = load;
+load();
+</script>
+</body>
+</html>

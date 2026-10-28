@@ -249,7 +249,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.44';
+const VERSION='0.3.45';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -270,6 +270,17 @@ let topLevel=true; try{topLevel=window.top===window.self}catch(_){topLevel=false
 const pref=(k,v)=>{try{ if(v===undefined) return localStorage.getItem(KEY+'-'+k); localStorage.setItem(KEY+'-'+k,v) }catch(_){ return null }};
 // 이 기기 표시 (가족 공유에서 누가 기록했는지 구분, 동기화 안 함)
 let DEVICE=pref('device'); if(!DEVICE){ DEVICE=uid(); pref('device',DEVICE) }
+// 베타 테스터(얼리버드) 코드: LN07-K3QX 꼴. 공개 저장소라 SHA-256 앞 24자리만 둠. 순서+1 = 테스터 번호.
+// 맞는 코드를 넣으면 pref 'tester'=번호, 광고 끔(얼리버드 약속). 사용량 숫자에 번호가 붙어 운영자가 테스터별로 볼 수 있음(testers.html)
+const TESTER_H=["9dab6538abf56aed278f3043", "a2ba93e4f8fd8c5609231373", "646ecb5a65bf89942ac6e10d", "7d46773e575d10d67a51bc3d", "e2a03a0421e9c20352c5e829", "6df5b2ae47b30f32958cc13a", "1c95b7e22d1cea7f3990f42a", "1717cdc705641623afb2efed", "951b647267eff2ad72284513", "324e9cb2776fce68cb117170", "b75338a874e5337c40430ebb", "0e3d119fc4c6300e71d9b207", "0c9cf4089e753f8e6c6c4689", "92919606d7570f40faef2011", "7e8320e079a2c5db268a930c", "488194765afb7cba777327ca", "aceb7b3fba293435c1365d32", "fb05fb3ee0e8f6677b53371a", "c382bc3dc096119cc4f69376", "7fa8dfa17cceebec99438c36", "5a6a31c3f1b499733b708a1f", "fe79892f4aed8ce0a812e6aa", "d2fda5959ab38bdb219ace1c", "037561c45bc6da35094d1664", "0b0e9b1fe8ddbb5594d0eec4", "9aac93fdb887dccab2a86304", "1c394a72796fa7716d91de2e", "9be72a46d75cff4ae182caea", "a94442a3ebced9f987ae8e5f", "2dc8bcddab72a66673a18f23"];
+const testerNo=()=>+pref('tester')||0;
+async function testerMatch(raw){
+  const v=String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(!/^LN\d{2}[A-Z0-9]{4}$/.test(v)) return 0;
+  try{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)); const h=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24);
+    const i=TESTER_H.indexOf(h); return i<0?0:i+1 }catch(_){ return 0 }
+}
+function testerOn(n){ pref('tester',String(n)); pref('ads','0'); try{dispatchEvent(new CustomEvent('babylog-ads',{detail:false}))}catch(_){}
+  try{ window.BabySync&&BabySync.local&&BabySync.local(S) }catch(_){} }
 
 // ---------- 기록 종류 ----------
 // 수유·수면·기저귀 외 기록은 type:'etc' + sub
@@ -901,6 +912,7 @@ const SET_CATS=[
   ['screen','🎨','화면',()=>({auto:'자동',light:'라이트',dark:'다크'})[pref('theme')||'auto']+' · '+(view.order==='desc'?'최신이 위':'최신이 아래')],
   ['voice','🎙️','음성 명령',()=>iosVoice()?'Siri':(window.BabyNative&&BabyNative.voiceHelp)?'빅스비·구글 어시스턴트':'앱에서만 돼요'],
   ['data','🗂️','데이터',()=>'기록 '+S.events.length+'개'],
+  ['beta','🎁','베타 테스트·의견',()=>testerNo()?'얼리버드 '+testerNo()+'번 · 광고 없음':'테스터 코드 · 문제 알리기'],
   ['dev','🛠️','개발자',()=>pref('dev')==='1'?'켜짐 · 광고 '+(pref('ads')!=='0'?'표시':'숨김'):'코드 입력'],
 ];
 const setCats=()=>SET_CATS;
@@ -962,6 +974,11 @@ function renderSettings(){
 `,
     voice:voiceSetHTML(),
     data:`  <div class="row"><button class="btn ghost" style="flex:1" type="button" data-act="sample">예시 데이터 보기</button><button class="btn ghost" style="flex:1" type="button" data-act="clear">모든 기록 지우기</button></div>
+`,
+    beta:`  ${testerNo()?`<div class="card panel"><div class="field"><span>🎁 얼리버드 테스터 <b>${testerNo()}번</b><br><span class="small muted">정식 출시 뒤에도 광고 없이 쓸 수 있어요. 앱을 지우면 코드를 다시 넣어 주세요.</span></span></div></div>`
+    :`<div class="card panel" style="padding:12px 14px"><div class="row"><input type="text" id="testerCode" placeholder="테스터 코드 (예: LN07-ABCD)" autocapitalize="characters" autocomplete="off" style="flex:1"><button class="btn ghost" type="button" data-act="testerCode">확인</button></div></div>`}
+  <button class="btn ghost full" style="margin-top:8px" type="button" data-act="feedback">문제·의견 보내기</button>
+  <p class="small muted" style="margin:0 4px">${testerNo()?'테스터 코드를 넣으면 하루 사용량 숫자(기록 개수·서버 읽기·쓰기 횟수)에 테스터 번호가 붙어요. 기록 내용·아기 정보는 보내지 않아요.':'아파트 베타 테스트에 참여했다면 받은 코드를 넣어 주세요.'} 문제를 보낼 땐 언제, 누구 휴대폰에서, 무엇을 눌렀는지 적어 주면 빨리 고칠 수 있어요.</p>
 `,
     dev:`  ${pref('dev')==='1'?`<div class="card panel"><label class="field" for="adsOn">광고 표시<input type="checkbox" id="adsOn" ${pref('ads')!=='0'?'checked':''}></label>
     <div class="field"><span>오늘 이 휴대폰 사용량<br><span class="small muted">${(()=>{const u=window.BabySync&&BabySync.usage&&BabySync.usage(); return u?`Firestore 읽기 ${u.reads.toLocaleString()} · 쓰기 ${u.writes.toLocaleString()} (대략)`:'가족 공유를 켜면 세요'})()}</span></span><a class="linkbtn" href="usage.html" target="_blank" rel="noopener">전체 사용량 보기</a></div>
@@ -1345,6 +1362,12 @@ $('#app').addEventListener('click',async e=>{
     try{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)); h=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('') }catch(_){}
     // 공개 저장소라 코드 원문 대신 SHA-256 해시로 비교
     if(h==='f9f40d77657a9dfff29bbfba10471c821bb4c5ef571613c11765fb64e63baa6a'){ pref('dev','1'); if(pref('ads')===null) pref('ads','1'); render(); toast('개발자 모드를 켰어요') } else toast('코드가 맞지 않아요'); return }
+  if(a==='testerCode'){ const n=await testerMatch($('#testerCode').value); if(!n){ toast('코드가 맞지 않아요'); return } testerOn(n); render(); toast('얼리버드 '+n+'번으로 등록했어요. 고마워요!'); return }
+  if(a==='feedback'){ const sy=window.BabySync&&BabySync.status(), ua=navigator.userAgent, gb=(ua.match(/BabylogAndroid\/(\d+)/)||[])[1];
+    const where=iosVoice()?'아이폰 앱':gb?'갤럭시 앱 '+gb:/iPhone|iPad/.test(ua)?'아이폰 웹':/Android/.test(ua)?'안드로이드 웹':'웹';
+    const txt=`[아기로그 의견] ${testerNo()?'테스터 '+testerNo()+'번 · ':''}${VERSION} · ${where} · 가족 공유 ${sy&&sy.fid?(sy.state==='on'?'연결됨':'연결 안 됨'):'안 씀'} · ${new Date().toLocaleString('ko-KR')}\n\n언제(몇 시쯤):\n누구 휴대폰에서:\n무엇을 눌렀나요:\n어떻게 됐나요:\n`;
+    try{ if(navigator.share){ await navigator.share({text:txt}); return } }catch(_){ return }
+    try{ await navigator.clipboard.writeText(txt); toast('내용을 복사했어요. 카톡에 붙여넣어 보내 주세요') }catch(_){ toast('복사가 안 됐어요. 화면을 캡처해 보내 주세요') } return }
   if(a==='voiceHelp'){ pref('voiceTip','1'); try{ BabyNative.voiceHelp() }catch(_){} return }
   if(a==='voiceTipOff'){ pref('voiceTip','1'); return render() }
   if(a==='devOff'){ pref('dev','0'); render(); return }
@@ -1390,6 +1413,8 @@ window.BabyApp={
   get ads(){ return pref('ads')!=='0' },
   toast
 };
+// 초대 링크 ?t=LN07-ABCD 로 열면 테스터 코드 자동 등록 (웹앱용. 갤럭시·아이폰 앱은 설정에서 입력)
+try{ const tq=new URLSearchParams(location.search).get('t'); if(tq){ history.replaceState(null,'',location.pathname); testerMatch(tq).then(n=>{ if(n){ testerOn(n); render(); toast('얼리버드 '+n+'번으로 등록했어요') } }) } }catch(_){}
 render();
 setInterval(()=>{ if(!$('#sw')&&view.tab==='today'&&!(document.activeElement&&document.activeElement.tagName==='INPUT')) render() },60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ checkUpdate(); if(!$('#sw')) render() } });
