@@ -168,6 +168,7 @@ function listen() {
       if (!snap.metadata.fromCache) { if (state !== 'on') setState('on'); recoverWidget(fid); }
       return;
     }
+    let keep = false;
     App.applyRemote(S => {
       const idx = new Map(S.events.map((e, i) => [e.id, i]));
       for (const ch of changes) {
@@ -182,14 +183,16 @@ function listen() {
           const localC = idx.has(id) ? canon(S.events[idx.get(id)]) : null;
           const prev = st.synced[id];
           st.synced[id] = c;
-          // 내가 올린 기록이 되돌아왔는데 그사이 이 휴대폰에서 또 고쳤으면 새 값을 지킴 (다음 올리기에서 반영)
-          if (mine && localC && localC !== c && localC !== prev) continue;
+          // 이 휴대폰에서 고친 뒤 아직 못 올린 기록이면 이 휴대폰 값을 지킴 (다음 올리기에서 반영).
+          // 예전엔 내가 올린 기록만 지켜서, 밤에 갤럭시가 절전으로 늦게 올리는 사이 다른 휴대폰이 같은 수면을 고치면
+          // 갤럭시에서 누른 '깼어요' 시각이 말없이 사라졌음. 이제는 마지막으로 고쳐서 올린 쪽으로 양쪽이 맞춰짐
+          if (localC && localC !== c && localC !== prev && (mine || prev !== undefined)) { keep = true; continue; }
           if (idx.has(id)) S.events[idx.get(id)] = ev; else S.events.push(ev);
         }
         idx.clear(); S.events.forEach((e, i) => idx.set(e.id, i));
       }
-    });
-    persist(); if (!snap.metadata.fromCache) setState('on');
+    }, 'sync');
+    persist(); if (keep) local(App.state); if (!snap.metadata.fromCache) setState('on');
     // 같은 로그인 ID를 공유하는 다른 탭의 변경도 비교. 내용 동일한 자기 echo는 큐가 무시.
     if (!snap.metadata.fromCache) recoverWidget(fid, true);
   }, e => setState('err', errText(e))));
@@ -198,7 +201,7 @@ function listen() {
     const d = snap.data(); if (!d || !d.meta || snap.metadata.hasPendingWrites) return;
     const m = canon(d.meta); if (m === st.meta) return;
     st.meta = m; persist();
-    App.applyRemote(S => { for (const k of META_KEYS) if (d.meta[k] !== undefined) S[k] = d.meta[k]; });
+    App.applyRemote(S => { for (const k of META_KEYS) if (d.meta[k] !== undefined) S[k] = d.meta[k]; }, 'sync');
     if (!snap.metadata.fromCache) recoverWidget(fid, true);
   }, e => setState('err', errText(e))));
 }
@@ -238,7 +241,7 @@ window.BabySync = {
       st = { fid, cursor: 0, synced: {}, meta: null };
       if (fam.exists() && fam.data().meta) {
         const meta = fam.data().meta; st.meta = canon(meta);
-        App.applyRemote(S => { for (const k of META_KEYS) if (meta[k] !== undefined) S[k] = meta[k]; });
+        App.applyRemote(S => { for (const k of META_KEYS) if (meta[k] !== undefined) S[k] = meta[k]; }, 'sync');
       }
       persist(); listen(); push(App.state);
       App.toast('가족에 참여했어요. 기록을 맞추는 중이에요');
