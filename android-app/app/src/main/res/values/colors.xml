@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg">#F3F5F8</color>
+    <!-- 앱 아이콘 뒷면 (달 그림 가장자리 남보라) -->
+    <color name="ic_launcher_bg">#1E1255</color>
     <color name="widget_bg">#FFFFFF</color>
     <color name="widget_ink">#1B1F3B</color>
     <color name="widget_sub">#6A6F8A</color>
