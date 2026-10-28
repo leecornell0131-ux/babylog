@@ -8,12 +8,11 @@ export const LEVELS = [
 ];
 export const level = pct => LEVELS.reduce((r, l) => (pct >= l.min ? l : r), LEVELS[0]);
 
-// 하루 사용량의 한도 대비 %. Firestore 읽기·쓰기는 휴대폰이 센 대략값이라 10% 여유를 더해 봄.
-export const FS_MARGIN = 1.1;
+// 하루 사용량의 한도 대비 %. 숫자는 서버(/usage)가 이미 직접 집계·보정 비율을 반영해 줌.
 export function percents(d, limits) {
   return {
-    reads: d.reads * FS_MARGIN / limits.fsReads * 100,
-    writes: d.writes * FS_MARGIN / limits.fsWrites * 100,
+    reads: d.reads / limits.fsReads * 100,
+    writes: d.writes / limits.fsWrites * 100,
     req: d.req / limits.cfRequests * 100,
   };
 }
@@ -23,7 +22,7 @@ export const worst = p => Math.max(p.reads, p.writes, p.req);
 export function capacity(d, limits) {
   const n = d.sharedFamilies || d.families;
   if (!n) return null;
-  const per = { reads: d.reads * FS_MARGIN / n, writes: d.writes * FS_MARGIN / n, req: d.req / n };
+  const per = { reads: d.reads / n, writes: d.writes / n, req: d.req / n };
   const caps = [
     { what: 'Firebase 읽기', n: per.reads ? Math.floor(limits.fsReads / per.reads) : Infinity },
     { what: 'Firebase 쓰기', n: per.writes ? Math.floor(limits.fsWrites / per.writes) : Infinity },

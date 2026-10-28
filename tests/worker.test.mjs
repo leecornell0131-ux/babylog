@@ -5,9 +5,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { generateKeyPairSync } from 'node:crypto';
 
 const source = await readFile(new URL('../push-server/worker.js', import.meta.url), 'utf8');
-const { default: worker, cleanSummary } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const { default: worker, cleanSummary, calibration } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const migration = (await readFile(new URL('../push-server/migrations/0001_summaries.sql', import.meta.url), 'utf8'))
-  + (await readFile(new URL('../push-server/migrations/0002_usage.sql', import.meta.url), 'utf8'));
+  + (await readFile(new URL('../push-server/migrations/0002_usage.sql', import.meta.url), 'utf8'))
+  + (await readFile(new URL('../push-server/migrations/0003_usage_actual.sql', import.meta.url), 'utf8'));
 const fid = 'AAAAAAAAAA';
 function fixture(d1 = true) {
   const values = new Map(), counts = { get: 0, put: 0 };
@@ -136,7 +137,7 @@ test('usage: app reports keep the larger cumulative value and reject bad input',
   assert.equal((await send({ dev: 'BAD!' })).status, 400);
   assert.equal((await send({ reads: -1 })).status, 400);
   const t = (await (await f.request('/usage')).json()).days[0];
-  assert.equal(t.reads, 45); assert.equal(t.writes, 7); assert.equal(t.top[0].devs, 2); assert.equal(t.sharedFamilies, 1);
+  assert.equal(t.est.reads, 45); assert.equal(t.est.writes, 7); assert.equal(t.reads, 68); assert.equal(t.top[0].devs, 2); assert.equal(t.sharedFamilies, 1);
 });
 test('usage counting never breaks the widget API when tables are missing', async () => {
   const f = fixture();
@@ -155,4 +156,24 @@ test('usage: requests inside the wait window are saved without a later request (
   f.env.USAGE_FLUSH_MS = 0;
   const t = (await (await f.request('/usage?fid=' + other)).json()).days[0];
   assert.equal(t.top.find(x => x.me).req, 3);
+});
+
+test('usage: direct counts from Cloudflare/Firebase override and calibrate the self-counted numbers', async () => {
+  const f = fixture();
+  const day = i => new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+  const send = (d, reads, writes) => f.request('/usage', { fid, day: d, dev: 'abcd1234', reads, writes });
+  await send(day(1), 100, 20); await send(day(0), 50, 10);
+  const q = (sql, ...a) => f.env.DB.prepare(sql).bind(...a).run();
+  await q('INSERT INTO usage_actual (day, cf_req, fs_reads, fs_writes, at) VALUES (?1, ?2, ?3, ?4, ?5)', day(1), 300, 180, 30, 1);
+  const j = await (await f.request('/usage')).json();
+  const y = j.days.find(d => d.day === day(1)), t = j.days.find(d => d.day === day(0));
+  assert.equal(y.reads, 180); assert.equal(y.writes, 30); assert.equal(y.req, 300); // 마감일: 직접 집계가 기준
+  assert.equal(j.calib.reads, 1.8); assert.equal(j.calib.writes, 1.5);
+  assert.equal(t.reads, 90); assert.equal(t.writes, 15); // 오늘: 자체 집계 × 어제 비율
+  assert.equal(t.est.reads, 50);
+});
+test('calibration falls back to 1.5x for Firestore and clamps to 1..3', () => {
+  assert.deepEqual(calibration([], {}, '2026-10-25'), { req: 1, reads: 1.5, writes: 1.5 });
+  const c = calibration([{ day: '2026-10-24', req: 10, reads: 10, writes: 10 }], { '2026-10-24': { cf_req: 5, fs_reads: 100, fs_writes: null } }, '2026-10-25');
+  assert.equal(c.req, 1); assert.equal(c.reads, 3); assert.equal(c.writes, 1.5);
 });
