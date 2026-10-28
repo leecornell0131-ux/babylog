@@ -16,7 +16,7 @@ const DEV = /^[a-z0-9]{8,16}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const KEEP_DAYS = 60;
 // 무료 한도 (공식 문서 기준). 대시보드·매일 점검이 이 값으로 몇 %인지 계산.
-export const LIMITS = { fsReads: 50000, fsWrites: 20000, cfRequests: 100000 };
+export const LIMITS = { fsReads: 50000, fsWrites: 20000, cfRequests: 100000, codemagicMinutes: 500 };
 
 export default {
   async fetch(req, env, ctx) {
@@ -195,7 +195,10 @@ export async function usageReport(env, days, myFid) {
         .map(f => ({ id: f.fid.slice(0, 2) + '········', me: !!myFid && f.fid === myFid, req: f.req, reads: f.reads, writes: f.writes, devs: f.devs })),
     };
   });
-  return { now: Date.now(), today: utcDay(), limits: LIMITS, calib, days: out };
+  // 달 단위 한도 (Codemagic 빌드 시간)
+  let monthly = [];
+  try { monthly = (await env.DB.prepare('SELECT month, kind, used, count, at FROM usage_monthly WHERE month >= ?1 ORDER BY month DESC').bind(utcDay(Date.now() - 62 * 864e5).slice(0, 7)).all()).results || []; } catch (_) {}
+  return { now: Date.now(), today: utcDay(), limits: LIMITS, calib, days: out, monthly };
 }
 
 // 자체 집계가 실제보다 얼마나 적게 세는지: 직접 집계가 있는 가장 최근 마감일의 비율(1~3배). 아직 없으면 읽기·쓰기 1.5배로 넉넉히.

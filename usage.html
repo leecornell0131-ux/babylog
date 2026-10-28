@@ -125,6 +125,13 @@ function draw() {
     ${gauge('Firebase 쓰기', d.writes, L.fsWrites, p.writes, src(d, 'writes', 'Firebase'))}
     ${gauge('알림 서버 요청', d.req, L.cfRequests, p.req, src(d, 'req', 'Cloudflare'))}
   </div>
+  <h2>이번 달 (달마다 초기화)</h2>
+  <div class="grid">${(() => {
+    const m = (data.monthly || []).find(x => x.kind === 'codemagic' && x.month === new Date().toISOString().slice(0, 7));
+    if (!m) return '<div class="card small muted">Codemagic 빌드 시간: 아직 못 읽었어요(저장소에 CODEMAGIC_API_TOKEN 필요).</div>';
+    return gauge('Codemagic 빌드 시간(분)', m.used, L.codemagicMinutes || 500, m.used / (L.codemagicMinutes || 500) * 100,
+      `빌드 ${m.count}번 · ${new Date(m.at).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })} 기준 · 매달 1일 초기화`);
+  })()}</div>
   <h2>지금 방식이면 몇 가족까지?</h2>
   <div class="card">${cap ? `<div class="big">${n(cap.safe)}가족 <span class="small muted">(여유 20% 남기고)</span></div>
     <div class="small muted">끝까지 채우면 ${n(cap.max)}가족 · 먼저 막히는 곳: <b>${cap.bottleneck}</b></div>

@@ -2,7 +2,8 @@
 // 1) Cloudflare·Firebase가 직접 센 하루 합계(UTC 날짜)를 읽어 알림 서버 DB(D1 usage_actual)에 넣음 → 대시보드가 이 숫자를 씀
 // 2) 알림 서버 /usage로 한도 대비 %를 계산하고, ALERT=1(아침·저녁 점검)일 때 50%(지켜보기) 이상이면 usage-alert.md를 만들어
 //    워크플로가 GitHub 이슈로 올림 → 저장소 주인에게 이메일이 감.
-// 필요한 값: CLOUDFLARE_API_TOKEN·CLOUDFLARE_ACCOUNT_ID(요청 수 읽기·D1 쓰기), FCM_SA(Firebase 서비스 계정, 모니터링 뷰어 역할 필요).
+// 필요한 값: CLOUDFLARE_API_TOKEN·CLOUDFLARE_ACCOUNT_ID(요청 수 읽기·D1 쓰기), FCM_SA(Firebase 서비스 계정, 모니터링 뷰어 역할 필요),
+// CODEMAGIC_API_TOKEN(이번 달 빌드 시간).
 // 하나라도 없거나 권한이 없으면 그 부분만 건너뜀.
 import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import { createSign } from 'node:crypto';
@@ -79,6 +80,49 @@ for (const day of [dayOf(1), dayOf(0)]) {
   await saveActual(day, req, fs);
 }
 
+// Codemagic 이번 달 빌드 시간 (무료 개인 계정 월 500분, mac_mini_m2). 저장소 Secret CODEMAGIC_API_TOKEN이 있어야 함.
+async function codemagicMonth() {
+  const token = process.env.CODEMAGIC_API_TOKEN;
+  if (!token) { console.log('Codemagic 건너뜀: CODEMAGIC_API_TOKEN 없음'); return null; }
+  try {
+    const month = new Date().toISOString().slice(0, 7), from = Date.parse(month + '-01T00:00:00Z');
+    let minutes = 0, count = 0, skip = 0;
+    for (let page = 0; page < 20; page++) {
+      const j = await fetch(`https://api.codemagic.io/builds?skip=${skip}`, { headers: { 'x-auth-token': token } }).then(x => x.json());
+      const builds = j.builds || [];
+      if (!builds.length) break;
+      let older = false;
+      for (const b of builds) {
+        const st = Date.parse(b.startedAt || b.createdAt || 0);
+        if (st < from) { older = true; continue; }
+        if (!b.startedAt) continue;
+        // Codemagic은 시작~끝을 분 단위로 올림해서 셈
+        const end = Date.parse(b.finishedAt || new Date().toISOString());
+        minutes += Math.ceil(Math.max(0, end - st) / 60e3); count++;
+      }
+      if (older) break;
+      skip += builds.length;
+    }
+    return { month, minutes, count };
+  } catch (e) { console.log('Codemagic 건너뜀: ' + e.message); return null; }
+}
+async function saveMonthly(m) {
+  if (!m || !cfToken || !cfAccount) return;
+  try {
+    const list = await cfApi(`/accounts/${cfAccount}/d1/database?name=babylog-widget-summaries`);
+    const db = (list.result || []).find(d => d.name === 'babylog-widget-summaries');
+    const r = await cfApi(`/accounts/${cfAccount}/d1/database/${db.uuid}/query`, {
+      sql: `INSERT INTO usage_monthly (month, kind, used, count, at) VALUES (?1, 'codemagic', ?2, ?3, ?4)
+        ON CONFLICT(month, kind) DO UPDATE SET used = excluded.used, count = excluded.count, at = excluded.at`,
+      params: [m.month, m.minutes, m.count, Date.now()],
+    });
+    if (!r.success) throw new Error(JSON.stringify(r.errors).slice(0, 200));
+  } catch (e) { console.log('Codemagic 저장 실패: ' + e.message); }
+}
+const cm = await codemagicMonth();
+if (cm) console.log(`${cm.month} Codemagic 빌드 ${cm.count}번 · ${cm.minutes}분`);
+await saveMonthly(cm);
+
 const cfg = JSON.parse(await readFile(new URL('../android-app/push-config.json', import.meta.url), 'utf8'));
 const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=3', { cache: 'no-store' }).catch(e => ({ ok: false, status: e.message }));
 // 서버를 못 읽는 것 자체도 알림 (배포가 안 됐거나 D1 한도 초과일 수 있음)
@@ -98,6 +142,11 @@ const src = d => (d.actual ? `직접 집계(${['req', 'reads', 'writes'].filter(
 lines.push('', `숫자 출처: 어제 ${src(yday)}, 오늘 ${src(today)}. 보정 비율 읽기 ${data.calib ? data.calib.reads.toFixed(2) : '-'}배 · 쓰기 ${data.calib ? data.calib.writes.toFixed(2) : '-'}배 · 요청 ${data.calib ? data.calib.req.toFixed(2) : '-'}배.`);
 const cap = capacity(yday.families ? yday : today, L);
 if (cap) lines.push('', `지금 방식이면 **약 ${n(cap.safe)}가족**까지(여유 20%), 먼저 막히는 곳: ${cap.bottleneck}. 가족당 하루 읽기 ${n(cap.per.reads)} · 쓰기 ${n(cap.per.writes)} · 요청 ${n(cap.per.req)}.`);
+if (cm) {
+  const p = cm.minutes / L.codemagicMinutes * 100;
+  lvs.push(level(p));
+  lines.push('', `Codemagic 이번 달 빌드 ${cm.count}번 · **${n(cm.minutes)}분** / ${n(L.codemagicMinutes)}분 (${Math.round(p)}%)`);
+}
 const worstLv = lvs.reduce((a, b) => (b.min > a.min ? b : a));
 lines.push('', `**지금 단계: ${worstLv.name}** — ${worstLv.act}`, '', '대시보드: https://leecornell0131-ux.github.io/babylog/usage.html');
 const body = lines.join('\n');
