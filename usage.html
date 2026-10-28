@@ -60,8 +60,8 @@ button[aria-pressed="true"]{background:var(--accent);color:var(--card);border-co
   <h2>읽는 법</h2>
   <div class="card small muted">
     <p style="margin-top:0">· <b>하루</b>는 한국 시각 <b>아침 9시부터 다음 날 아침 9시까지</b>예요(알림 서버 무료 한도가 9시에 초기화돼요). Firebase 무료 한도는 오후 4~5시에 초기화돼서 조금 어긋나요.</p>
-    <p>· Firestore 읽기·쓰기는 각 휴대폰이 스스로 센 <b>대략값</b>이라 10%를 더해 계산해요. 정확한 전체 합계는 Firebase 콘솔 > Firestore > 사용량에서 확인해요.</p>
-    <p>· 알림 서버 요청은 최대 20초씩 모아 저장해서 Cloudflare 대시보드 > Workers의 "Requests today"와 거의 같아요(10/25 저녁 이전 기록은 약 40% 적게 저장됐어요). 매일 점검은 Cloudflare 숫자를 직접 읽을 수 있으면 그 숫자로 판정해요.</p>
+    <p>· 숫자는 <b>Firebase·Cloudflare가 직접 센 값</b>을 매시간 받아 와서 써요(각 칸 아래에 몇 시 기준인지 나와요). 그 뒤 시간은 휴대폰·서버가 센 값에 보정 비율을 곱해 채워요. 직접 센 값이 없는 날은 넉넉히 1.5배로 계산해요.</p>
+    <p>· 가족별 표는 휴대폰·서버가 센 값이라 전체보다 작게 나와요. 누가 얼마나 많이 쓰는지 비중을 보는 용도예요.</p>
     <p style="margin-bottom:0">· 가족코드는 앞 2자리만 보여요. 이름·아기 정보·기록 내용은 서버에 없어요.</p>
   </div>
 </main>
@@ -97,6 +97,13 @@ function gauge(title, used, limit, p, note) {
     <div class="small"><b style="color:var(--c)">${pct(p)}</b> <span class="muted">${note}</span></div></div>`;
 }
 
+// 숫자 출처: Firebase·Cloudflare가 직접 센 값(매시간 갱신)이 있으면 그 값, 없으면 휴대폰·서버가 센 값 × 보정 비율
+function src(d, k, who) {
+  const a = d.actual && d.actual[k], c = data.calib ? data.calib[k] : 1;
+  if (a != null) return `${who} 직접 집계 ${new Date(d.actual.at).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}${d[k] > a ? ' + 이후 추정' : ''}`;
+  return '자체 집계' + (c > 1.001 ? ` × ${c.toFixed(1)} 보정` : '');
+}
+
 function draw() {
   const L = data.limits, days = data.days;
   const byDay = Object.fromEntries(days.map(d => [d.day, d]));
@@ -114,9 +121,9 @@ function draw() {
   <div class="card status l-${lv.key}"><div><b>${lv.name}</b> · 한도의 최대 ${pct(worst(p))} 사용</div><div class="small" style="margin-top:4px">${lv.act}</div></div>
   <h2>${md(d.day)} 하루 사용량 (무료 한도 대비)</h2>
   <div class="grid">
-    ${gauge('Firebase 읽기', d.reads, L.fsReads, p.reads, '가장 먼저 차는 한도')}
-    ${gauge('Firebase 쓰기', d.writes, L.fsWrites, p.writes, '기록 1개 = 쓰기 1')}
-    ${gauge('알림 서버 요청', d.req, L.cfRequests, p.req, '위젯 갱신')}
+    ${gauge('Firebase 읽기', d.reads, L.fsReads, p.reads, src(d, 'reads', 'Firebase'))}
+    ${gauge('Firebase 쓰기', d.writes, L.fsWrites, p.writes, src(d, 'writes', 'Firebase'))}
+    ${gauge('알림 서버 요청', d.req, L.cfRequests, p.req, src(d, 'req', 'Cloudflare'))}
   </div>
   <h2>지금 방식이면 몇 가족까지?</h2>
   <div class="card">${cap ? `<div class="big">${n(cap.safe)}가족 <span class="small muted">(여유 20% 남기고)</span></div>

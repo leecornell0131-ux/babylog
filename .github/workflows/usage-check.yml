@@ -1,4 +1,5 @@
-# 매일 사용량 점검. 한도의 50% 이상이면 "사용량 경보" 이슈를 만들거나 댓글을 달아 저장소 주인에게 이메일이 감. 0원(공개 저장소 Actions).
+# 사용량 점검. 매시간 Cloudflare·Firebase가 직접 센 숫자를 대시보드용으로 옮기고,
+# 아침·저녁 점검(과 수동 실행) 때 한도의 50% 이상이면 "사용량 경보" 이슈를 만들거나 댓글을 달아 저장소 주인에게 이메일이 감. 0원(공개 저장소 Actions).
 # 주의: GitHub는 저장소에 60일 동안 변화가 없으면 예약 실행을 멈춤 → Actions 탭에서 다시 켜면 됨.
 name: Usage check
 
@@ -6,6 +7,7 @@ on:
   schedule:
     - cron: '15 0 * * *'   # 한국 아침 9:15 (어제 하루가 막 마감된 뒤)
     - cron: '0 11 * * *'   # 한국 저녁 8:00 (오늘 진행 중 확인)
+    - cron: '40 * * * *'   # 매시간: 직접 집계만 옮김 (경보 없음)
   workflow_dispatch:
 
 permissions:
@@ -25,6 +27,7 @@ jobs:
           FCM_SA: ${{ secrets.FCM_SERVICE_ACCOUNT }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ALERT: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule != '40 * * * *' }}
         run: node push-server/usage-check.mjs
       - name: Alert by GitHub issue (email)
         if: hashFiles('usage-alert.md') != ''
