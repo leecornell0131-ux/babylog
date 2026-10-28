@@ -100,7 +100,7 @@ function gauge(title, used, limit, p, note) {
 // 숫자 출처: Firebase·Cloudflare가 직접 센 값(매시간 갱신)이 있으면 그 값, 없으면 휴대폰·서버가 센 값 × 보정 비율
 function src(d, k, who) {
   const a = d.actual && d.actual[k], c = data.calib ? data.calib[k] : 1;
-  if (a != null) return `${who} 직접 집계 ${new Date(d.actual.at).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}${d[k] > a ? ' + 이후 추정' : ''}`;
+  if (a != null) return `${who} 직접 집계 ${new Date(d.actual.at).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}${d[k] > a ? ` + 그 뒤 ${d[k] - a}` : ''}`;
   return '자체 집계' + (c > 1.001 ? ` × ${c.toFixed(1)} 보정` : '');
 }
 
