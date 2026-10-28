@@ -8,7 +8,8 @@ const source = await readFile(new URL('../push-server/worker.js', import.meta.ur
 const { default: worker, cleanSummary, calibration } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const migration = (await readFile(new URL('../push-server/migrations/0001_summaries.sql', import.meta.url), 'utf8'))
   + (await readFile(new URL('../push-server/migrations/0002_usage.sql', import.meta.url), 'utf8'))
-  + (await readFile(new URL('../push-server/migrations/0003_usage_actual.sql', import.meta.url), 'utf8'));
+  + (await readFile(new URL('../push-server/migrations/0003_usage_actual.sql', import.meta.url), 'utf8'))
+  + (await readFile(new URL('../push-server/migrations/0004_usage_monthly.sql', import.meta.url), 'utf8'));
 const fid = 'AAAAAAAAAA';
 function fixture(d1 = true) {
   const values = new Map(), counts = { get: 0, put: 0 };
@@ -176,4 +177,13 @@ test('calibration falls back to 1.5x for Firestore and clamps to 1..3', () => {
   assert.deepEqual(calibration([], {}, '2026-10-25'), { req: 1, reads: 1.5, writes: 1.5 });
   const c = calibration([{ day: '2026-10-24', req: 10, reads: 10, writes: 10 }], { '2026-10-24': { cf_req: 5, fs_reads: 100, fs_writes: null } }, '2026-10-25');
   assert.equal(c.req, 1); assert.equal(c.reads, 3); assert.equal(c.writes, 1.5);
+});
+
+test('usage: monthly Codemagic minutes are returned with the limit', async () => {
+  const f = fixture();
+  const month = new Date().toISOString().slice(0, 7);
+  await f.env.DB.prepare("INSERT INTO usage_monthly (month, kind, used, count, at) VALUES (?1, 'codemagic', 42, 3, 1)").bind(month).run();
+  const j = await (await f.request('/usage')).json();
+  assert.equal(j.limits.codemagicMinutes, 500);
+  assert.deepEqual(j.monthly.map(m => [m.month, m.kind, m.used, m.count]), [[month, 'codemagic', 42, 3]]);
 });
