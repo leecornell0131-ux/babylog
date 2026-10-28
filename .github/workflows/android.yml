@@ -37,6 +37,29 @@ jobs:
           ./gradlew --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk babylog.apk
 
+      # Play 스토어용 AAB (업로드 키 Secrets가 있을 때만). 같은 빌드 번호라 APK와 버전이 같음.
+      # 키 만들기·넣는 법: guide 폴더의 Play 안내서
+      - name: Build Play AAB
+        id: aab
+        env:
+          PLAY_UPLOAD_KEYSTORE: ${{ secrets.PLAY_UPLOAD_KEYSTORE }}
+          PLAY_UPLOAD_PASSWORD: ${{ secrets.PLAY_UPLOAD_PASSWORD }}
+        working-directory: android-app
+        run: |
+          if [ -z "$PLAY_UPLOAD_KEYSTORE" ]; then echo "업로드 키 없음: AAB 건너뜀"; exit 0; fi
+          echo "$PLAY_UPLOAD_KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          PLAY_UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks" ./gradlew --no-daemon bundleRelease -Pstore=true
+          cp app/build/outputs/bundle/release/app-release.aab babylog-play.aab
+          rm -f "$RUNNER_TEMP/upload.jks"
+          echo "built=1" >> "$GITHUB_OUTPUT"
+
+      - name: Keep AAB
+        if: steps.aab.outputs.built == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: babylog-play-aab
+          path: android-app/babylog-play.aab
+
       # 다른 브랜치에서 만든 APK는 내려받기용으로만 남기고, 설치 주소(최신 릴리스)에는 main만 올림
       - name: Keep APK (branch build)
         if: github.ref != 'refs/heads/main'
@@ -52,7 +75,9 @@ jobs:
         run: |
           TAG="android-${{ github.run_number }}"
           MSG="$(git log -1 --pretty=%s)"
-          gh release create "$TAG" android-app/babylog.apk \
+          FILES="android-app/babylog.apk"
+          [ -f android-app/babylog-play.aab ] && FILES="$FILES android-app/babylog-play.aab"
+          gh release create "$TAG" $FILES \
             --target "${{ github.sha }}" \
             --title "아기로그 안드로이드 0.1.${{ github.run_number }}" \
             --notes "- ${MSG}" \
