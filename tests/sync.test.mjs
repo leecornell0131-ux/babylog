@@ -90,3 +90,25 @@ test('partner update still applies when this phone did not change the record', a
   await f.save();
   assert.equal(f.S.events[0].end, 900); assert.equal(f.commits.length, 0);
 });
+const remote = (f, data) => f.snapshots[0].cb({ metadata: { fromCache: false }, docChanges: () => [{ type: 'modified', doc: { id: 'old',
+  metadata: { hasPendingWrites: false }, data: () => ({ id: 'old', type: 'sleep', start: 1, by: 'them', u: { toMillis: () => 1000003 }, ...data }) } }] });
+test('a late wake tap from a stale phone does not move an earlier wake', async () => {
+  // 아내가 08:21에 깼어요 → 남편 아이폰 위젯이 늦게 바뀌어 08:34에 또 깼어요
+  const f = await fixture();
+  Object.assign(f.S.events[0], { end: 821, tap: 821 }); await f.save(); f.commits[0].resolve(); await f.save();
+  remote(f, { end: 834, tap: 834 }); await f.save();
+  assert.equal(f.S.events[0].end, 821);
+  assert.equal(f.commits.at(-1).writes[0].data.end, 821);
+});
+test('the phone that tapped late takes the earlier wake tap', async () => {
+  const f = await fixture();
+  Object.assign(f.S.events[0], { end: 834, tap: 834 });
+  remote(f, { end: 821, tap: 821 }); await f.save();
+  assert.equal(f.S.events[0].end, 821); assert.equal(f.commits.length, 0);
+});
+test('an edited (not tapped) later wake time is still accepted', async () => {
+  const f = await fixture();
+  Object.assign(f.S.events[0], { end: 821, tap: 821 }); await f.save(); f.commits[0].resolve(); await f.save();
+  remote(f, { end: 840 }); await f.save();
+  assert.equal(f.S.events[0].end, 840);
+});

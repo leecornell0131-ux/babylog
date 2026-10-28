@@ -183,10 +183,16 @@ function listen() {
           const localC = idx.has(id) ? canon(S.events[idx.get(id)]) : null;
           const prev = st.synced[id];
           st.synced[id] = c;
+          // 같은 잠·수유를 두 휴대폰이 각자 '깼어요'·'끝'으로 끝낸 경우: 먼저 누른 시각이 맞음.
+          // 늦게 바뀌는 화면·위젯(아이폰 위젯은 15분쯤 늦음)을 보고 이미 끝난 잠에 또 '깼어요'를 누르면 더 늦은 시각이 오는데,
+          // 버튼은 진행 중일 때만 누를 수 있으니 이미 끝난 기록보다 늦은 버튼 시각은 버림 (기록 수정으로 바꾼 시각은 tap이 없어 그대로 받음)
+          const lo = idx.has(id) ? S.events[idx.get(id)] : null, same = lo && lo.start === ev.start && lo.end != null && ev.end != null;
+          if (same && ev.tap === ev.end && lo.end < ev.end) { keep = true; continue; }
+          const localTapLater = same && lo.tap === lo.end && ev.end < lo.end;
           // 이 휴대폰에서 고친 뒤 아직 못 올린 기록이면 이 휴대폰 값을 지킴 (다음 올리기에서 반영).
           // 예전엔 내가 올린 기록만 지켜서, 밤에 갤럭시가 절전으로 늦게 올리는 사이 다른 휴대폰이 같은 수면을 고치면
           // 갤럭시에서 누른 '깼어요' 시각이 말없이 사라졌음. 이제는 마지막으로 고쳐서 올린 쪽으로 양쪽이 맞춰짐
-          if (localC && localC !== c && localC !== prev && (mine || prev !== undefined)) { keep = true; continue; }
+          if (!localTapLater && localC && localC !== c && localC !== prev && (mine || prev !== undefined)) { keep = true; continue; }
           if (idx.has(id)) S.events[idx.get(id)] = ev; else S.events.push(ev);
         }
         idx.clear(); S.events.forEach((e, i) => idx.set(e.id, i));
