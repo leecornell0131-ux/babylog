@@ -156,6 +156,11 @@ object Widgets {
     }
 
     // 위젯 버튼: 앱이 열리면서 바로 기록 (ActionActivity가 누른 시각을 붙임)
+    // 수면 버튼은 화면에 보이는 대로 "잠듦"(sleep_start)·"깼어요"(stop_sleep)를 따로 보냄.
+    // 예전처럼 "sleep"(누를 때마다 바꾸기)을 보내면, 가족이 이미 바꾼 걸 위젯이 늦게 알 때 반대로 기록됨.
+    // 이미 자는 중이면 잠듦은 그대로 두고, 이미 깬 잠에 깼어요는 먼저 깬 시각을 지킴 (bridge.js __babyQuick)
+    fun sleepAct(d: Data) = if (d.sleep > 0) "stop_sleep" else "sleep_start"
+
     fun act(ctx: Context, owner: Any, action: String): PendingIntent {
         val i = Intent(ctx, ActionActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -226,7 +231,7 @@ class QuickWidget : BabyWidget() {
         v.setOnClickPendingIntent(R.id.b_feed, Widgets.act(ctx, this, if (d.feed > 0) "stop_feed" else "feed"))
         v.setOnClickPendingIntent(R.id.b_pee, Widgets.act(ctx, this, "pee"))
         v.setOnClickPendingIntent(R.id.b_poo, Widgets.act(ctx, this, "poo"))
-        v.setOnClickPendingIntent(R.id.b_sleep, Widgets.act(ctx, this, "sleep"))
+        v.setOnClickPendingIntent(R.id.b_sleep, Widgets.act(ctx, this, Widgets.sleepAct(d)))
         return v
     }
 }
@@ -310,7 +315,7 @@ class SleepWidget : BabyWidget() {
         v.setTextViewText(R.id.w_sub, if (d.sleep > 0) Widgets.hm(d.sleep) + "에 잠듦" else if (d.lastWake > 0) Widgets.hm(d.lastWake) + "에 깸" else "")
         v.setTextViewText(R.id.w_btn, if (d.sleep > 0) "☀️ 깼어요" else "🌙 잠듦")
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
-        v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, "sleep"))
+        v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, Widgets.sleepAct(d)))
         return v
     }
 }
