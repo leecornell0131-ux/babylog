@@ -35,6 +35,23 @@ struct BabySummary: Codable, Equatable {
         return abs(day / 1000 - Calendar.current.startOfDay(for: now).timeIntervalSince1970) < 3600
     }
 
+    // 서버 요약이 더 새로워도, 이 휴대폰이 이미 끝난 것으로 아는 잠·수유를 다시 '진행 중'으로 되살리지 않음.
+    // 배우자 휴대폰이 아직 '깼어요'를 못 받은 채(밤새 절전 등) 올린 요약이 이 휴대폰 기록보다 늦게 도착하면
+    // 위젯·다이내믹 아일랜드가 깬 뒤에도 '수면 중'으로 돌아가던 문제 (10/31).
+    // 이 휴대폰에서 끝난 시각이 서버 쪽 시작보다 늦거나 같으면 같은 잠(또는 그 앞의 잠)이므로 끝난 것으로 봄.
+    // 배우자가 그 뒤에 새로 재운 잠은 시작이 더 늦어서 그대로 보임.
+    mutating func dropEnded(by local: BabySummary?) {
+        guard let local else { return }
+        if let rs = sleep, local.sleep == nil, let w = local.lastWake, w >= rs {
+            sleep = nil
+            lastWake = max(lastWake ?? 0, w)
+        }
+        if let rf = feed, local.feed == nil, let lf = local.lastFeed, lf >= rf {
+            feed = nil
+            feedLabel = nil
+        }
+    }
+
     static let sample = BabySummary(
         at: Date().timeIntervalSince1970 * 1000, name: "아기", sleep: nil, feed: nil, feedLabel: nil,
         lastFeed: (Date().timeIntervalSince1970 - 5400) * 1000, lastFeedText: "분유 120ml", lastFeedAmt: "120ml",
@@ -106,6 +123,7 @@ enum RemoteSummary {
         let now = SharedStore.summary
         guard now?.fid == fid, remote.at > (now?.at ?? 0) else { return now }
         remote.fid = fid
+        remote.dropEnded(by: now)
         SharedStore.summary = remote
         return remote
     }

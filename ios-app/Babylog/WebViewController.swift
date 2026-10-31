@@ -73,9 +73,14 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         NotificationCenter.default.addObserver(self, selector: #selector(becameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
-    // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리)
+    // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리).
+    // 그리고 지금 화면의 기록으로 요약을 다시 보내 위젯·다이내믹 아일랜드를 맞춤 (갤럭시 앱 onResume의 RESEND와 같음).
+    // 예전엔 앱을 열어도 다시 보내지 않아서, 서버에서 받은 낡은 '수면 중' 요약이 앱을 연 뒤에도 그대로 남았음
+    private static let resend = "(function(){var v=localStorage.getItem('babylog-v1');if(v)localStorage.setItem('babylog-v1',v)})()"
+
     @objc private func becameActive() {
         web.evaluateJavaScript("window.BabyApp&&BabyApp.refresh()", completionHandler: nil)
+        web.evaluateJavaScript(Self.resend, completionHandler: nil)
     }
 
     // MARK: 위젯·잠금화면 버튼 → 웹앱에 기록 (갤럭시 앱 runAction과 같음)
