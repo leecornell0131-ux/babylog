@@ -92,10 +92,10 @@ function code() {
 }
 
 // ---------- 올리기 ----------
-let pushTimer = null;
+let pushTimer = null, pushState = null; // 기다리는 올리기와 그때의 기록 (예시 데이터로 바뀐 뒤에도 그 기록을 올림)
 function local(S) {
   if (!st.fid || S.sample) return;
-  clearTimeout(pushTimer);
+  clearTimeout(pushTimer); pushState = S;
   pushTimer = setTimeout(() => { pushTimer = null; push(S); }, 400);
 }
 // 기다리는 올리기를 바로 보냄. 기록 직후 화면을 끄거나 앱을 내리면 휴대폰이 웹 화면을 멈춰서
@@ -103,7 +103,7 @@ function local(S) {
 function flush() {
   if (!pushTimer) return;
   clearTimeout(pushTimer); pushTimer = null;
-  push(App.state);
+  if (pushState && !pushState.sample) push(pushState);
 }
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
