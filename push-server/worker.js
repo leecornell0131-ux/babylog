@@ -16,7 +16,7 @@ const DEV = /^[a-z0-9]{8,16}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const KEEP_DAYS = 60;
 // 무료 한도 (공식 문서 기준). 대시보드·매일 점검이 이 값으로 몇 %인지 계산.
-export const LIMITS = { fsReads: 50000, fsWrites: 20000, cfRequests: 100000 };
+export const LIMITS = { fsReads: 50000, fsWrites: 20000, cfRequests: 100000, codemagicMinutes: 500 };
 
 export default {
   async fetch(req, env, ctx) {
@@ -202,23 +202,51 @@ export async function usageReport(env, days, myFid) {
     const d = byDay[day] || (byDay[day] = { day, req: 0, reads: 0, writes: 0, families: {} });
     return d.families[fid] || (d.families[fid] = { fid, req: 0, reads: 0, writes: 0, devs: 0 });
   };
+  // 직접 집계(없거나 표가 아직 없으면 빈 목록)
+  let actual = [];
+  try { actual = (await env.DB.prepare('SELECT day, cf_req, fs_reads, fs_writes, est_req, at FROM usage_actual WHERE day >= ?1').bind(from).all()).results || []; } catch (_) {}
+  const act = Object.fromEntries(actual.map(a => [a.day, a]));
   for (const r of req.results || []) { row(r.day, r.fid).req += r.req; byDay[r.day].req += r.req; }
   for (const r of app.results || []) {
     const f = row(r.day, r.fid); f.reads += r.reads; f.writes += r.writes; f.devs += r.devs;
     byDay[r.day].reads += r.reads; byDay[r.day].writes += r.writes;
   }
+  for (const a of actual) if (!byDay[a.day]) byDay[a.day] = { day: a.day, req: 0, reads: 0, writes: 0, families: {} };
+  const calib = calibration(Object.values(byDay), act, utcDay());
   const out = Object.values(byDay).sort((a, b) => (a.day < b.day ? 1 : -1)).map(d => {
     const fams = Object.values(d.families).filter(f => f.fid !== '-');
-    const other = d.families['-'];
+    const other = d.families['-'], a = act[d.day], done = d.day < utcDay();
+    // 하루 사용량: 마감된 날에 직접 집계가 있으면 그 값 그대로(콘솔과 같은 숫자).
+    // 오늘은 직접 집계와 (자체 집계 × 보정 비율) 중 큰 값.
+    const eff = (est, real, k) => Math.round(real != null && done ? real : Math.max(real ?? 0, est * calib[k]));
+    // Cloudflare 요청 오늘: 마지막 직접 집계 + 그 뒤로 서버가 더 센 만큼(매시간 집계 사이를 채움)
+    const req = a && a.cf_req != null && !done && a.est_req != null ? a.cf_req + Math.max(0, d.req - a.est_req) : eff(d.req, a && a.cf_req, 'req');
     return {
-      day: d.day, req: d.req, reads: d.reads, writes: d.writes,
+      day: d.day, req, reads: eff(d.reads, a && a.fs_reads, 'reads'), writes: eff(d.writes, a && a.fs_writes, 'writes'),
+      est: { req: d.req, reads: d.reads, writes: d.writes },
+      actual: a ? { req: a.cf_req, reads: a.fs_reads, writes: a.fs_writes, at: a.at } : null,
       families: fams.length, sharedFamilies: fams.filter(f => f.reads || f.writes).length,
       otherReq: other ? other.req : 0,
       top: fams.sort((a, b) => (b.reads + b.writes * 2.5 + b.req / 2) - (a.reads + a.writes * 2.5 + a.req / 2)).slice(0, 30)
         .map(f => ({ id: f.fid.slice(0, 2) + '········', me: !!myFid && f.fid === myFid, req: f.req, reads: f.reads, writes: f.writes, devs: f.devs })),
     };
   });
-  return { now: Date.now(), today: utcDay(), limits: LIMITS, days: out };
+  // 달 단위 한도 (Codemagic 빌드 시간)
+  let monthly = [];
+  try { monthly = (await env.DB.prepare('SELECT month, kind, used, count, at FROM usage_monthly WHERE month >= ?1 ORDER BY month DESC').bind(utcDay(Date.now() - 62 * 864e5).slice(0, 7)).all()).results || []; } catch (_) {}
+  return { now: Date.now(), today: utcDay(), limits: LIMITS, calib, days: out, monthly };
+}
+
+// 자체 집계가 실제보다 얼마나 적게 세는지: 직접 집계가 있는 가장 최근 마감일의 비율(1~3배). 아직 없으면 읽기·쓰기 1.5배로 넉넉히.
+// (10/25 확인: Firebase 콘솔 읽기 227 vs 휴대폰 집계 126~155)
+export function calibration(days, act, today) {
+  const c = { req: 1, reads: 1.5, writes: 1.5 };
+  const keys = { req: 'cf_req', reads: 'fs_reads', writes: 'fs_writes' };
+  for (const k of Object.keys(c)) {
+    const d = days.filter(x => x.day < today && act[x.day] && act[x.day][keys[k]] != null && x[k] > 0).sort((a, b) => (a.day < b.day ? 1 : -1))[0];
+    if (d) c[k] = Math.min(3, Math.max(1, act[d.day][keys[k]] / d[k]));
+  }
+  return c;
 }
 
 function corsHeaders(req) {

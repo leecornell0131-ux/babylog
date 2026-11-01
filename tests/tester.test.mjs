@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 const source = await readFile(new URL('../push-server/worker.js', import.meta.url), 'utf8');
 const { default: worker, utcDay } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const dir = new URL('../push-server/migrations/', import.meta.url);
-const migration = (await Promise.all(['0001_summaries.sql', '0002_usage.sql', '0004_usage_tester.sql'].map(f => readFile(new URL(f, dir), 'utf8')))).join('\n');
+const migration = (await Promise.all(['0001_summaries.sql', '0002_usage.sql', '0006_usage_tester.sql'].map(f => readFile(new URL(f, dir), 'utf8')))).join('\n');
 
 function fixture() {
   const sql = new DatabaseSync(':memory:'); sql.exec(migration);
