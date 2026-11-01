@@ -494,6 +494,8 @@ function fixLive(st){
   // tap: '깼어요'·'수유 끝' 버튼으로 끝낸 시각 (기록 수정으로 끝 시각을 바꾸면 지움). 가족 공유에서 두 휴대폰이 같은 잠을
   // 각자 끝냈을 때 먼저 누른 쪽을 고르는 데 씀 (sync.js)
   st.events.forEach(x=>{ if(x.tap!==undefined&&x.tap!==x.end) delete x.tap });
+  // 끝 시각이 숫자가 아니면(예전 수정 화면이 만든 NaN, 가족 휴대폰에서 받은 것 포함) '자는 중·수유 중'으로 봄
+  st.events.forEach(x=>{ if((x.type==='sleep'||x.type==='feed')&&x.end!==null&&x.end!==undefined&&!Number.isFinite(x.end)) x.end=null });
   let n=0;
   // 이미 끝난 잠 안에서 시작한 '자는 중'은 같은 잠을 다른 휴대폰에서 누른 것 (10/31: 아이폰 20:51 잠듦·08:05 깼어요,
   // 밤새 못 받은 갤럭시 21:05 잠듦이 아침에 도착해 계속 '수면 중'으로 남고 '깼어요'를 또 눌러 밤잠이 둘이 됨).
@@ -1218,8 +1220,11 @@ function evSheet(id){
     let dsub=x.sub, kind=x.kind||'auto'; const tags=[...(x.tags||[])]; bindTags(tags);
     const tb=$('#sw .tagbox[data-tg="poo"]'); if(tb) tb.hidden=dsub==='pee'; $('#sw').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ kind=b.dataset.kind; $('#sw').querySelectorAll('[data-kind]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
     $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)); if(tb) tb.hidden=dsub==='pee' });
-    $('#eSave').onclick=()=>{ x.start=nearTime(x.start,$('#eTime').value); if(x.end===null&&x.start>Date.now()) x.start-=DAY;
-      if($('#eEnd')){ let end=withTime(x.start,$('#eEnd').value); if(end<=x.start) end+=DAY; x.end=end }
+    $('#eSave').onclick=()=>{ if($('#eTime').value) x.start=nearTime(x.start,$('#eTime').value);
+      // 깬 시각을 지우면 다시 '자는 중'(end:null). 예전엔 빈칸이 NaN이 돼서 화면은 자는 중으로 안 보고 '수면'을 다시 열어 줘서
+      // 같은 밤에 '자는 중'이 둘 생겼음 (11/01 갤럭시 05:48)
+      if($('#eEnd')){ const v=$('#eEnd').value; if(!v) x.end=null; else { let end=withTime(x.start,v); if(end<=x.start) end+=DAY; x.end=end } }
+      if(x.end===null&&x.start>Date.now()) x.start-=DAY;
       if($('#eMl')){ const v=+$('#eMl').value; if(v>0) x.ml=v; else delete x.ml }
       if(x.type==='diaper') x.sub=dsub;
       x.note=$('#eNote').value.trim(); if(!x.note) delete x.note;
