@@ -249,7 +249,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.48';
+const VERSION='0.3.49';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -519,6 +519,11 @@ function dupPairs(d){
   const sl=list.filter(x=>x.type==='sleep');
   for(let i=0;i<sl.length;i++) for(let j=i+1;j<sl.length;j++){ const a=sl[i], b=sl[j], ae=a.end??Date.now();
     if(b.start>=ae) continue; const k=[a.id,b.id].sort().join('|');
+    if(!S.dups[k]&&!out.some(p=>p.k===k)) out.push({a,b,k,overlap:true}) }
+  // 두 휴대폰이 서로 모른 채 '잠듦'을 눌러 fixLive가 앞의 것을 뒤의 시작에 끊어 둔 경우 (20:51–21:05 + 21:05–08:05):
+  // 버튼으로 끝낸 게 아닌데 끝이 다음 잠 시작과 딱 맞으면 같은 잠으로 보고 묻기
+  for(let i=0;i<sl.length;i++) for(let j=i+1;j<sl.length;j++){ const a=sl[i], b=sl[j];
+    if(a.end!==b.start||a.tap!==undefined) continue; const k=[a.id,b.id].sort().join('|');
     if(!S.dups[k]&&!out.some(p=>p.k===k)) out.push({a,b,k,overlap:true}) }
   return out;
 }

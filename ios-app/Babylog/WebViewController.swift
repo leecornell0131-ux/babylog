@@ -71,6 +71,25 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         super.viewDidLoad()
         web.load(URLRequest(url: Self.startURL))
         NotificationCenter.default.addObserver(self, selector: #selector(becameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(willResign), name: UIApplication.willResignActiveNotification, object: nil)
+    }
+
+    // 기록하고 바로 화면을 끄거나 앱을 내려도 가족에게 올리기가 끝나게: 웹앱의 기다리는 올리기를 바로 보내고
+    // iOS에 잠깐(최대 25초) 더 돌 시간을 받음. 예전엔 웹 화면이 바로 멈춰서 '잠듦'이 다음날 아침에야 올라갔음 (10/31)
+    private var bgTask: UIBackgroundTaskIdentifier = .invalid
+
+    @objc private func willResign() {
+        if bgTask == .invalid {
+            bgTask = UIApplication.shared.beginBackgroundTask(withName: "babylog.flush") { [weak self] in self?.endBg() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in self?.endBg() }
+        }
+        web.evaluateJavaScript("window.BabySync&&BabySync.flush&&BabySync.flush()", completionHandler: nil)
+    }
+
+    private func endBg() {
+        guard bgTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(bgTask)
+        bgTask = .invalid
     }
 
     // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리).
