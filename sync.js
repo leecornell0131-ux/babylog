@@ -43,22 +43,35 @@ let use = { dev: null, day: today(), reads: 0, writes: 0, prev: null, sentAt: 0 
 try { Object.assign(use, JSON.parse(localStorage.getItem(UL) || '{}')); } catch (_) {}
 if (!use.dev) { const a = new Uint32Array(2); crypto.getRandomValues(a); use.dev = Array.from(a, n => n.toString(36).padStart(7, '0').slice(-7)).join(''); }
 let useTimer = null;
+// 베타 테스터 번호(설정에서 코드를 넣은 휴대폰만). 테스터는 가족 공유를 안 써도 하루 기록 개수를 보냄
+const testerNo = () => { const n = +localStorage.getItem('babylog-v1-tester'); return n >= 1 && n <= 99 ? n : 0; };
+// 그 날(UTC) 이 휴대폰에서 남긴 기록 개수 (기록 내용은 보내지 않고 개수만)
+function evCount(day) {
+  const dev = localStorage.getItem('babylog-v1-device'), from = Date.parse(day + 'T00:00:00Z'), to = from + 864e5;
+  return ((App.state && App.state.events) || []).filter(e => e.by === dev && e.start >= from && e.start < to).length;
+}
+function rollDay() {
+  const d = today(); if (use.day === d) return;
+  use.prev = use.reads || use.writes || testerNo() ? { day: use.day, reads: use.reads, writes: use.writes } : null;
+  use.day = d; use.reads = 0; use.writes = 0; use.sentAt = 0;
+}
 function tally(reads, writes = 0) {
-  const d = today();
-  if (use.day !== d) { use.prev = use.reads || use.writes ? { day: use.day, reads: use.reads, writes: use.writes } : null; use.day = d; use.reads = 0; use.writes = 0; use.sentAt = 0; }
+  rollDay();
   use.reads += reads; use.writes += writes;
   try { localStorage.setItem(UL, JSON.stringify(use)); } catch (_) {}
   clearTimeout(useTimer); useTimer = setTimeout(reportUsage, 5000);
 }
 async function reportUsage() {
-  const fid = st.fid; if (!fid) return;
+  const fid = st.fid, tc = testerNo(); if (!fid && !tc) return;
+  rollDay();
   const sends = [];
   if (use.prev) sends.push(use.prev);
-  if ((use.reads || use.writes) && Date.now() - use.sentAt > 3 * 3600e3) sends.push({ day: use.day, reads: use.reads, writes: use.writes });
+  if ((use.reads || use.writes || tc) && Date.now() - use.sentAt > 3 * 3600e3) sends.push({ day: use.day, reads: use.reads, writes: use.writes });
   if (!sends.length) return;
   const m = await import('./push-server/web-notify.js').catch(() => null); if (!m || !m.sendUsage) return;
   for (const u of sends) {
-    if (!await m.sendUsage({ fid, dev: use.dev, ...u }).catch(() => false)) return;
+    const extra = tc ? { tc, ev: evCount(u.day) } : {};
+    if (!await m.sendUsage({ ...(fid ? { fid } : {}), dev: use.dev, ...u, ...extra }).catch(() => false)) return;
     if (u === use.prev) use.prev = null; else use.sentAt = Date.now();
     try { localStorage.setItem(UL, JSON.stringify(use)); } catch (_) {}
   }
@@ -94,6 +107,7 @@ function code() {
 // ---------- 올리기 ----------
 let pushTimer = null;
 function local(S) {
+  if (testerNo() && !S.sample) { clearTimeout(useTimer); useTimer = setTimeout(reportUsage, 5000); }
   if (!st.fid || S.sample) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => push(S), 400);
@@ -263,5 +277,6 @@ window.BabySync = {
   },
 };
 
-if (st.fid) { state = 'off'; listen(); push(App.state); setTimeout(reportUsage, 8000); }
+if (st.fid) { state = 'off'; listen(); push(App.state); }
+setTimeout(reportUsage, 8000);
 App.refresh();
