@@ -92,11 +92,22 @@ function code() {
 }
 
 // ---------- 올리기 ----------
-let pushTimer = null;
+let pushTimer = null, pushState = null; // 기다리는 올리기와 그때의 기록 (예시 데이터로 바뀐 뒤에도 그 기록을 올림)
 function local(S) {
   if (!st.fid || S.sample) return;
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => push(S), 400);
+  clearTimeout(pushTimer); pushState = S;
+  pushTimer = setTimeout(() => { pushTimer = null; push(S); }, 400);
+}
+// 기다리는 올리기를 바로 보냄. 기록 직후 화면을 끄거나 앱을 내리면 휴대폰이 웹 화면을 멈춰서
+// 0.4초 기다리던 올리기가 다음에 앱을 열 때까지(밤새) 안 나가고, 그 사이 배우자 휴대폰은 모른 채 따로 '잠듦'을 누를 수 있었음 (10/31)
+function flush() {
+  if (!pushTimer) return;
+  clearTimeout(pushTimer); pushTimer = null;
+  if (pushState && !pushState.sample) push(pushState);
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+  addEventListener('pagehide', flush);
 }
 async function push(S) {
   if (!st.fid) return;
@@ -222,6 +233,7 @@ window.BabySync = {
   status: () => ({ fid: st.fid, state, error, busy }),
   usage: () => ({ day: use.day, reads: use.reads, writes: use.writes, prev: use.prev, sentAt: use.sentAt }),
   local,
+  flush,
   async create() {
     busy = true; error = ''; App.refresh();
     try {
