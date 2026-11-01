@@ -147,7 +147,10 @@ const cap = capacity(yday.families ? yday : today, L);
 if (cap) lines.push('', `지금 방식이면 **약 ${n(cap.safe)}가족**까지(여유 20%), 먼저 막히는 곳: ${cap.bottleneck}. 가족당 하루 읽기 ${n(cap.per.reads)} · 쓰기 ${n(cap.per.writes)} · 요청 ${n(cap.per.req)}.`);
 if (cm) {
   const p = cm.minutes / L.codemagicMinutes * 100;
-  lvs.push(level(p));
+  // Codemagic은 Firebase·알림 서버와 대응이 다름: 다 쓰면 다음 달 1일까지 아이폰 빌드만 멈춤(카드가 없어 돈은 안 나감)
+  const lv = level(p);
+  lvs.push(lv.min >= 85 ? { ...lv, name: lv.name + '(Codemagic)', act: '아이폰 빌드는 꼭 필요한 것만. 다 쓰면 다음 달 1일까지 아이폰 빌드가 멈춤(돈은 안 나감). 다른 앱(PACE 등) 빌드도 같은 500분을 씀. 앱 사용·동기화는 영향 없음.' }
+    : lv.min >= 50 ? { ...lv, name: lv.name + '(Codemagic)', act: '아이폰 빌드를 몰아서 하기(한 번에 약 7분). 앱 사용·동기화는 영향 없음.' } : lv);
   lines.push('', `Codemagic 이번 달 빌드 ${cm.count}번 · **${n(cm.minutes)}분** / ${n(L.codemagicMinutes)}분 (${Math.round(p)}%)`);
 }
 const worstLv = lvs.reduce((a, b) => (b.min > a.min ? b : a));
