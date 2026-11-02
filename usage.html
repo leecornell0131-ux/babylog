@@ -78,7 +78,7 @@ async function load() {
   $('#when').textContent = '불러오는 중…';
   try {
     const cfg = await fetch('android-app/push-config.json', { cache: 'no-cache' }).then(r => r.json());
-    const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=14' + (myFid ? '&fid=' + myFid : ''), { cache: 'no-store' });
+    const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=60' + (myFid ? '&fid=' + myFid : ''), { cache: 'no-store' });
     if (!r.ok) throw new Error('서버 응답 ' + r.status);
     data = await r.json();
     $('#when').textContent = new Date(data.now).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }) + ' 기준';
@@ -110,6 +110,10 @@ function draw() {
   const list = [];
   for (let i = 13; i >= 0; i--) { const k = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10); list.push(byDay[k] || { day: k, req: 0, reads: 0, writes: 0, families: 0, sharedFamilies: 0, top: [] }); }
   const today = list[13], yday = list[12];
+  // 날짜별 기록: 최근 60일은 서버의 실시간 값, 그보다 오래된 날은 계속 보관한 하루 합계
+  const live = Object.fromEntries(days.map(x => [x.day, { day: x.day, shared: x.sharedFamilies, req: x.req, reads: x.reads, writes: x.writes }]));
+  for (const h of data.history || []) if (!live[h.day]) live[h.day] = h;
+  const hist = Object.values(live).sort((a, b) => (a.day < b.day ? 1 : -1));
   const d = pick ? yday : today;
   const p = percents(d, L), lv = level(worst(p));
   // 수용 인원: 마감된 어제를 기본으로, 어제 기록이 없으면 오늘
@@ -145,11 +149,24 @@ function draw() {
     <div class="days">${list.map((x, i) => `<span>${i === 13 ? '오늘' : i % 3 === 1 ? md(x.day) : ''}</span>`).join('')}</div>
     <div class="small muted" style="margin-top:8px">${LEVELS.map(l => `<span class="l-${l.key}"><b style="color:var(--c)">■</b> ${l.name} ${l.min}%~</span>`).join(' &nbsp;')}</div>
   </div>
+  <h2>날짜별 기록 (${hist.length}일, 최근 것부터)</h2>
+  <div class="card scroll"><table class="tbl"><thead><tr><th>날짜</th><th>가족</th><th>요청</th><th>읽기</th><th>쓰기</th><th>최고</th></tr></thead><tbody>
+    ${hist.map(x => `<tr><td>${md(x.day)}${x.day === data.today ? ' <span class="tag">오늘</span>' : ''}</td><td>${x.shared ?? '-'}</td><td>${n(x.req)}</td><td>${n(x.reads)}</td><td>${n(x.writes)}</td><td class="l-${level(worst(percents(x, L))).key}"><b style="color:var(--c)">${pct(worst(percents(x, L)))}</b></td></tr>`).join('')}
+    </tbody></table>
+    <div class="row" style="margin-top:10px"><button type="button" id="csv">표 내려받기 (CSV)</button></div>
+    <div class="small muted" style="margin-top:6px">하루 = 한국 시각 오전 9시~다음 날 9시. 요청은 Cloudflare가 센 값, 읽기·쓰기는 휴대폰 집계 × 보정 비율. 가족코드 없이 합계만 계속 보관해요.</div></div>
   <h2>가족별 (${md(d.day)}, 많이 쓰는 순 ${top.length}가족)</h2>
   <div class="card scroll">${top.length ? `<table class="tbl"><thead><tr><th>가족</th><th>휴대폰</th><th>읽기</th><th>쓰기</th><th>요청</th><th>읽기 비중</th></tr></thead><tbody>
     ${top.map(f => `<tr><td>${f.id}${f.me ? '<span class="tag">우리</span>' : ''}</td><td>${f.devs || '-'}</td><td>${n(f.reads)}</td><td>${n(f.writes)}</td><td>${n(f.req)}</td><td>${pct(f.reads / tot * 100)}</td></tr>`).join('')}
     </tbody></table><div class="small muted" style="margin-top:8px">가족 공유 ${d.sharedFamilies}가족 · 요청만 있는 가족 포함 ${d.families}가족 · 가족코드 없는 요청 ${n(d.otherReq || 0)}회(${pct((d.otherReq || 0) / totReq * 100)})</div>`
     : '<div class="small muted">이 날 기록된 가족이 없어요.</div>'}</div>`;
+  $('#csv').onclick = () => {
+    const rows = [['날짜(UTC)', '공유 가족', '알림 서버 요청', 'Firebase 읽기', 'Firebase 쓰기', '한도 대비 최고 %'],
+      ...hist.map(x => [x.day, x.shared ?? '', x.req, x.reads, x.writes, worst(percents(x, L)).toFixed(2)])];
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }));
+    a.download = `babylog-usage-${data.today}.csv`; a.click();
+  };
   out.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { pick = +b.dataset.pick; draw(); });
 }
 $('#reload').onclick = load;
