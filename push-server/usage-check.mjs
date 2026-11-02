@@ -122,15 +122,40 @@ async function saveMonthly(m) {
     if (!r.success) throw new Error(JSON.stringify(r.errors).slice(0, 200));
   } catch (e) { console.log('Codemagic 저장 실패: ' + e.message); }
 }
+// 마감된 날의 서비스 전체 합계를 usage_daily에 계속 보관 (가족코드 없음, 60일 뒤에도 남음)
+async function saveDaily(days) {
+  if (!days.length || !cfToken || !cfAccount) return;
+  try {
+    const list = await cfApi(`/accounts/${cfAccount}/d1/database?name=babylog-widget-summaries`);
+    const db = (list.result || []).find(d => d.name === 'babylog-widget-summaries');
+    if (!db) throw new Error('D1을 못 찾음');
+    const src = d => [d.actual && d.actual.req != null ? 'cf' : 'est', d.actual && d.actual.reads != null ? 'fs' : 'est×' + (data.calib ? data.calib.reads : 1.5)].join(',');
+    for (let i = 0; i < days.length; i += 10) {
+      const part = days.slice(i, i + 10);
+      const r = await cfApi(`/accounts/${cfAccount}/d1/database/${db.uuid}/query`, {
+        // 한 번에 10일씩 (D1 매개변수 100개 한도)
+        sql: `INSERT INTO usage_daily (day, req, reads, writes, families, shared, src, at) VALUES `
+          + part.map((_, j) => '(' + Array.from({ length: 8 }, (_, k) => '?' + (j * 8 + k + 1)).join(', ') + ')').join(', ')
+          + ` ON CONFLICT(day) DO UPDATE SET req = excluded.req, reads = excluded.reads, writes = excluded.writes,
+            families = excluded.families, shared = excluded.shared, src = excluded.src, at = excluded.at`,
+        params: part.flatMap(d => [d.day, d.req, d.reads, d.writes, d.families || 0, d.sharedFamilies || 0, src(d), Date.now()]),
+      });
+      if (!r.success) throw new Error(JSON.stringify(r.errors).slice(0, 200));
+    }
+    console.log(`하루 합계 ${days.length}일 보관`);
+  } catch (e) { console.log('하루 합계 저장 실패: ' + e.message); }
+}
+
 const cm = await codemagicMonth();
 if (cm) console.log(`${cm.month} Codemagic 빌드 ${cm.count}번 · ${cm.minutes}분`);
 await saveMonthly(cm);
 
 const cfg = JSON.parse(await readFile(new URL('../android-app/push-config.json', import.meta.url), 'utf8'));
-const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=3', { cache: 'no-store' }).catch(e => ({ ok: false, status: e.message }));
+const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=60', { cache: 'no-store' }).catch(e => ({ ok: false, status: e.message }));
 // 서버를 못 읽는 것 자체도 알림 (배포가 안 됐거나 D1 한도 초과일 수 있음)
 if (!r.ok) { console.log('::warning::사용량을 못 읽었어요: ' + r.status); process.exit(1); }
 const data = await r.json(), L = data.limits;
+await saveDaily(data.days.filter(d => d.day < dayOf(0)));
 const get = k => data.days.find(d => d.day === k) || { day: k, req: 0, reads: 0, writes: 0, families: 0, sharedFamilies: 0, top: [] };
 const today = get(dayOf(0)), yday = get(dayOf(1));
 
