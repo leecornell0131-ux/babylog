@@ -30,7 +30,7 @@
   --feed-text:#B32F62; --sleep-text:#3B49B8; --pee-text:#1A6F66; --sleep-green:#237A49; --sleep-yellow:#926B00;
   --band1:#DDE7F7; --band2:#B9CCEF; --median:#3B49B8; --pt:#D9731F;
   --hatch1:#E4E8EE; --hatch2:#F3F5F8;
-  --day-sky:#FFF1D9; --night-sky:#DCE0F7; --sun:#F2A23A; --moon:#5F6BC9;
+  --sky-n1:#1F2760; --sky-n2:#3E4A9C; --sky-dusk:#F6B08C; --sky-d1:#FFD49A; --sky-d2:#FFE4BC; --dial:#FFFFFF; --track:rgba(255,255,255,.55); --rim-n:#1A2150; --rim-dusk:#E07F55; --rim-d:#E9A04A; --badge:#1C222B;
   --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
   --mono:ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
@@ -42,7 +42,7 @@
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9; --sleep-green:#8BD6A6; --sleep-yellow:#E8C65A;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
-  --hatch1:#262D37; --hatch2:#1C222B; --day-sky:#3B3528; --night-sky:#262D55; --sun:#F2B65A; --moon:#B7BEF5; color-scheme:dark}}
+  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
@@ -50,7 +50,7 @@
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9; --sleep-green:#8BD6A6; --sleep-yellow:#E8C65A;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
-  --hatch1:#262D37; --hatch2:#1C222B; --day-sky:#3B3528; --night-sky:#262D55; --sun:#F2B65A; --moon:#B7BEF5; color-scheme:dark}
+  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{min-height:100%;margin:0;touch-action:manipulation}
 button,a,label,input,select,.tile,.chip,.item{touch-action:manipulation}
@@ -250,7 +250,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.50';
+const VERSION='0.3.51';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -611,50 +611,69 @@ function arcPath(cx,cy,r1,r2,f0,f1){
   const big=f1-f0>0.5?1:0, [x0,y0]=pol(cx,cy,r2,f0), [x1,y1]=pol(cx,cy,r2,f1), [x2,y2]=pol(cx,cy,r1,f1), [x3,y3]=pol(cx,cy,r1,f0);
   return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r2} ${r2} 0 ${big} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}A${r1} ${r1} 0 ${big} 0 ${x3.toFixed(1)} ${y3.toFixed(1)}Z`;
 }
-// 하늘 띠: 밤 시간대(설정의 밤잠 시간, 기본 19~7시)는 남색, 낮은 살구색. 해 질 녘·동틀 녘 1시간씩은 서서히 바뀜
-function skyPaths(c,r1,r2){
-  const {from,to}=nightWin(), STEP=1/6, F=h=>(((h%24)+24)%24)/24;
-  let s=`<circle cx="${c}" cy="${c}" r="${(r1+r2)/2}" fill="none" style="stroke:var(--day-sky)" stroke-width="${r2-r1}"/>`;
-  const nf=F(from+0.5), nt=F(to-0.5), span=((nt-nf)+1)%1;
-  if(span>0) s+=`<path d="${arcPath(c,c,r1,r2,nf,nf+span)}" style="fill:var(--night-sky)"/>`;
-  for(let k=0;k<6;k++){ const o=((k+0.5)/6).toFixed(2);
-    s+=`<path d="${arcPath(c,c,r1,r2,F(from-0.5+k*STEP),F(from-0.5+k*STEP)+STEP/24+0.0004)}" style="fill:var(--night-sky)" opacity="${o}"/>`;
-    s+=`<path d="${arcPath(c,c,r1,r2,F(to+0.5-(k+1)*STEP),F(to+0.5-(k+1)*STEP)+STEP/24+0.0004)}" style="fill:var(--night-sky)" opacity="${o}"/>` }
-  return s;
-}
-function sunIcon(x,y,r){ let s=`<circle cx="${x}" cy="${y}" r="${r}" style="fill:var(--sun)"/>`;
-  for(let i=0;i<8;i++){ const a=i*Math.PI/4, x1=x+Math.cos(a)*(r+3), y1=y+Math.sin(a)*(r+3), x2=x+Math.cos(a)*(r+6), y2=y+Math.sin(a)*(r+6);
-    s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--sun)" stroke-width="2" stroke-linecap="round"/>` }
-  return s }
-function moonIcon(x,y,r){ return `<path d="M${x+r*0.35} ${y-r}A${r} ${r} 0 1 0 ${x+r} ${y+r*0.35}A${r*0.8} ${r*0.8} 0 0 1 ${x+r*0.35} ${y-r}Z" style="fill:var(--moon)"/><circle cx="${x+r*1.25}" cy="${y-r*0.9}" r="1.3" style="fill:var(--moon)"/><circle cx="${x-r*1.3}" cy="${y-r*0.2}" r="1" style="fill:var(--moon)"/>` }
-// big: 오늘 화면용 (시각 눈금·지금 바늘·가운데 글씨·해/달), 작은 것: 주간 원형 달력
+// 2번 시안: 원판 전체가 하늘. 밤 시간대 가운데가 위로 가도록 그라데이션을 돌려서 밤=남색·별·달, 낮=살구빛·해
+let RID=0;
 function ringSVG(d,opt={}){
-  // 큰 원: 시각 숫자는 원 바깥, 가운데 글자는 안쪽 원 안에만 (겹치지 않게)
-  const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now();
-  const rS2=big?124:40, rS1=big?100:30, rF1=big?128:41, rF2=big?140:46, rD=big?90:24;
+  const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now(), id='r'+(++RID);
+  const R=big?150:45, rT=big?128:37, tw=big?22:9, rFeed=big?105:0, rDia=big?84:0, rCore=big?66:24;
   const fr=t=>(t-d)/DAY;
-  let s=`<svg viewBox="${big?'-14 0 '+(W+28):'0 0 '+W} ${W}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
-  s+=skyPaths(c,rS1,rS2);
-  if(opt.alert) s+=`<circle cx="${c}" cy="${c}" r="${rS2+1}" fill="none" style="stroke:var(--warn)" stroke-width="1.5" opacity=".7"/>`;
-  gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rS1,rS2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".25"/>` });
-  const list=evOfDay(d);
-  list.forEach(x=>{
-    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1+(big?3:1.5),rS2-(big?3:1.5),fr(a),fr(b))}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"/>` }
-    else if(x.type==='feed'){ const [x1,y1]=pol(c,c,rF1,fr(x.start)), [x2,y2]=pol(c,c,rF2,fr(x.start)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--feed)" stroke-width="${big?5:3}" stroke-linecap="round"/>` }
-    else if(x.type==='diaper'&&big){ const [px,py]=pol(c,c,rD,fr(x.start)); s+=x.sub==='pee'?`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" style="fill:var(--pee)"/>`:`<rect x="${(px-4.5).toFixed(1)}" y="${(py-4.5).toFixed(1)}" width="9" height="9" rx="2" style="fill:var(--poo)"/>` }
-    else if(big){ const [px,py]=pol(c,c,rD-14,fr(x.start)); s+=`<rect x="${(px-3.5).toFixed(1)}" y="${(py-3.5).toFixed(1)}" width="7" height="7" rx="1" transform="rotate(45 ${px.toFixed(1)} ${py.toFixed(1)})" style="fill:${evColor(x)}"/>` }
-  });
+  const {from,to}=nightWin(), span=(((to-from)%24)+24)%24||12, mid=(from+span/2)%24;
+  const half=Math.PI*span/24, hz=(1-Math.cos(half))/2;   // 수평선 위치 (0=위, 1=아래)
+  const isNightF=f=>{ const h=f*24; return from>to?(h>=from||h<to):(h>=from&&h<to) };
+  const pad=big?22:2;
+  let s=`<svg viewBox="${-pad} ${-pad} ${W+pad*2} ${W+pad*2}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
+  s+=`<defs><linearGradient id="${id}g" x1="0" y1="${c-R}" x2="0" y2="${c+R}" gradientUnits="userSpaceOnUse" gradientTransform="rotate(${(mid/24*360).toFixed(1)} ${c} ${c})">
+    <stop offset="0" style="stop-color:var(--sky-n1)"/><stop offset="${(hz*0.8).toFixed(3)}" style="stop-color:var(--sky-n2)"/>
+    <stop offset="${hz.toFixed(3)}" style="stop-color:var(--sky-dusk)"/><stop offset="${Math.min(1,hz+0.12).toFixed(3)}" style="stop-color:var(--sky-d1)"/><stop offset="1" style="stop-color:var(--sky-d2)"/></linearGradient>
+    <linearGradient id="${id}rim" x1="0" y1="${c-R}" x2="0" y2="${c+R}" gradientUnits="userSpaceOnUse" gradientTransform="rotate(${(mid/24*360).toFixed(1)} ${c} ${c})"><stop offset="${(hz*0.8).toFixed(3)}" style="stop-color:var(--rim-n)"/><stop offset="${hz.toFixed(3)}" style="stop-color:var(--rim-dusk)"/><stop offset="${Math.min(1,hz+0.15).toFixed(3)}" style="stop-color:var(--rim-d)"/></linearGradient>
+    <filter id="${id}s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="${big?3:1}" stdDeviation="${big?6:2}" flood-opacity=".18"/></filter></defs>`;
+  s+=`<circle cx="${c}" cy="${c}" r="${R}" fill="url(#${id}g)"/><circle cx="${c}" cy="${c}" r="${R-(big?1.5:1)}" fill="none" stroke="${opt.alert?'var(--warn)':`url(#${id}rim)`}" stroke-width="${big?3:2}"/>`;
+  if(big){ // 별
+    for(let i=0;i<26;i++){ const f=((i*0.6180339)%1), rr=rCore+6+((i*37)%60); if(!isNightF(f)) continue; if(rr>rT-tw/2-3&&rr<rT+tw/2+3) continue;
+      const [x,y]=pol(c,c,rr,f); s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i%5===0?1.6:0.9}" fill="#fff" opacity="${i%3===0?.9:.55}"/>` }
+  }
+  // 바깥 기록 길
+  s+=`<circle cx="${c}" cy="${c}" r="${rT}" fill="none" style="stroke:var(--track)" stroke-width="${tw}"/>`;
+  gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rT-tw/2,rT+tw/2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".3"/>` });
+  const list=evOfDay(d), sw=tw-(big?6:3), cap=sw/2/(2*Math.PI*rT);
+  list.forEach(x=>{ if(x.type!=='sleep') return; const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b<=a) return;
+    let f0=fr(a)+cap, f1=fr(b)-cap; if(f1<f0){ const m=(f0+f1)/2; f0=f1=m }
+    const [x0,y0]=pol(c,c,rT,f0), [x1,y1]=pol(c,c,rT,f1);
+    s+= f1-f0<0.0005 ? `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="${sw/2}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"/>`
+      : `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)}A${rT} ${rT} 0 ${f1-f0>0.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" style="stroke:var(--${sleepKind(x)==='nap'?'nap':'sleep'})" stroke-width="${sw}" stroke-linecap="round"/>` });
   if(big){
-    const {from,to}=nightWin(), isNight=h=>from>to?(h>=from||h<to):(h>=from&&h<to);
-    for(let h=0;h<24;h++){ const f=h/24, [px,py]=pol(c,c,151,f);
-      if(h%6===0) s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--${isNight(h)?'moon':'sun'})">${h}시</text>`;
-      else if(h%3===0) s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.8" style="fill:var(--muted)" opacity=".6"/>`;
-      else s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1" style="fill:var(--muted)" opacity=".35"/>` }
-    s+=moonIcon(c,c-74,8)+sunIcon(c,c+74,5.5);
-    if(d===dayStart(now)){ const [x1,y1]=pol(c,c,rS1-8,fr(now)), [x2,y2]=pol(c,c,rF2+5,fr(now)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--fg)" stroke-width="2.5" stroke-linecap="round"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="5" style="fill:var(--fg);stroke:var(--card)" stroke-width="2"/>` }
-    const [l1,l2,l3]=opt.center||['','',''];
-    s+=`<text x="${c}" y="${c-18}" text-anchor="middle" font-size="13" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+9}" text-anchor="middle" font-size="${String(l2).length>7?20:24}" font-weight="700" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+32}" text-anchor="middle" font-size="13" style="fill:var(--muted)">${esc(l3)}</text>`;
-  } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="600" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
+    // 해·달: 배지와 헷갈리지 않게 크고 흐릿한 하늘 장식 (테두리 없음, 기록보다 뒤에)
+    const [mx,my]=pol(c,c,84,mid/24), [sx,sy]=pol(c,c,84,((mid+12)%24)/24);
+    s+=`<defs><radialGradient id="${id}sun"><stop offset="0" stop-color="#FFD36B" stop-opacity=".95"/><stop offset=".38" stop-color="#FFC24A" stop-opacity=".75"/><stop offset=".55" stop-color="#FFB238" stop-opacity=".25"/><stop offset="1" stop-color="#FFB238" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}moon"><stop offset=".4" stop-color="#FFF4C8" stop-opacity=".35"/><stop offset="1" stop-color="#FFF4C8" stop-opacity="0"/></radialGradient>
+      <mask id="${id}cres"><rect x="${(mx-30).toFixed(1)}" y="${(my-30).toFixed(1)}" width="60" height="60" fill="#fff"/><circle cx="${(mx+8).toFixed(1)}" cy="${(my-6).toFixed(1)}" r="15" fill="#000"/></mask></defs>`;
+    s+=`<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="34" fill="url(#${id}sun)"/><circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="15" fill="#FFC042" opacity=".9"/>`;
+    for(let k=0;k<12;k++){ const a=k*Math.PI/6, x1=sx+Math.cos(a)*19, y1=sy+Math.sin(a)*19, x2=sx+Math.cos(a)*(k%2?24:28), y2=sy+Math.sin(a)*(k%2?24:28);
+      s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFA928" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>` }
+    s+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="32" fill="url(#${id}moon)"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="17" fill="#FFF1C2" opacity=".9" mask="url(#${id}cres)"/>`;
+    // 아이콘 배지: 수유(🍼/🤱)·이유식(🥣)은 바깥 궤도, 대변(💩)은 안쪽 궤도. 소변·기타는 작은 점
+    const badge=(px,py,ic,col,r=10)=>`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}" style="fill:var(--badge);stroke:${col}" stroke-width="2"/><text x="${px.toFixed(1)}" y="${(py+r*0.42).toFixed(1)}" text-anchor="middle" font-size="${(r*1.15).toFixed(1)}">${ic}</text>`;
+    const later=[];
+    list.forEach(x=>{
+      if(x.type==='feed'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,x.sub==='breastL'||x.sub==='breastR'?'🤱':'🍼','var(--feed)')) }
+      else if(x.type==='etc'&&x.sub==='solid'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,'🥣','#E8913A')) }
+      else if(x.type==='diaper'){ const [px,py]=pol(c,c,rDia,fr(x.start));
+        if(x.sub==='pee') later.unshift(badge(px,py,'💦','var(--pee)',7.5));
+        else later.unshift(badge(px,py,'💩','var(--poo)',8.5)) }
+      else if(x.type!=='sleep'){ const [px,py]=pol(c,c,rDia,fr(x.start)); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" style="fill:${evColor(x)};stroke:var(--dial)" stroke-width="1.2"/>` } });
+    s+=later.join('');
+    // 시각: 원판 바깥 작은 숫자
+    for(let h=0;h<24;h+=1){ const f=h/24, [px,py]=pol(c,c,R+12,f);
+      if(h%6===0) s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--muted)">${h}</text>`;
+      else if(h%3===0) s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.6" style="fill:var(--muted)" opacity=".5"/>` }
+  }
+  // 가운데 접시
+  s+=`<circle cx="${c}" cy="${c}" r="${rCore}" style="fill:var(--dial)" filter="url(#${id}s)"/>`;
+  if(big&&d===dayStart(now)){ const f=fr(now), [hx,hy]=pol(c,c,rT,f), [ix,iy]=pol(c,c,rCore+2,f);
+    s+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="13" fill="#fff" opacity=".35"/><circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="7.5" style="fill:var(--dial);stroke:var(--fg)" stroke-width="3"/>` }
+  if(big){ const [l1,l2,l3]=opt.center||['','',''];
+    s+=`<text x="${c}" y="${c-20}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+7}" text-anchor="middle" font-size="${String(l2).length>7?18:22}" font-weight="800" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+28}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l3)}</text>`;
+  } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="700" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
   return s+'</svg>';
 }
 
@@ -741,7 +760,7 @@ function renderToday(){
   if(view.todayMode==='ring'){
     const center=d===today?(lfl?['지금 '+(FEEDN[lfl.sub]||'수유')+' 중',dur(now-lfl.start),hm(lfl.start)+' 시작']:ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?(()=>{const z=sleepSummary(d);return ['수면 합계',durS(st.sleep),'밤잠 '+durS(z.night)+' · 낮잠 '+z.naps+'회']})():['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
     body=`<div class="card ring">${ringSVG(d,{big:true,center,label:`${md(d)} 24시간 원형 기록: 수면 ${durS(st.sleep)}, 수유 ${st.feeds}회, 기저귀 ${st.pee+st.poo}회`})}
-    <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
+    <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span>🍼 수유</span><span>🥣 이유식</span><span>💩 대변</span><span>💦 소변</span></div></div>
     <div class="list">${listHTML}</div>`;
   } else {
     // 위치는 % 로 두고, 막대 전체 높이는 render() 뒤에 오른쪽 목록 높이에 맞춤 (fitBar)
