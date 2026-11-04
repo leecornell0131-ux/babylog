@@ -617,12 +617,12 @@ function arcPath(cx,cy,r1,r2,f0,f1){
 let RID=0;
 function ringSVG(d,opt={}){
   const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now(), id='r'+(++RID);
-  const R=big?150:45, rT=big?128:37, tw=big?22:9, rFeed=big?167:0, rDia=big?100:0, rCore=big?66:24;
+  const R=big?150:45, rT=big?128:37, tw=big?22:9, rFeed=big?150:0, rDia=big?100:0, rCore=big?66:24;
   const fr=t=>(t-d)/DAY;
   const {from,to}=nightWin(), span=(((to-from)%24)+24)%24||12, mid=(from+span/2)%24;
   const half=Math.PI*span/24, hz=(1-Math.cos(half))/2;   // 수평선 위치 (0=위, 1=아래)
   const isNightF=f=>{ const h=f*24; return from>to?(h>=from||h<to):(h>=from&&h<to) };
-  const pad=big?60:2;
+  const pad=big?40:2;
   let s=`<svg viewBox="${-pad} ${-pad} ${W+pad*2} ${W+pad*2}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
   s+=`<defs><linearGradient id="${id}g" x1="0" y1="${c-R}" x2="0" y2="${c+R}" gradientUnits="userSpaceOnUse" gradientTransform="rotate(${(mid/24*360).toFixed(1)} ${c} ${c})">
     <stop offset="0" style="stop-color:var(--sky-n1)"/><stop offset="${(hz*0.8).toFixed(3)}" style="stop-color:var(--sky-n2)"/>
@@ -665,7 +665,7 @@ function ringSVG(d,opt={}){
       else if(x.type!=='sleep'){ const [px,py]=pol(c,c,rDia,fr(x.start)); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" style="fill:${evColor(x)};stroke:var(--dial)" stroke-width="1.2"/>` } });
     s+=later.join('');
     // 시각: 원판 바깥 작은 숫자
-    for(let h=0;h<24;h+=1){ const f=h/24, [px,py]=pol(c,c,R+43,f);
+    for(let h=0;h<24;h+=1){ const f=h/24, [px,py]=pol(c,c,R+27,f);
       if(h%6===0) s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--muted)">${h}</text>`;
       else if(h%3===0) s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.6" style="fill:var(--muted)" opacity=".5"/>` }
   }
