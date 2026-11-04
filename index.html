@@ -638,11 +638,19 @@ function ringSVG(d,opt={}){
   s+=`<circle cx="${c}" cy="${c}" r="${rT}" fill="none" style="stroke:var(--track)" stroke-width="${tw}"/>`;
   gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rT-tw/2,rT+tw/2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".3"/>` });
   const list=evOfDay(d), sw=tw-(big?6:3), cap=sw/2/(2*Math.PI*rT);
+  // 수면: 말랑한 클레이 막대 (그림자 + 아래쪽 음영 + 위쪽 광택)
+  const arcD=(r,f0,f1)=>{ const [x0,y0]=pol(c,c,r,f0), [x1,y1]=pol(c,c,r,f1); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${f1-f0>0.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}` };
+  s+=`<defs><filter id="${id}c" filterUnits="userSpaceOnUse" x="${-pad}" y="${-pad}" width="${W+pad*2}" height="${W+pad*2}"><feDropShadow dx="0" dy="${big?2.5:1}" stdDeviation="${big?2.2:.8}" flood-color="#0B1030" flood-opacity=".35"/></filter></defs>`;
   list.forEach(x=>{ if(x.type!=='sleep') return; const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b<=a) return;
     let f0=fr(a)+cap, f1=fr(b)-cap; if(f1<f0){ const m=(f0+f1)/2; f0=f1=m }
-    const [x0,y0]=pol(c,c,rT,f0), [x1,y1]=pol(c,c,rT,f1);
-    s+= f1-f0<0.0005 ? `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="${sw/2}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"/>`
-      : `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)}A${rT} ${rT} 0 ${f1-f0>0.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" style="stroke:var(--${sleepKind(x)==='nap'?'nap':'sleep'})" stroke-width="${sw}" stroke-linecap="round"/>` });
+    const col=`var(--${sleepKind(x)==='nap'?'nap':'sleep'})`, dot=f1-f0<0.0005, hw=sw*0.32, off=sw*0.2;
+    if(dot){ const [px,py]=pol(c,c,rT,f0), [hx,hy]=pol(c,c,rT+off,f0);
+      s+=`<g filter="url(#${id}c)"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${sw/2}" style="fill:${col}"/></g><circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(sw*0.18).toFixed(1)}" fill="#fff" opacity=".45"/>`; return }
+    s+=`<g filter="url(#${id}c)"><path d="${arcD(rT,f0,f1)}" fill="none" style="stroke:${col}" stroke-width="${sw}" stroke-linecap="round"/></g>`;
+    s+=`<path d="${arcD(rT-off,f0,f1)}" fill="none" stroke="#000" stroke-opacity=".13" stroke-width="${hw.toFixed(1)}" stroke-linecap="round"/>`;
+    const ins=Math.min((f1-f0)/2, (sw*0.15)/(2*Math.PI*rT));
+    s+=`<path d="${arcD(rT+off,f0+ins,f1-ins)}" fill="none" stroke="#fff" stroke-opacity=".42" stroke-width="${(sw*0.22).toFixed(1)}" stroke-linecap="round"/>`;
+  });
   if(big){
     // 해·달: 배지와 헷갈리지 않게 크고 흐릿한 하늘 장식 (테두리 없음, 기록보다 뒤에)
     const [mx,my]=pol(c,c,74,mid/24), [sx,sy]=pol(c,c,74,((mid+12)%24)/24);
