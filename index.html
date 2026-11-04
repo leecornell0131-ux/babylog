@@ -137,6 +137,8 @@ body:has(#sheetRoot .sheetwrap) .adprev{display:none}
 .rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
 .rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"";width:22px;height:20px;margin:0 auto 2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M3 4H21Q22 4 22 5V9.2C18.6 9.8 16.6 13.4 16.2 19.2Q16.1 20 15.3 20H8.7Q7.9 20 7.8 19.2C7.4 13.4 5.4 9.8 2 9.2V5Q2 4 3 4Z'/%3E%3Cpath fill='none' stroke='%2323917F' stroke-width='1.4' stroke-linecap='round' d='M3.6 7.4H20.4'/%3E%3Cpath fill='%2323917F' d='M3.2 5H5.4V6.4H3.2ZM18.6 5H20.8V6.4H18.6Z' opacity='.85'/%3E%3C/svg%3E") center/contain no-repeat}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}.rec .feed.live::before{content:"⏱️"}
 .rec .more{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.rec button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.rec .feed.pressing{transform:scale(.95);transition:transform .45s}
 :root[data-theme="dark"] .rec button:not(.more){color:#12161C}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button:not(.more){color:#12161C}}
 .dtypes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -250,7 +252,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.52';
+const VERSION='0.3.53';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -1420,7 +1422,26 @@ function dayGuard(fn,skip){ return ()=>{
   <button class="btn ghost full" type="button" id="gPast">${label.replace(' (어제)','')}에 기록하기</button>`,()=>{
     $('#gToday').onclick=()=>{ closeSheet(); view.day=today; view.scrollLatest=true; render(); fn() };
     $('#gPast').onclick=()=>{ closeSheet(); fn() } }) } }
-$('#bFeed').onclick=dayGuard(feedSheet,()=>!!liveFeed()); $('#bDiaper').onclick=dayGuard(diaperSheet); $('#bSleep').onclick=dayGuard(sleepAction,()=>!!liveSleep()); $('#bMore').onclick=dayGuard(moreSheet);
+$('#bFeed').onclick=e=>{ if(feedHold.fired){ feedHold.fired=false; e.preventDefault(); return } dayGuard(feedSheet,()=>!!liveFeed())() };
+// 수유 버튼 꾹 누르기(0.5초) → 수유/이유식 고르기. 더보기를 거치지 않고 이유식을 바로 기록
+function feedPick(){
+  const lf=liveFeed();
+  openSheet(`<h2>무엇을 기록할까요?</h2>
+  <div class="grid3" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <button class="tile" type="button" id="pkFeed" style="min-height:84px;font-size:16px"><span class="ic" style="--c:var(--feed);font-size:26px">${lf?'⏱️':'🍼'}</span>${lf?'수유 끝':'수유'}</button>
+    <button class="tile" type="button" id="pkSolid" style="min-height:84px;font-size:16px"><span class="ic" style="--c:var(--feed);font-size:26px">🥣</span>${ETC.solid.label}</button>
+  </div>`,()=>{
+    const at=Date.now(); $('#sw').addEventListener('click',e=>{ if(Date.now()-at<700) e.stopImmediatePropagation() },true); // 손을 떼는 순간의 클릭으로 바로 닫히지 않게
+    $('#pkFeed').onclick=()=>feedSheet(); $('#pkSolid').onclick=()=>etcSheet('solid');
+  });
+}
+const feedHold={t:0,fired:false,x:0,y:0};
+(()=>{ const b=$('#bFeed'), stop=()=>{ clearTimeout(feedHold.t); feedHold.t=0; b.classList.remove('pressing') };
+  b.addEventListener('pointerdown',e=>{ if(e.button>0) return; feedHold.fired=false; feedHold.x=e.clientX; feedHold.y=e.clientY; b.classList.add('pressing');
+    feedHold.t=setTimeout(()=>{ stop(); feedHold.fired=true; try{ navigator.vibrate&&navigator.vibrate(15) }catch(_){} dayGuard(feedPick)() },500) });
+  b.addEventListener('pointermove',e=>{ if(feedHold.t&&Math.hypot(e.clientX-feedHold.x,e.clientY-feedHold.y)>10) stop() });
+  ['pointerup','pointercancel','pointerleave'].forEach(n=>b.addEventListener(n,stop));
+  b.addEventListener('contextmenu',e=>e.preventDefault()) })(); $('#bDiaper').onclick=dayGuard(diaperSheet); $('#bSleep').onclick=dayGuard(sleepAction,()=>!!liveSleep()); $('#bMore').onclick=dayGuard(moreSheet);
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today'){ view.day=dayStart(Date.now()); view.scrollLatest=true } if(view.tab==='week') view.weekOff=0; if(view.tab==='settings') view.setCat=null;
   pref('tab',JSON.stringify({tab:view.tab})); render(); window.scrollTo(0,0)});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
