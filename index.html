@@ -30,7 +30,7 @@
   --feed-text:#B32F62; --sleep-text:#3B49B8; --pee-text:#1A6F66; --sleep-green:#237A49; --sleep-yellow:#926B00;
   --band1:#DDE7F7; --band2:#B9CCEF; --median:#3B49B8; --pt:#D9731F;
   --hatch1:#E4E8EE; --hatch2:#F3F5F8;
-  --sky-n1:#1F2760; --sky-n2:#3E4A9C; --sky-dusk:#F6B08C; --sky-d1:#FFD49A; --sky-d2:#FFE4BC; --dial:#FFFFFF; --track:rgba(255,255,255,.55); --rim-n:#1A2150; --rim-dusk:#E07F55; --rim-d:#E9A04A; --badge:#1C222B;
+  --sky-n1:#1F2760; --sky-n2:#3E4A9C; --sky-dusk:#F6B08C; --sky-d1:#FFD49A; --sky-d2:#FFE4BC; --dial:#FFFFFF; --track:rgba(255,255,255,.55); --rim-n:#1A2150; --rim-dusk:#E07F55; --rim-d:#E9A04A; --badge:#1C222B; --meal:#FBE6EE; --meal-edge:#F2C3D4; --meal:#FBE6EE; --meal-edge:#F2C3D4;
   --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
   --mono:ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
@@ -42,7 +42,7 @@
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9; --sleep-green:#8BD6A6; --sleep-yellow:#E8C65A;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
-  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; color-scheme:dark}}
+  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; --meal:#2E2229; --meal-edge:#4A3340; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
@@ -50,7 +50,7 @@
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9; --sleep-green:#8BD6A6; --sleep-yellow:#E8C65A;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
-  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; color-scheme:dark}
+  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; --meal:#2E2229; --meal-edge:#4A3340; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{min-height:100%;margin:0;touch-action:manipulation}
 button,a,label,input,select,.tile,.chip,.item{touch-action:manipulation}
@@ -252,7 +252,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.53';
+const VERSION='0.3.54';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -617,12 +617,12 @@ function arcPath(cx,cy,r1,r2,f0,f1){
 let RID=0;
 function ringSVG(d,opt={}){
   const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now(), id='r'+(++RID);
-  const R=big?150:45, rT=big?128:37, tw=big?22:9, rFeed=big?103:0, rDia=big?79:0, rCore=big?66:24;
+  const R=big?134:45, rT=big?114:37, tw=big?20:9, rFeed=big?150:0, rDia=big?90:0, rCore=big?60:24;
   const fr=t=>(t-d)/DAY;
   const {from,to}=nightWin(), span=(((to-from)%24)+24)%24||12, mid=(from+span/2)%24;
   const half=Math.PI*span/24, hz=(1-Math.cos(half))/2;   // 수평선 위치 (0=위, 1=아래)
   const isNightF=f=>{ const h=f*24; return from>to?(h>=from||h<to):(h>=from&&h<to) };
-  const pad=big?22:2;
+  const pad=big?28:2;
   let s=`<svg viewBox="${-pad} ${-pad} ${W+pad*2} ${W+pad*2}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
   s+=`<defs><linearGradient id="${id}g" x1="0" y1="${c-R}" x2="0" y2="${c+R}" gradientUnits="userSpaceOnUse" gradientTransform="rotate(${(mid/24*360).toFixed(1)} ${c} ${c})">
     <stop offset="0" style="stop-color:var(--sky-n1)"/><stop offset="${(hz*0.8).toFixed(3)}" style="stop-color:var(--sky-n2)"/>
@@ -638,14 +638,19 @@ function ringSVG(d,opt={}){
   s+=`<circle cx="${c}" cy="${c}" r="${rT}" fill="none" style="stroke:var(--track)" stroke-width="${tw}"/>`;
   gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rT-tw/2,rT+tw/2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".3"/>` });
   const list=evOfDay(d), sw=tw-(big?6:3), cap=sw/2/(2*Math.PI*rT);
+  // 수면: 둥근 막대 + 살짝 뜬 그림자
+  const arcD=(r,f0,f1)=>{ const [x0,y0]=pol(c,c,r,f0), [x1,y1]=pol(c,c,r,f1); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${f1-f0>0.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}` };
+  s+=`<defs><filter id="${id}c" filterUnits="userSpaceOnUse" x="${-pad}" y="${-pad}" width="${W+pad*2}" height="${W+pad*2}"><feDropShadow dx="0" dy="${big?2.5:1}" stdDeviation="${big?2.2:.8}" flood-color="#0B1030" flood-opacity=".35"/></filter></defs>`;
   list.forEach(x=>{ if(x.type!=='sleep') return; const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b<=a) return;
     let f0=fr(a)+cap, f1=fr(b)-cap; if(f1<f0){ const m=(f0+f1)/2; f0=f1=m }
-    const [x0,y0]=pol(c,c,rT,f0), [x1,y1]=pol(c,c,rT,f1);
-    s+= f1-f0<0.0005 ? `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="${sw/2}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"/>`
-      : `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)}A${rT} ${rT} 0 ${f1-f0>0.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" style="stroke:var(--${sleepKind(x)==='nap'?'nap':'sleep'})" stroke-width="${sw}" stroke-linecap="round"/>` });
+    const col=`var(--${sleepKind(x)==='nap'?'nap':'sleep'})`, dot=f1-f0<0.0005;
+    if(dot){ const [px,py]=pol(c,c,rT,f0);
+      s+=`<g filter="url(#${id}c)"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${sw/2}" style="fill:${col}"/></g>`; return }
+    s+=`<g filter="url(#${id}c)"><path d="${arcD(rT,f0,f1)}" fill="none" style="stroke:${col}" stroke-width="${sw}" stroke-linecap="round"/></g>`;
+  });
   if(big){
     // 해·달: 배지와 헷갈리지 않게 크고 흐릿한 하늘 장식 (테두리 없음, 기록보다 뒤에)
-    const [mx,my]=pol(c,c,84,mid/24), [sx,sy]=pol(c,c,84,((mid+12)%24)/24);
+    const [mx,my]=pol(c,c,74,mid/24), [sx,sy]=pol(c,c,74,((mid+12)%24)/24);
     s+=`<defs><radialGradient id="${id}sun"><stop offset="0" stop-color="#FFD36B" stop-opacity=".95"/><stop offset=".38" stop-color="#FFC24A" stop-opacity=".75"/><stop offset=".55" stop-color="#FFB238" stop-opacity=".25"/><stop offset="1" stop-color="#FFB238" stop-opacity="0"/></radialGradient>
       <radialGradient id="${id}moon"><stop offset=".4" stop-color="#FFF4C8" stop-opacity=".35"/><stop offset="1" stop-color="#FFF4C8" stop-opacity="0"/></radialGradient>
       <mask id="${id}cres"><rect x="${(mx-30).toFixed(1)}" y="${(my-30).toFixed(1)}" width="60" height="60" fill="#fff"/><circle cx="${(mx+8).toFixed(1)}" cy="${(my-6).toFixed(1)}" r="15" fill="#000"/></mask></defs>`;
@@ -654,18 +659,20 @@ function ringSVG(d,opt={}){
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFA928" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>` }
     s+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="32" fill="url(#${id}moon)"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="17" fill="#FFF1C2" opacity=".9" mask="url(#${id}cres)"/>`;
     // 아이콘 배지: 수유(🍼/🤱)·이유식(🥣)은 바깥 궤도, 대변(💩)은 안쪽 궤도. 소변·기타는 작은 점
-    const badge=(px,py,ic,col,r=13)=>`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}" style="fill:var(--badge);stroke:${col}" stroke-width="2"/><text x="${px.toFixed(1)}" y="${(py+0.5).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${(r*1.4).toFixed(1)}">${ic}</text>`;
+    const badge=(px,py,ic,col,r=12)=>`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}" style="fill:var(--badge);stroke:${col}" stroke-width="2"/><text x="${px.toFixed(1)}" y="${(py+0.5).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${(r*1.4).toFixed(1)}">${ic}</text>`;
+    // 식사 띠: 원판 바깥에 따로 두른 수유·이유식 전용 고리
+    s+=`<circle cx="${c}" cy="${c}" r="${rFeed}" fill="none" style="stroke:var(--meal)" stroke-width="28"/><circle cx="${c}" cy="${c}" r="${rFeed+14}" fill="none" style="stroke:var(--meal-edge)" stroke-width="1.2"/><circle cx="${c}" cy="${c}" r="${rFeed-14}" fill="none" style="stroke:var(--meal-edge)" stroke-width="1.2"/>`;
     const later=[];
     list.forEach(x=>{
       if(x.type==='feed'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,x.sub==='breastL'||x.sub==='breastR'?'🤱':'🍼','var(--feed)')) }
       else if(x.type==='etc'&&x.sub==='solid'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,'🥣','#E8913A')) }
       else if(x.type==='diaper'){ const [px,py]=pol(c,c,rDia,fr(x.start));
-        if(x.sub==='pee') later.unshift(badge(px,py,'💦','var(--pee)',10.5));
-        else later.unshift(badge(px,py,'💩','var(--poo)',11)) }
+        if(x.sub==='pee') later.unshift(badge(px,py,'💦','var(--pee)',10));
+        else later.unshift(badge(px,py,'💩','var(--poo)',10.5)) }
       else if(x.type!=='sleep'){ const [px,py]=pol(c,c,rDia,fr(x.start)); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" style="fill:${evColor(x)};stroke:var(--dial)" stroke-width="1.2"/>` } });
     s+=later.join('');
     // 시각: 원판 바깥 작은 숫자
-    for(let h=0;h<24;h+=1){ const f=h/24, [px,py]=pol(c,c,R+12,f);
+    for(let h=0;h<24;h+=1){ const f=h/24, [px,py]=pol(c,c,R+43,f);
       if(h%6===0) s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--muted)">${h}</text>`;
       else if(h%3===0) s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.6" style="fill:var(--muted)" opacity=".5"/>` }
   }
@@ -674,7 +681,7 @@ function ringSVG(d,opt={}){
   if(big&&d===dayStart(now)){ const f=fr(now), [hx,hy]=pol(c,c,rT,f), [ix,iy]=pol(c,c,rCore+2,f);
     s+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="13" fill="#fff" opacity=".35"/><circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="7.5" style="fill:var(--dial);stroke:var(--fg)" stroke-width="3"/>` }
   if(big){ const [l1,l2,l3]=opt.center||['','',''];
-    s+=`<text x="${c}" y="${c-20}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+7}" text-anchor="middle" font-size="${String(l2).length>7?18:22}" font-weight="800" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+28}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l3)}</text>`;
+    s+=`<text x="${c}" y="${c-20}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+7}" text-anchor="middle" font-size="${String(l2).length>7?17:21}" font-weight="800" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+28}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l3)}</text>`;
   } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="700" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
   return s+'</svg>';
 }
