@@ -250,7 +250,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.51';
+const VERSION='0.3.52';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -615,7 +615,7 @@ function arcPath(cx,cy,r1,r2,f0,f1){
 let RID=0;
 function ringSVG(d,opt={}){
   const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now(), id='r'+(++RID);
-  const R=big?150:45, rT=big?128:37, tw=big?22:9, rFeed=big?105:0, rDia=big?84:0, rCore=big?66:24;
+  const R=big?150:45, rT=big?128:37, tw=big?22:9, rFeed=big?103:0, rDia=big?79:0, rCore=big?66:24;
   const fr=t=>(t-d)/DAY;
   const {from,to}=nightWin(), span=(((to-from)%24)+24)%24||12, mid=(from+span/2)%24;
   const half=Math.PI*span/24, hz=(1-Math.cos(half))/2;   // 수평선 위치 (0=위, 1=아래)
@@ -652,14 +652,14 @@ function ringSVG(d,opt={}){
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFA928" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>` }
     s+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="32" fill="url(#${id}moon)"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="17" fill="#FFF1C2" opacity=".9" mask="url(#${id}cres)"/>`;
     // 아이콘 배지: 수유(🍼/🤱)·이유식(🥣)은 바깥 궤도, 대변(💩)은 안쪽 궤도. 소변·기타는 작은 점
-    const badge=(px,py,ic,col,r=10)=>`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}" style="fill:var(--badge);stroke:${col}" stroke-width="2"/><text x="${px.toFixed(1)}" y="${(py+r*0.42).toFixed(1)}" text-anchor="middle" font-size="${(r*1.15).toFixed(1)}">${ic}</text>`;
+    const badge=(px,py,ic,col,r=13)=>`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}" style="fill:var(--badge);stroke:${col}" stroke-width="2"/><text x="${px.toFixed(1)}" y="${(py+0.5).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${(r*1.4).toFixed(1)}">${ic}</text>`;
     const later=[];
     list.forEach(x=>{
       if(x.type==='feed'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,x.sub==='breastL'||x.sub==='breastR'?'🤱':'🍼','var(--feed)')) }
       else if(x.type==='etc'&&x.sub==='solid'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,'🥣','#E8913A')) }
       else if(x.type==='diaper'){ const [px,py]=pol(c,c,rDia,fr(x.start));
-        if(x.sub==='pee') later.unshift(badge(px,py,'💦','var(--pee)',7.5));
-        else later.unshift(badge(px,py,'💩','var(--poo)',8.5)) }
+        if(x.sub==='pee') later.unshift(badge(px,py,'💦','var(--pee)',10.5));
+        else later.unshift(badge(px,py,'💩','var(--poo)',11)) }
       else if(x.type!=='sleep'){ const [px,py]=pol(c,c,rDia,fr(x.start)); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" style="fill:${evColor(x)};stroke:var(--dial)" stroke-width="1.2"/>` } });
     s+=later.join('');
     // 시각: 원판 바깥 작은 숫자
