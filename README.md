@@ -58,6 +58,9 @@
 | `who_lms.js` | WHO 성장 기준표 (0~24개월, 성장곡선과 백분위 계산용) |
 | `sleep_rules.js` | 낮잠·밤잠 구분 규칙과 월령별 수면 참고 범위 (프로젝트 공용 `sleep_rules.json`과 같은 값) |
 | `sync.js` | 가족 공유 (Firebase 설정이 있을 때만 불러옴) |
+| `i18n.js` | 화면 언어(한국어·English·简体中文·日本語). 설정 > 화면·언어에서 고르고, 처음엔 휴대폰 언어를 따라감 |
+| `i18n/src/*.json` | 번역 사전 원본 (한국어 조각 → 번역). 고친 뒤 `node tools/i18n-build.mjs`로 `i18n/*.js`를 만듦 |
+| `tools/i18n-extract.mjs` | 화면 문구 조각을 뽑음. 새 문구를 넣으면 `node --test tests/i18n.test.mjs`가 빠진 번역을 알려 줌 |
 | `firebase-config.js` | Firebase 설정값. 비어 있으면 가족 공유가 꺼짐 |
 | `firestore.rules` | Firestore 보안 규칙 (초대코드를 아는 가족만 읽고 쓰기) |
 | `sw.js` | 오프라인 실행용. 파일을 바꾸면 안의 VERSION을 올려야 함 |
