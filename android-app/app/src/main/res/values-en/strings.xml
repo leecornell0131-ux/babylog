@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 휴대폰 언어가 이 언어일 때 위젯 고르는 화면에 보이는 이름 -->
+<resources>
+    <string name="app_name">BabyLog</string>
+    <string name="widget_name">BabyLog quick log</string>
+    <string name="w_feed">BabyLog feed timer</string>
+    <string name="w_feed_desc">Time since the last feed, big, and the next feed time based on your usual interval</string>
+    <string name="w_card">BabyLog last feed</string>
+    <string name="w_card_desc">Baby name·age and last feed time·amount, how long ago</string>
+    <string name="w_sleep">BabyLog sleep·awake time</string>
+    <string name="w_sleep_desc">Sleep time while asleep, time since waking while awake, with Asleep·Woke up buttons</string>
+    <string name="w_diaper">BabyLog diaper</string>
+    <string name="w_diaper_desc">Time since the last diaper with Pee·Poop·Both buttons</string>
+    <string name="w_today">BabyLog today summary</string>
+    <string name="w_today_desc">Today\'s feed count·amount, total sleep, diaper count, time since last feed</string>
+    <string name="widget_desc">Time since the last feed and Pee·Poop·Sleep buttons</string>
+</resources>

@@ -22,8 +22,8 @@ object LiveNotify {
     const val ID_FEED = 2
 
     fun ensureChannel(ctx: Context) {
-        val ch = NotificationChannel(CH, "진행 중 타이머", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "수유·수면이 진행 중일 때 지난 시간을 잠금화면과 알림창에 보여줘요"
+        val ch = NotificationChannel(CH, Tr.t("진행 중 타이머"), NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = Tr.t("수유·수면이 진행 중일 때 지난 시간을 잠금화면과 알림창에 보여줘요")
             setSound(null, null)
             enableVibration(false)
             setShowBadge(false)
@@ -33,10 +33,10 @@ object LiveNotify {
     }
 
     fun update(ctx: Context, o: JSONObject) {
-        val name = if (o.isNull("name")) "아기" else o.optString("name", "아기")
-        show(ctx, ID_SLEEP, o.optLongOrNull("sleep"), "🌙 $name 수면 중", "☀️ 깼어요", "stop_sleep", R.drawable.btn_sleep)
-        val feedLabel = if (o.isNull("feedLabel")) "수유" else o.optString("feedLabel").ifBlank { "수유" }
-        show(ctx, ID_FEED, o.optLongOrNull("feed"), "🍼 $name $feedLabel 중", "🍼 수유 끝", "stop_feed", R.drawable.btn_feed)
+        val name = (if (o.isNull("name")) "" else o.optString("name", "")).let { if (it.isBlank() || it == "아기") Tr.t("아기") else it }
+        show(ctx, ID_SLEEP, o.optLongOrNull("sleep"), Tr.f("🌙 {0} 수면 중", name), Tr.t("☀️ 깼어요"), "stop_sleep", R.drawable.btn_sleep)
+        val feedLabel = Tr.v(if (o.isNull("feedLabel")) "수유" else o.optString("feedLabel").ifBlank { "수유" })
+        show(ctx, ID_FEED, o.optLongOrNull("feed"), Tr.f("🍼 {0} {1} 중", name, feedLabel), Tr.t("🍼 수유 끝"), "stop_feed", R.drawable.btn_feed)
     }
 
     private fun show(ctx: Context, id: Int, start: Long?, title: String, actLabel: String, act: String, btnBg: Int) {
@@ -45,7 +45,7 @@ object LiveNotify {
             nm(ctx).cancel(id)
             return
         }
-        val since = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(start)) + "부터"
+        val since = Tr.f("{0}부터", SimpleDateFormat("HH:mm", Locale.ROOT).format(Date(start)))
         val tap = stop(ctx, act, id + 10)
         fun view(layout: Int) = RemoteViews(ctx.packageName, layout).apply {
             setTextViewText(R.id.n_title, title)

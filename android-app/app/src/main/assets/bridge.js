@@ -77,6 +77,8 @@
     else if (this === localStorage && k === 'babylog-sync-v1') send();
   };
   send();
+  // 웹앱 화면 언어를 위젯·잠금화면에도 (웹 0.3.55부터 BabyI18n)
+  try { if (window.BabyI18n && N.setLang) N.setLang(window.BabyI18n.lang); } catch (e) {}
 
   // 위젯·알림 버튼으로 들어온 동작
   // at: 버튼을 누른 시각 (잠금화면에서 누르고 나중에 앱을 연 경우 그 시각으로 기록)
