@@ -138,7 +138,7 @@ enum Fmt {
 
     private static let clockF: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "ko_KR")
+        f.locale = Tr.locale
         f.dateFormat = "a h:mm"
         return f
     }()
@@ -154,8 +154,9 @@ enum Fmt {
         guard let b = f.date(from: String(birth.prefix(10))) else { return nil }
         let cal = Calendar.current
         let days = (cal.dateComponents([.day], from: cal.startOfDay(for: b), to: cal.startOfDay(for: now)).day ?? 0) + 1
-        if days < 100 { return "\(days)일" }
-        return "\(cal.dateComponents([.month], from: b, to: now).month ?? 0)개월"
+        if days < 100 { return Tr.f("{0}일", String(days)) }
+        let months = cal.dateComponents([.month], from: b, to: now).month ?? 0
+        return Tr.f("{0}개월", String(months))
     }
 }
 

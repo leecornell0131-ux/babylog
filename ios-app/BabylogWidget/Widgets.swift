@@ -70,8 +70,12 @@ extension BabySummary {
                                    lastFeedAmt: nil, lastFeedSub: nil, birth: nil, feedGap: nil, lastWake: nil, lastDiaper: nil,
                                    lastDiaperText: nil, day: nil, tFeeds: nil, tMl: nil, tPee: nil, tPoo: nil, tSleep: nil, fid: nil, sleeps: nil)
 
-    var babyName: String { (name ?? "").isEmpty ? "아기" : name! }
-    var feedName: String { (feedLabel ?? "").isEmpty ? "수유" : feedLabel! }
+    var babyName: String { (name ?? "").isEmpty || name == "아기" ? Tr.t("아기") : name! }
+    var feedName: String { (feedLabel ?? "").isEmpty ? Tr.t("수유") : (Tr.v(feedLabel) ?? "") }
+    // 요약에 한국어로 담겨 온 값을 화면 언어로 (Tr.v)
+    var feedText: String? { Tr.v(lastFeedText) }
+    var feedAmt: String? { Tr.v(lastFeedAmt) }
+    var diaperText: String? { Tr.v(lastDiaperText) }
     var sleepAt: Date? { BabySummary.date(sleep) }
     var feedAt: Date? { BabySummary.date(feed) }
     var lastFeedAt: Date? { BabySummary.date(lastFeed) }
@@ -116,7 +120,7 @@ enum WFmt {
     }
 
     static func ago(_ d: Date, _ now: Date) -> String {
-        now.timeIntervalSince(d) < 60 ? "방금" : dur(now.timeIntervalSince(d)) + " 전"
+        now.timeIntervalSince(d) < 60 ? Tr.t("방금") : Tr.f("{0} 전", dur(now.timeIntervalSince(d)))
     }
 
     private static let hmF: DateFormatter = {
@@ -140,7 +144,7 @@ enum WFmt {
         while let n = cal.date(byAdding: .month, value: months + 1, to: b), n <= now { months += 1 }
         let base = cal.date(byAdding: .month, value: months, to: b) ?? b
         let days = Int(now.timeIntervalSince(base) / 86_400)
-        return months == 0 ? "생후 \(days)일" : "\(months)개월 \(days)일"
+        return months == 0 ? Tr.f("생후 {0}일", String(days)) : Tr.f("{0}개월 {1}일", String(months), String(days))
     }
 }
 
@@ -203,24 +207,24 @@ struct QuickView: View {
         VStack(spacing: 8) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text((s.lastFeedText ?? "").isEmpty ? "마지막 수유 후" : "마지막 수유 후 · " + s.lastFeedText!).wLabel(Palette.feed)
+                    Text((s.feedText ?? "").isEmpty ? Tr.t("마지막 수유 후") : Tr.f("마지막 수유 후 · {0}", s.feedText ?? "")).wLabel(Palette.feed)
                     if let lf = s.lastFeedAt { TickClock(since: lf, size: 28) }
-                    else { Text("앱을 한 번 열어 주세요").font(.system(size: 15)).foregroundStyle(Palette.ink) }
+                    else { Text(Tr.t("앱을 한 번 열어 주세요")).font(.system(size: 15)).foregroundStyle(Palette.ink) }
                 }
                 Spacer(minLength: 4)
                 if let live = s.feedAt ?? s.sleepAt {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(s.feedAt != nil ? s.feedName + " 중" : "수면 중").wLabel(Palette.sleep)
+                        Text(s.feedAt != nil ? Tr.f("{0} 중", s.feedName) : Tr.t("수면 중")).wLabel(Palette.sleep)
                         TickClock(since: live, size: 20, align: .trailing).frame(maxWidth: 110, alignment: .trailing)
                     }
                 }
             }
             .frame(maxHeight: .infinity)
             HStack(spacing: 6) {
-                WButton(title: s.feedAt != nil ? "🍼 수유 끝" : "🍼 수유", bg: Palette.feedBg, action: s.feedAt != nil ? "stop_feed" : "feed")
-                WButton(title: "💧 소변", bg: Palette.diaperBg, action: "pee")
-                WButton(title: "💩 대변", bg: Palette.pooBg, action: "poo")
-                WButton(title: s.sleepAt != nil ? "☀️ 깼어요" : "🌙 잠듦", bg: Palette.sleepBg, action: s.sleepAt != nil ? "stop_sleep" : "sleep_start")
+                WButton(title: s.feedAt != nil ? Tr.t("🍼 수유 끝") : Tr.t("🍼 수유"), bg: Palette.feedBg, action: s.feedAt != nil ? "stop_feed" : "feed")
+                WButton(title: Tr.t("💧 소변"), bg: Palette.diaperBg, action: "pee")
+                WButton(title: Tr.t("💩 대변"), bg: Palette.pooBg, action: "poo")
+                WButton(title: s.sleepAt != nil ? Tr.t("☀️ 깼어요") : Tr.t("🌙 잠듦"), bg: Palette.sleepBg, action: s.sleepAt != nil ? "stop_sleep" : "sleep_start")
             }
             .frame(height: 44)
         }
@@ -233,8 +237,8 @@ struct QuickWidget: Widget {
         StaticConfiguration(kind: "Quick", provider: BabyProvider()) { e in
             QuickView(e: e).babyCard()
         }
-        .configurationDisplayName("빠른 기록")
-        .description("마지막 수유 후 지난 시간과 소변·대변·수면 버튼")
+        .configurationDisplayName(Tr.t("빠른 기록"))
+        .description(Tr.t("마지막 수유 후 지난 시간과 소변·대변·수면 버튼"))
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }
@@ -250,24 +254,26 @@ struct FeedTimerView: View {
         let since = s.feedAt ?? s.lastFeedAt
         VStack(alignment: .leading, spacing: 6) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(s.feedAt != nil ? s.feedName + " 중" : "마지막 수유 후").wLabel(Palette.feed)
+                Text(s.feedAt != nil ? Tr.f("{0} 중", s.feedName) : Tr.t("마지막 수유 후")).wLabel(Palette.feed)
                 if let since { TickClock(since: since, size: 30) }
-                else { Text("아직 기록이 없어요").font(.system(size: 15)).foregroundStyle(Palette.ink) }
+                else { Text(Tr.t("아직 기록이 없어요")).font(.system(size: 15)).foregroundStyle(Palette.ink) }
                 Text(sub(s)).font(.system(size: 13)).foregroundStyle(Palette.sub).lineLimit(2).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            WButton(title: s.feedAt != nil ? "🍼 수유 끝" : "🍼 수유 기록", bg: Palette.feedBg, action: s.feedAt != nil ? "stop_feed" : "feed", size: 15)
+            WButton(title: s.feedAt != nil ? Tr.t("🍼 수유 끝") : Tr.t("🍼 수유 기록"), bg: Palette.feedBg, action: s.feedAt != nil ? "stop_feed" : "feed", size: 15)
                 .frame(height: 40)
         }
         .padding(12)
     }
 
     func sub(_ s: BabySummary) -> String {
-        if let f = s.feedAt { return WFmt.hm(f) + "부터" }
+        if let f = s.feedAt { return Tr.f("{0}부터", WFmt.hm(f)) }
         if let lf = s.lastFeedAt, let g = s.feedGap, g > 0 {
-            return "평소 \(WFmt.dur(g / 1000)) 간격 · \(WFmt.hm(lf.addingTimeInterval(g / 1000)))쯤"
+            let gap = WFmt.dur(g / 1000)
+            let next = WFmt.hm(lf.addingTimeInterval(g / 1000))
+            return Tr.f("평소 {0} 간격 · {1}쯤", gap, next)
         }
-        return s.lastFeedText ?? ""
+        return s.feedText ?? ""
     }
 }
 
@@ -276,8 +282,8 @@ struct FeedTimerWidget: Widget {
         StaticConfiguration(kind: "FeedTimer", provider: BabyProvider()) { e in
             FeedTimerView(e: e).babyCard()
         }
-        .configurationDisplayName("수유 타이머")
-        .description("마지막 수유 후 지난 시간을 크게, 평소 간격으로 본 다음 수유 시각")
+        .configurationDisplayName(Tr.t("수유 타이머"))
+        .description(Tr.t("마지막 수유 후 지난 시간을 크게, 평소 간격으로 본 다음 수유 시각"))
         .supportedFamilies([.systemSmall])
         .contentMarginsDisabled()
     }
@@ -297,14 +303,14 @@ struct LastFeedView: View {
         case .accessoryCircular:
             VStack(spacing: 0) {
                 Text("🍼").font(.system(size: 14))
-                Text(s.feedAt != nil ? "수유중" : (s.lastFeedAt.map { Fmt.dur(e.date.timeIntervalSince($0)) } ?? "-"))
+                Text(s.feedAt != nil ? Tr.t("수유중") : (s.lastFeedAt.map { Fmt.dur(e.date.timeIntervalSince($0)) } ?? "-"))
                     .font(.system(size: 12, weight: .semibold)).minimumScaleFactor(0.6).lineLimit(1)
             }
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 1) {
                 Text("🍼 " + inline(s)).font(.headline).lineLimit(1)
                 if let lf = s.lastFeedAt {
-                    Text(Fmt.clock(lf) + (s.lastFeedText.map { " · " + $0 } ?? "")).font(.caption).lineLimit(1)
+                    Text(Fmt.clock(lf) + (s.feedText.map { " · " + $0 } ?? "")).font(.caption).lineLimit(1)
                 }
             }
         default:
@@ -313,9 +319,10 @@ struct LastFeedView: View {
     }
 
     func inline(_ s: BabySummary) -> String {
-        if let f = s.feedAt { return s.feedName + " 중 " + Fmt.dur(e.date.timeIntervalSince(f)) }
-        guard let lf = s.lastFeedAt else { return "수유 기록 없음" }
-        return Fmt.dur(e.date.timeIntervalSince(lf)) + " 전" + (s.lastFeedAmt.map { " · " + $0 } ?? "")
+        if let f = s.feedAt { return Tr.f("{0} 중 {1}", s.feedName, Fmt.dur(e.date.timeIntervalSince(f))) }
+        guard let lf = s.lastFeedAt else { return Tr.t("수유 기록 없음") }
+        let amt = s.feedAt == nil ? (s.feedAmt.map { " · " + $0 } ?? "") : ""
+        return Tr.f("{0} 전{1}", Fmt.dur(e.date.timeIntervalSince(lf)), amt)
     }
 
     func card(_ s: BabySummary) -> some View {
@@ -336,9 +343,9 @@ struct LastFeedView: View {
                     .background(Circle().fill(Palette.feedBg))
                     .overlay(Circle().stroke(Palette.feed, lineWidth: 1.5))
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(at.map { Fmt.clock($0) } ?? "수유 기록 없음")
+                    Text(at.map { Fmt.clock($0) } ?? Tr.t("수유 기록 없음"))
                         .font(.system(size: 20, weight: .bold)).foregroundStyle(Palette.ink).lineLimit(1).minimumScaleFactor(0.6)
-                    let amt = s.feedAt != nil ? s.feedName + " 중" : (s.lastFeedAmt ?? "")
+                    let amt = s.feedAt != nil ? Tr.f("{0} 중", s.feedName) : (s.feedAmt ?? "")
                     if !amt.isEmpty {
                         Text(amt).font(.system(size: 18, weight: .bold)).foregroundStyle(Palette.feed).lineLimit(1).minimumScaleFactor(0.6)
                     }
@@ -352,9 +359,9 @@ struct LastFeedView: View {
     }
 
     func ago(_ s: BabySummary) -> String {
-        if let f = s.feedAt { return WFmt.ago(f, e.date).replacingOccurrences(of: " 전", with: "째") }
+        if let f = s.feedAt { return Tr.f("{0}째", WFmt.dur(e.date.timeIntervalSince(f))) }
         if let lf = s.lastFeedAt { return WFmt.ago(lf, e.date) }
-        return "누르면 앱이 열려요"
+        return Tr.t("누르면 앱이 열려요")
     }
 }
 
@@ -363,8 +370,8 @@ struct LastFeedWidget: Widget {
         StaticConfiguration(kind: "LastFeed", provider: BabyProvider()) { e in
             LastFeedView(e: e).babyCard()
         }
-        .configurationDisplayName("마지막 수유")
-        .description("아기 이름·월령과 마지막 수유 시각·양, 몇 시간 전인지")
+        .configurationDisplayName(Tr.t("마지막 수유"))
+        .description(Tr.t("아기 이름·월령과 마지막 수유 시각·양, 몇 시간 전인지"))
         .supportedFamilies([.systemSmall, .accessoryRectangular, .accessoryInline, .accessoryCircular])
         .contentMarginsDisabled()
     }
@@ -396,13 +403,13 @@ struct SleepView: View {
         default:
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(s.sleepAt != nil ? s.babyName + " 수면 중" : "깨어 있는 시간").wLabel(Palette.sleep)
+                    Text(s.sleepAt != nil ? Tr.f("{0} 수면 중", s.babyName) : Tr.t("깨어 있는 시간")).wLabel(Palette.sleep)
                     if let since { TickClock(since: since, size: 30) }
-                    else { Text("아직 기록이 없어요").font(.system(size: 15)).foregroundStyle(Palette.ink) }
+                    else { Text(Tr.t("아직 기록이 없어요")).font(.system(size: 15)).foregroundStyle(Palette.ink) }
                     Text(sub(s)).font(.system(size: 13)).foregroundStyle(Palette.sub).lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                WButton(title: s.sleepAt != nil ? "☀️ 깼어요" : "🌙 잠듦", bg: Palette.sleepBg, action: s.sleepAt != nil ? "stop_sleep" : "sleep_start", size: 15)
+                WButton(title: s.sleepAt != nil ? Tr.t("☀️ 깼어요") : Tr.t("🌙 잠듦"), bg: Palette.sleepBg, action: s.sleepAt != nil ? "stop_sleep" : "sleep_start", size: 15)
                     .frame(height: 40)
             }
             .padding(12)
@@ -410,15 +417,15 @@ struct SleepView: View {
     }
 
     func sub(_ s: BabySummary) -> String {
-        if let st = s.sleepAt { return WFmt.hm(st) + "에 잠듦" }
-        if let w = s.wakeAt { return WFmt.hm(w) + "에 깸" }
+        if let st = s.sleepAt { return Tr.f("{0}에 잠듦", WFmt.hm(st)) }
+        if let w = s.wakeAt { return Tr.f("{0}에 깸", WFmt.hm(w)) }
         return ""
     }
 
     func line(_ s: BabySummary) -> String {
-        if let st = s.sleepAt { return "😴 수면 중 " + Fmt.dur(e.date.timeIntervalSince(st)) }
-        if let w = s.wakeAt { return "👀 깬 지 " + Fmt.dur(e.date.timeIntervalSince(w)) }
-        return "😴 수면 기록 없음"
+        if let st = s.sleepAt { return Tr.f("😴 수면 중 {0}", Fmt.dur(e.date.timeIntervalSince(st))) }
+        if let w = s.wakeAt { return Tr.f("👀 깬 지 {0}", Fmt.dur(e.date.timeIntervalSince(w))) }
+        return Tr.t("😴 수면 기록 없음")
     }
 }
 
@@ -427,8 +434,8 @@ struct SleepWidget: Widget {
         StaticConfiguration(kind: "Sleep", provider: BabyProvider()) { e in
             SleepView(e: e).babyCard()
         }
-        .configurationDisplayName("수면·깨어 있는 시간")
-        .description("자는 중이면 수면 시간, 깨어 있으면 깬 뒤 지난 시간과 잠듦·깼어요 버튼")
+        .configurationDisplayName(Tr.t("수면·깨어 있는 시간"))
+        .description(Tr.t("자는 중이면 수면 시간, 깨어 있으면 깬 뒤 지난 시간과 잠듦·깼어요 버튼"))
         .supportedFamilies([.systemSmall, .accessoryRectangular, .accessoryInline, .accessoryCircular])
         .contentMarginsDisabled()
     }
@@ -443,17 +450,17 @@ struct DiaperView: View {
         let s = e.s
         HStack(spacing: 6) {
             VStack(alignment: .leading, spacing: 2) {
-                Text((s.lastDiaperText ?? "").isEmpty ? "마지막 기저귀 후" : "마지막 \(s.lastDiaperText!) 후").wLabel(Palette.diaper)
+                Text((s.diaperText ?? "").isEmpty ? Tr.t("마지막 기저귀 후") : Tr.f("마지막 {0} 후", s.diaperText ?? "")).wLabel(Palette.diaper)
                 if let d = s.lastDiaperAt { TickClock(since: d, size: 20) }
-                else { Text("아직 기록이 없어요").font(.system(size: 15)).foregroundStyle(Palette.ink).lineLimit(1).minimumScaleFactor(0.7) }
+                else { Text(Tr.t("아직 기록이 없어요")).font(.system(size: 15)).foregroundStyle(Palette.ink).lineLimit(1).minimumScaleFactor(0.7) }
             }
             .padding(.leading, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
             HStack(spacing: 6) {
-                WButton(title: "💧 소변", bg: Palette.diaperBg, action: "pee")
-                WButton(title: "💩 대변", bg: Palette.pooBg, action: "poo")
-                WButton(title: "둘 다", bg: Palette.diaperBg, action: "both")
+                WButton(title: Tr.t("💧 소변"), bg: Palette.diaperBg, action: "pee")
+                WButton(title: Tr.t("💩 대변"), bg: Palette.pooBg, action: "poo")
+                WButton(title: Tr.t("둘 다"), bg: Palette.diaperBg, action: "both")
             }
             .frame(height: 44)
             .frame(maxWidth: .infinity)
@@ -468,8 +475,8 @@ struct DiaperWidget: Widget {
         StaticConfiguration(kind: "Diaper", provider: BabyProvider()) { e in
             DiaperView(e: e).babyCard()
         }
-        .configurationDisplayName("기저귀")
-        .description("마지막 기저귀 후 지난 시간과 소변·대변·둘 다 버튼")
+        .configurationDisplayName(Tr.t("기저귀"))
+        .description(Tr.t("마지막 기저귀 후 지난 시간과 소변·대변·둘 다 버튼"))
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }
@@ -488,22 +495,22 @@ struct TodayView: View {
         let sleepLive = y.map { $0.live } ?? (s.sleepAt != nil)
         let since = s.sleepAt ?? s.wakeAt
         VStack(alignment: .leading, spacing: 4) {
-            Text("오늘 · " + s.babyName).font(.system(size: 14, weight: .bold)).foregroundStyle(Palette.ink).lineLimit(1)
+            Text(Tr.f("오늘 · {0}", s.babyName)).font(.system(size: 14, weight: .bold)).foregroundStyle(Palette.ink).lineLimit(1)
                 .padding(.leading, 4)
             HStack(spacing: 8) {
-                tile("🍼 오늘 수유", Palette.feed, Palette.feedBg) {
-                    value("\(s.today(s.tFeeds, e.date))회" + (ml > 0 ? " · \(ml)ml" : ""))
+                tile(Tr.t("🍼 오늘 수유"), Palette.feed, Palette.feedBg) {
+                    value(Tr.f("{0}회", String(s.today(s.tFeeds, e.date))) + (ml > 0 ? " · \(ml)ml" : ""))
                 }
-                tile("⏱ 최근 수유한 지", Palette.feed, Palette.feedBg) {
-                    if let lf = s.lastFeedAt { TickClock(since: lf, size: 17) } else { value("기록 없음") }
+                tile(Tr.t("⏱ 최근 수유한 지"), Palette.feed, Palette.feedBg) {
+                    if let lf = s.lastFeedAt { TickClock(since: lf, size: 17) } else { value(Tr.t("기록 없음")) }
                 }
             }
             HStack(spacing: 8) {
-                tile(y != nil ? "🌙 어제 수면" : "🌙 오늘 수면", Palette.sleep, Palette.sleepBg) {
-                    value(slept > 0 ? WFmt.dur(slept) + (sleepLive ? " 💤" : "") : "기록 없음")
+                tile(y != nil ? Tr.t("🌙 어제 수면") : Tr.t("🌙 오늘 수면"), Palette.sleep, Palette.sleepBg) {
+                    value(slept > 0 ? WFmt.dur(slept) + (sleepLive ? " 💤" : "") : Tr.t("기록 없음"))
                 }
-                tile(s.sleepAt != nil ? "🌙 잠든 지" : "👀 최근 깬 지", Palette.wake, Palette.wakeBg) {
-                    value(since.map { WFmt.dur(e.date.timeIntervalSince($0)) } ?? "기록 없음")
+                tile(s.sleepAt != nil ? Tr.t("🌙 잠든 지") : Tr.t("👀 최근 깬 지"), Palette.wake, Palette.wakeBg) {
+                    value(since.map { WFmt.dur(e.date.timeIntervalSince($0)) } ?? Tr.t("기록 없음"))
                 }
             }
         }
@@ -530,8 +537,8 @@ struct TodayWidget: Widget {
         StaticConfiguration(kind: "Today", provider: BabyProvider()) { e in
             TodayView(e: e).babyCard()
         }
-        .configurationDisplayName("오늘 요약")
-        .description("오늘 수유 횟수·양, 수면 합계, 마지막 수유 후 시간")
+        .configurationDisplayName(Tr.t("오늘 요약"))
+        .description(Tr.t("오늘 수유 횟수·양, 수면 합계, 마지막 수유 후 시간"))
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }

@@ -78,13 +78,13 @@ object Widgets {
         val feed = n("feed").let { if (it > 0 && StopReceiver.stopped(ctx, "stop_feed", it)) 0L else it }
         val lastWake = if (sleep > 0) 0L else n("lastWake")
         val lastFeed = n("lastFeed")
-        val lastFeedText = s("lastFeedText")
-        val feedLabel = s("feedLabel").ifBlank { "수유" }
+        val lastFeedText = Tr.v(s("lastFeedText"))
+        val feedLabel = Tr.v(s("feedLabel").ifBlank { "수유" })
         val feedGap = n("feedGap")
         val lastDiaper = n("lastDiaper")
-        val lastDiaperText = s("lastDiaperText")
-        val name = s("name").ifBlank { "아기" }
-        val lastFeedAmt = s("lastFeedAmt")
+        val lastDiaperText = Tr.v(s("lastDiaperText"))
+        val name = s("name").let { if (it.isBlank() || it == "아기") Tr.t("아기") else it }  // 이름이 없으면 요약에 "아기"로 옴
+        val lastFeedAmt = Tr.v(s("lastFeedAmt"))
         val lastFeedSub = s("lastFeedSub")
         val birth = s("birth")
         // 오늘 숫자는 저장한 날이 오늘일 때만 (자정이 지나면 0부터)
@@ -147,7 +147,7 @@ object Widgets {
     fun chrono(v: RemoteViews, id: Int, since: Long) =
         v.setChronometer(id, SystemClock.elapsedRealtime() - (System.currentTimeMillis() - since), null, true)
 
-    fun hm(t: Long): String = SimpleDateFormat("HH:mm", Locale.KOREA).format(Date(t))
+    fun hm(t: Long): String = SimpleDateFormat("HH:mm", Locale.ROOT).format(Date(t))
 
     // 걸린 시간은 웹앱과 같은 "1h 05m" 꼴 (웹앱 durS)
     fun dur(ms: Long): String {
@@ -179,12 +179,12 @@ object Widgets {
         var months = 0
         while (!plus(months + 1).after(today)) months++
         val days = ((today.timeInMillis - plus(months).timeInMillis) / 86_400_000L).toInt()
-        return if (months == 0) "생후 ${days}일" else "${months}개월 ${days}일"
+        return if (months == 0) Tr.f("생후 {0}일", days) else Tr.f("{0}개월 {1}일", months, days)
     }
 
     fun ago(t: Long): String {
         val ms = System.currentTimeMillis() - t
-        return if (ms < 60_000) "방금" else dur(ms) + " 전"
+        return if (ms < 60_000) Tr.t("방금") else Tr.f("{0} 전", dur(ms))
     }
 
     fun show(v: RemoteViews, id: Int, on: Boolean) = v.setViewVisibility(id, if (on) View.VISIBLE else View.GONE)
@@ -213,20 +213,24 @@ class QuickWidget : BabyWidget() {
     override val rows = mapOf(R.id.btn_row to 44f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_quick)
+        v.setTextViewText(R.id.feed_label, Tr.t("마지막 수유 후"))
+        v.setTextViewText(R.id.feed_none, Tr.t("앱을 한 번 열어 주세요"))
+        v.setTextViewText(R.id.b_pee, Tr.t("💧 소변"))
+        v.setTextViewText(R.id.b_poo, Tr.t("💩 대변"))
         Widgets.show(v, R.id.feed_timer, d.lastFeed > 0)
         Widgets.show(v, R.id.feed_none, d.lastFeed == 0L)
         if (d.lastFeed > 0) {
             Widgets.chrono(v, R.id.feed_timer, d.lastFeed)
-            v.setTextViewText(R.id.feed_label, if (d.lastFeedText.isBlank()) "마지막 수유 후" else "마지막 수유 후 · ${d.lastFeedText}")
+            v.setTextViewText(R.id.feed_label, if (d.lastFeedText.isBlank()) Tr.t("마지막 수유 후") else Tr.f("마지막 수유 후 · {0}", d.lastFeedText))
         }
         val live = if (d.feed > 0) d.feed else d.sleep
         Widgets.show(v, R.id.live_box, live > 0)
         if (live > 0) {
-            v.setTextViewText(R.id.live_label, if (d.feed > 0) "${d.feedLabel} 중" else "수면 중")
+            v.setTextViewText(R.id.live_label, if (d.feed > 0) Tr.f("{0} 중", d.feedLabel) else Tr.t("수면 중"))
             Widgets.chrono(v, R.id.live_timer, live)
         }
-        v.setTextViewText(R.id.b_feed, if (d.feed > 0) "🍼 수유 끝" else "🍼 수유")
-        v.setTextViewText(R.id.b_sleep, if (d.sleep > 0) "☀️ 깼어요" else "🌙 잠듦")
+        v.setTextViewText(R.id.b_feed, if (d.feed > 0) Tr.t("🍼 수유 끝") else Tr.t("🍼 수유"))
+        v.setTextViewText(R.id.b_sleep, if (d.sleep > 0) Tr.t("☀️ 깼어요") else Tr.t("🌙 잠듦"))
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.b_feed, Widgets.act(ctx, this, if (d.feed > 0) "stop_feed" else "feed"))
         v.setOnClickPendingIntent(R.id.b_pee, Widgets.act(ctx, this, "pee"))
@@ -244,20 +248,21 @@ class FeedWidget : BabyWidget() {
     override val rows = mapOf(R.id.w_btn to 40f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_feed)
+        v.setTextViewText(R.id.w_none, Tr.t("아직 기록이 없어요"))
         val since = if (d.feed > 0) d.feed else d.lastFeed
         Widgets.show(v, R.id.w_timer, since > 0)
         Widgets.show(v, R.id.w_none, since == 0L)
         if (since > 0) Widgets.chrono(v, R.id.w_timer, since)
-        v.setTextViewText(R.id.w_label, if (d.feed > 0) "${d.feedLabel} 중" else "마지막 수유 후")
+        v.setTextViewText(R.id.w_label, if (d.feed > 0) Tr.f("{0} 중", d.feedLabel) else Tr.t("마지막 수유 후"))
         v.setTextViewText(
             R.id.w_sub,
             when {
-                d.feed > 0 -> Widgets.hm(d.feed) + "부터"
-                d.lastFeed > 0 && d.feedGap > 0 -> "평소 ${Widgets.dur(d.feedGap)} 간격 · ${Widgets.hm(d.lastFeed + d.feedGap)}쯤"
+                d.feed > 0 -> Tr.f("{0}부터", Widgets.hm(d.feed))
+                d.lastFeed > 0 && d.feedGap > 0 -> Tr.f("평소 {0} 간격 · {1}쯤", Widgets.dur(d.feedGap), Widgets.hm(d.lastFeed + d.feedGap))
                 else -> d.lastFeedText
             }
         )
-        v.setTextViewText(R.id.w_btn, if (d.feed > 0) "🍼 수유 끝" else "🍼 수유 기록")
+        v.setTextViewText(R.id.w_btn, if (d.feed > 0) Tr.t("🍼 수유 끝") else Tr.t("🍼 수유 기록"))
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, if (d.feed > 0) "stop_feed" else "feed"))
         return v
@@ -278,17 +283,17 @@ class FeedCardWidget : BabyWidget() {
         v.setTextViewText(R.id.c_age, age)
         v.setTextViewText(R.id.c_icon, if (d.lastFeedSub == "breastL" || d.lastFeedSub == "breastR") "🤱" else "🍼")
         if (d.feed > 0) {
-            v.setTextViewText(R.id.c_time, SimpleDateFormat("a h:mm", Locale.KOREA).format(Date(d.feed)))
-            v.setTextViewText(R.id.c_amt, "${d.feedLabel} 중")
-            v.setTextViewText(R.id.c_ago, Widgets.ago(d.feed).replace(" 전", "째"))
+            v.setTextViewText(R.id.c_time, SimpleDateFormat("a h:mm", Tr.locale).format(Date(d.feed)))
+            v.setTextViewText(R.id.c_amt, Tr.f("{0} 중", d.feedLabel))
+            v.setTextViewText(R.id.c_ago, Tr.f("{0}째", Widgets.dur(System.currentTimeMillis() - d.feed)))
         } else if (d.lastFeed > 0) {
-            v.setTextViewText(R.id.c_time, SimpleDateFormat("a h:mm", Locale.KOREA).format(Date(d.lastFeed)))
+            v.setTextViewText(R.id.c_time, SimpleDateFormat("a h:mm", Tr.locale).format(Date(d.lastFeed)))
             v.setTextViewText(R.id.c_amt, d.lastFeedAmt)
             v.setTextViewText(R.id.c_ago, Widgets.ago(d.lastFeed))
         } else {
-            v.setTextViewText(R.id.c_time, "수유 기록 없음")
+            v.setTextViewText(R.id.c_time, Tr.t("수유 기록 없음"))
             v.setTextViewText(R.id.c_amt, "")
-            v.setTextViewText(R.id.c_ago, "누르면 앱이 열려요")
+            v.setTextViewText(R.id.c_ago, Tr.t("누르면 앱이 열려요"))
         }
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         return v
@@ -307,13 +312,14 @@ class SleepWidget : BabyWidget() {
     override val rows = mapOf(R.id.w_btn to 40f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_sleep)
+        v.setTextViewText(R.id.w_none, Tr.t("아직 기록이 없어요"))
         val since = if (d.sleep > 0) d.sleep else d.lastWake
         Widgets.show(v, R.id.w_timer, since > 0)
         Widgets.show(v, R.id.w_none, since == 0L)
         if (since > 0) Widgets.chrono(v, R.id.w_timer, since)
-        v.setTextViewText(R.id.w_label, if (d.sleep > 0) "${d.name} 수면 중" else "깨어 있는 시간")
-        v.setTextViewText(R.id.w_sub, if (d.sleep > 0) Widgets.hm(d.sleep) + "에 잠듦" else if (d.lastWake > 0) Widgets.hm(d.lastWake) + "에 깸" else "")
-        v.setTextViewText(R.id.w_btn, if (d.sleep > 0) "☀️ 깼어요" else "🌙 잠듦")
+        v.setTextViewText(R.id.w_label, if (d.sleep > 0) Tr.f("{0} 수면 중", d.name) else Tr.t("깨어 있는 시간"))
+        v.setTextViewText(R.id.w_sub, if (d.sleep > 0) Tr.f("{0}에 잠듦", Widgets.hm(d.sleep)) else if (d.lastWake > 0) Tr.f("{0}에 깸", Widgets.hm(d.lastWake)) else "")
+        v.setTextViewText(R.id.w_btn, if (d.sleep > 0) Tr.t("☀️ 깼어요") else Tr.t("🌙 잠듦"))
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.w_btn, Widgets.act(ctx, this, Widgets.sleepAct(d)))
         return v
@@ -328,10 +334,14 @@ class DiaperWidget : BabyWidget() {
     override val rows = mapOf(R.id.btn_row to 44f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_diaper)
+        v.setTextViewText(R.id.w_none, Tr.t("아직 기록이 없어요"))
+        v.setTextViewText(R.id.b_pee, Tr.t("💧 소변"))
+        v.setTextViewText(R.id.b_poo, Tr.t("💩 대변"))
+        v.setTextViewText(R.id.b_both, Tr.t("둘 다"))
         Widgets.show(v, R.id.w_timer, d.lastDiaper > 0)
         Widgets.show(v, R.id.w_none, d.lastDiaper == 0L)
         if (d.lastDiaper > 0) Widgets.chrono(v, R.id.w_timer, d.lastDiaper)
-        v.setTextViewText(R.id.w_label, if (d.lastDiaperText.isBlank()) "마지막 기저귀 후" else "마지막 ${d.lastDiaperText} 후")
+        v.setTextViewText(R.id.w_label, if (d.lastDiaperText.isBlank()) Tr.t("마지막 기저귀 후") else Tr.f("마지막 {0} 후", d.lastDiaperText))
         v.setOnClickPendingIntent(R.id.root, Widgets.open(ctx))
         v.setOnClickPendingIntent(R.id.b_pee, Widgets.act(ctx, this, "pee"))
         v.setOnClickPendingIntent(R.id.b_poo, Widgets.act(ctx, this, "poo"))
@@ -348,15 +358,18 @@ class TodayWidget : BabyWidget() {
         R.id.t_feed to 17f, R.id.w_timer to 17f, R.id.w_none to 17f, R.id.t_sleep to 17f, R.id.t_wake to 17f)
     override fun build(ctx: Context, d: Widgets.Data): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
-        v.setTextViewText(R.id.w_title, "오늘 · ${d.name}")
-        v.setTextViewText(R.id.t_feed, "${d.tFeeds}회" + if (d.tMl > 0) " · ${d.tMl}ml" else "")
-        v.setTextViewText(R.id.l_sleep, if (d.ySleep != null) "🌙 어제 수면" else "🌙 오늘 수면")
+        v.setTextViewText(R.id.l_feed, Tr.t("🍼 오늘 수유"))
+        v.setTextViewText(R.id.l_gap, Tr.t("⏱ 최근 수유한 지"))
+        v.setTextViewText(R.id.w_none, Tr.t("기록 없음"))
+        v.setTextViewText(R.id.w_title, Tr.f("오늘 · {0}", d.name))
+        v.setTextViewText(R.id.t_feed, Tr.f("{0}회", d.tFeeds) + if (d.tMl > 0) " · ${d.tMl}ml" else "")
+        v.setTextViewText(R.id.l_sleep, if (d.ySleep != null) Tr.t("🌙 어제 수면") else Tr.t("🌙 오늘 수면"))
         val slept = d.ySleep ?: d.tSleep
-        v.setTextViewText(R.id.t_sleep, if (slept > 0) Widgets.dur(slept) + (if (if (d.ySleep != null) d.yLive else d.sleep > 0) " 💤" else "") else "기록 없음")
+        v.setTextViewText(R.id.t_sleep, if (slept > 0) Widgets.dur(slept) + (if (if (d.ySleep != null) d.yLive else d.sleep > 0) " 💤" else "") else Tr.t("기록 없음"))
         // 자는 중이면 잠든 지, 깨어 있으면 마지막으로 깬 지 (1분마다 다시 그림)
-        v.setTextViewText(R.id.l_wake, if (d.sleep > 0) "🌙 잠든 지" else "👀 최근 깬 지")
+        v.setTextViewText(R.id.l_wake, if (d.sleep > 0) Tr.t("🌙 잠든 지") else Tr.t("👀 최근 깬 지"))
         val since = if (d.sleep > 0) d.sleep else d.lastWake
-        v.setTextViewText(R.id.t_wake, if (since > 0) Widgets.dur(maxOf(0L, d.now - since)) else "기록 없음")
+        v.setTextViewText(R.id.t_wake, if (since > 0) Widgets.dur(maxOf(0L, d.now - since)) else Tr.t("기록 없음"))
         Widgets.show(v, R.id.w_timer, d.lastFeed > 0)
         Widgets.show(v, R.id.w_none, d.lastFeed == 0L)
         if (d.lastFeed > 0) Widgets.chrono(v, R.id.w_timer, d.lastFeed)

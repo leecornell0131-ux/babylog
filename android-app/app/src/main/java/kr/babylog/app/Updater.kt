@@ -39,10 +39,10 @@ object Updater {
                 a.runOnUiThread {
                     if (a.isFinishing) return@runOnUiThread
                     AlertDialog.Builder(a)
-                        .setTitle("새 버전이 있어요")
-                        .setMessage("위젯이나 잠금화면 기능이 바뀐 새 버전이에요. 받은 파일을 열어 설치하면 기록은 그대로 남아요." + if (notes.isNotBlank()) "\n\n$notes" else "")
-                        .setPositiveButton("받기") { _, _ -> a.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                        .setNegativeButton("나중에", null)
+                        .setTitle(Tr.t("새 버전이 있어요"))
+                        .setMessage(Tr.t("위젯이나 잠금화면 기능이 바뀐 새 버전이에요. 받은 파일을 열어 설치하면 기록은 그대로 남아요.") + if (notes.isNotBlank()) "\n\n$notes" else "")
+                        .setPositiveButton(Tr.t("받기")) { _, _ -> a.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                        .setNegativeButton(Tr.t("나중에"), null)
                         .show()
                 }
             } catch (_: Exception) {

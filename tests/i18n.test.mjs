@@ -49,3 +49,17 @@ test('Korean stays as-is', () => {
   ctx.window = ctx; vm.createContext(ctx); vm.runInContext(read('i18n.js'), ctx);
   assert.equal(ctx.BabyI18n.lang, 'ko'); assert.equal(ctx.BabyI18n.t('수유'), '수유');
 });
+
+test('Galaxy and iPhone widget dictionaries cover the same words', () => {
+  const kt = [...read('android-app/app/src/main/java/kr/babylog/app/Tr.kt').matchAll(/^\s*"((?:[^"\\]|\\.)*)" to listOf\(/gm)].map(m => m[1]);
+  const sw = new Set([...read('ios-app/Shared/Tr.swift').matchAll(/^\s*"((?:[^"\\]|\\.)*)": \[/gm)].map(m => m[1]));
+  assert.ok(kt.length > 50);
+  assert.deepEqual(kt.filter(k => !sw.has(k)), [], '갤럭시 Tr.kt에만 있는 말 → 아이폰 Tr.swift에도');
+  // 위젯·잠금화면에서 쓰는 말이 사전에 있는지
+  const used = s => [...s.matchAll(/Tr\.[tf]\("((?:[^"\\]|\\.)*)"/g)].map(m => m[1]);
+  const ktSet = new Set(kt);
+  for (const f of ['QuickWidget.kt', 'LiveNotify.kt', 'StopReceiver.kt', 'MainActivity.kt', 'Updater.kt'])
+    assert.deepEqual(used(read('android-app/app/src/main/java/kr/babylog/app/' + f)).filter(k => !ktSet.has(k)), [], f);
+  for (const f of ['BabylogWidget/Widgets.swift', 'BabylogWidget/TimerLiveActivity.swift', 'Shared/Summary.swift', 'Shared/TimerActivity.swift', 'Babylog/NativeSync.swift', 'Babylog/WebViewController.swift'])
+    assert.deepEqual(used(read('ios-app/' + f)).filter(k => !sw.has(k)), [], f);
+});

@@ -51,9 +51,9 @@ enum NativeSync {
 enum LiveTimers {
     static func sync(_ s: BabySummary, canStart: Bool) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let name = s.name ?? "아기"
-        handle("sleep", start: s.sleep, label: "수면 중", name: name, canStart: canStart)
-        handle("feed", start: s.feed, label: (s.feedLabel ?? "수유") + " 중", name: name, canStart: canStart)
+        let name = (s.name ?? "").isEmpty || s.name == "아기" ? Tr.t("아기") : s.name!
+        handle("sleep", start: s.sleep, label: Tr.t("수면 중"), name: name, canStart: canStart)
+        handle("feed", start: s.feed, label: Tr.f("{0} 중", Tr.v(s.feedLabel ?? "수유") ?? ""), name: name, canStart: canStart)
     }
 
     private static func handle(_ kind: String, start: Double?, label: String, name: String, canStart: Bool) {
