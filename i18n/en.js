@@ -685,8 +685,6 @@ BabyI18n.load("en",{"이유식":"Solids",
 "혼합수유":"mixed feeding",
 "후원하기":"Support us",
 "커피 한 잔으로 응원하기":"Buy us a coffee",
-"토스로 후원하기":"Support with Toss",
-"카카오페이로 후원하기":"Support with KakaoPay",
 "Ko-fi로 후원하기":"Support on Ko-fi",
 "아기로그는 작은 팀이 만드는 앱이에요. 도움이 되었다면 커피 한 잔으로 응원해 주세요.":"BabyLog is made by a small team. If it has helped you, you can cheer us on with a coffee.",
-"누르면 송금 화면으로 넘어가요. 금액은 마음대로 정하시면 돼요. 후원하지 않아도 모든 기능을 똑같이 쓸 수 있어요.":"Tapping opens the payment screen. Any amount is welcome. Every feature works the same whether or not you donate."});
+"카드나 PayPal로 보낼 수 있어요. 금액은 마음대로 정하시면 돼요. 후원하지 않아도 모든 기능을 똑같이 쓸 수 있어요.":"You can pay by card or PayPal. Any amount is welcome. Every feature works the same whether or not you donate."});

@@ -1032,13 +1032,12 @@ const SET_CATS=[
   ['donate','💝','후원하기',()=>'커피 한 잔으로 응원하기'],
   ['dev','🛠️','개발자',()=>pref('dev')==='1'?'켜짐 · 광고 '+(pref('ads')!=='0'?'표시':'숨김'):'코드 입력'],
 ];
-// 후원 링크: 토스아이디·카카오페이 송금코드·Ko-fi 주소 (계좌번호는 절대 넣지 말 것 — 공개 저장소).
-// 비어 있는 칸은 안 보임. 셋 다 비면 설정에 '후원하기'가 아예 안 나옴.
-// 스토어 앱(갤럭시·아이폰 앱) 안에서는 외부 송금 링크가 스토어 규정 위반이라 안 보임 → 나중에 인앱 '팁' 상품으로.
-const DONATE={toss:'',kakao:'',kofi:''};
-const DONATE_OK={toss:/^https:\/\/toss\.me\/[\w.-]+$/,kakao:/^https:\/\/qr\.kakaopay\.com\/[\w-]+$/,kofi:/^https:\/\/ko-fi\.com\/[\w-]+$/};
-// 한국어 화면은 토스·카카오페이, 영·중·일 화면은 Ko-fi(PayPal·카드)만 보여 줌
-const donateLinks=()=>window.BabyNative?[]:(L10N.lang==='ko'?[['toss','토스로 후원하기'],['kakao','카카오페이로 후원하기']]:[['kofi','Ko-fi로 후원하기']]).filter(([k])=>DONATE_OK[k].test(DONATE[k]));
+// 후원 링크: Ko-fi 주소(ko-fi.com/아이디, 카드·PayPal 결제). 계좌번호는 절대 넣지 말 것 — 공개 저장소.
+// (토스아이디 toss.me·카카오페이 송금 링크는 2026년 서비스 종료라 못 씀)
+// 비어 있으면 설정에 '후원하기'가 안 나옴. 스토어 앱(갤럭시·아이폰 앱) 안에서는 외부 결제 링크가 스토어 규정 위반이라 숨김 → 인앱 '커피' 상품으로.
+const DONATE={kofi:''};
+const DONATE_OK={kofi:/^https:\/\/ko-fi\.com\/[\w-]+$/};
+const donateLinks=()=>window.BabyNative?[]:[['kofi','Ko-fi로 후원하기']].filter(([k])=>DONATE_OK[k].test(DONATE[k]));
 const setCats=()=>SET_CATS.filter(c=>c[0]!=='donate'||donateLinks().length);
 // 설정 > 음성 명령: 기기에 맞는 말하기 예시 (자세한 설정은 앱의 voiceHelp 창)
 function voiceSetHTML(){
@@ -1105,7 +1104,7 @@ function renderSettings(){
 `,
     donate:`  <p class="small muted" style="margin:0 4px">아기로그는 작은 팀이 만드는 앱이에요. 도움이 되었다면 커피 한 잔으로 응원해 주세요.</p>
   ${donateLinks().map(([k,n])=>`<a class="btn ghost full" style="margin-top:8px;display:flex;align-items:center;justify-content:center;text-decoration:none" href="${DONATE[k]}" target="_blank" rel="noopener">${n}</a>`).join('')}
-  <p class="small muted" style="margin:8px 4px 0">누르면 송금 화면으로 넘어가요. 금액은 마음대로 정하시면 돼요. 후원하지 않아도 모든 기능을 똑같이 쓸 수 있어요.</p>
+  <p class="small muted" style="margin:8px 4px 0">카드나 PayPal로 보낼 수 있어요. 금액은 마음대로 정하시면 돼요. 후원하지 않아도 모든 기능을 똑같이 쓸 수 있어요.</p>
 `,
     dev:`  ${pref('dev')==='1'?`<div class="card panel"><label class="field" for="adsOn">광고 표시<input type="checkbox" id="adsOn" ${pref('ads')!=='0'?'checked':''}></label>
     <div class="field"><span>오늘 이 휴대폰 사용량<br><span class="small muted">${(()=>{const u=window.BabySync&&BabySync.usage&&BabySync.usage(); return u?`Firestore 읽기 ${u.reads.toLocaleString()} · 쓰기 ${u.writes.toLocaleString()} (대략)`:'가족 공유를 켜면 세요'})()}</span></span><a class="linkbtn" href="usage.html" target="_blank" rel="noopener">전체 사용량 보기</a></div>
