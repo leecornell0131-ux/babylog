@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import WidgetKit
 
 // 웹앱을 띄우는 화면. 갤럭시 앱 MainActivity와 같은 역할.
 // 웹앱은 고치지 않고, 웹앱이 이미 가진 연결점(window.BabyApp 등)만 씀.
@@ -24,6 +25,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         copy: function (text) { post({ t: 'copy', text: String(text) }); },
         reload: function () { post('reload'); },
         voiceHelp: function () { post('voiceHelp'); },
+        setLang: function (l) { post({ t: 'setLang', l: String(l) }); },
         platform: 'ios',
         voiceFeed: 'ml'
       };
@@ -71,6 +73,25 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         super.viewDidLoad()
         web.load(URLRequest(url: Self.startURL))
         NotificationCenter.default.addObserver(self, selector: #selector(becameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(willResign), name: UIApplication.willResignActiveNotification, object: nil)
+    }
+
+    // 기록하고 바로 화면을 끄거나 앱을 내려도 가족에게 올리기가 끝나게: 웹앱의 기다리는 올리기를 바로 보내고
+    // iOS에 잠깐(최대 25초) 더 돌 시간을 받음. 예전엔 웹 화면이 바로 멈춰서 '잠듦'이 다음날 아침에야 올라갔음 (10/31)
+    private var bgTask: UIBackgroundTaskIdentifier = .invalid
+
+    @objc private func willResign() {
+        if bgTask == .invalid {
+            bgTask = UIApplication.shared.beginBackgroundTask(withName: "babylog.flush") { [weak self] in self?.endBg() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in self?.endBg() }
+        }
+        web.evaluateJavaScript("window.BabySync&&BabySync.flush&&BabySync.flush()", completionHandler: nil)
+    }
+
+    private func endBg() {
+        guard bgTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(bgTask)
+        bgTask = .invalid
     }
 
     // 다른 휴대폰에서 바뀐 기록이 있으면 화면을 새로 그림 (가족 공유는 웹앱이 처리).
@@ -110,7 +131,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         }
         if r == "notready" { return nil }
         // 'ok'만 오면 아기 정보를 아직 안 넣어서 기록하지 않은 것 (bridge.js)
-        if r == "ok" { return "먼저 앱에서 아기 정보를 넣어 주세요" }
+        if r == "ok" { return Tr.t("먼저 앱에서 아기 정보를 넣어 주세요") }
         return r.hasPrefix("ok:") ? String(r.dropFirst(3)) : ""
     }
 
@@ -207,6 +228,12 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             if let text = m["text"] as? String { share([text]) }
         case "copy":
             UIPasteboard.general.string = m["text"] as? String
+        case "setLang":
+            // 웹앱 설정 > 화면·언어 (위젯·잠금화면 타이머 글자도 같은 언어로)
+            if let l = m["l"] as? String, l != Tr.lang || SharedStore.load(account: "lang") == nil {
+                Tr.set(l)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         default:
             break
         }
@@ -242,22 +269,22 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
         let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler() })
+        a.addAction(UIAlertAction(title: Tr.t("확인"), style: .default) { _ in completionHandler() })
         presentOr(a) { completionHandler() }
     }
 
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
         let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        a.addAction(UIAlertAction(title: "취소", style: .cancel) { _ in completionHandler(false) })
-        a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler(true) })
+        a.addAction(UIAlertAction(title: Tr.t("취소"), style: .cancel) { _ in completionHandler(false) })
+        a.addAction(UIAlertAction(title: Tr.t("확인"), style: .default) { _ in completionHandler(true) })
         presentOr(a) { completionHandler(false) }
     }
 
     func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
         let a = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
         a.addTextField { $0.text = defaultText }
-        a.addAction(UIAlertAction(title: "취소", style: .cancel) { _ in completionHandler(nil) })
-        a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler(a.textFields?.first?.text) })
+        a.addAction(UIAlertAction(title: Tr.t("취소"), style: .cancel) { _ in completionHandler(nil) })
+        a.addAction(UIAlertAction(title: Tr.t("확인"), style: .default) { _ in completionHandler(a.textFields?.first?.text) })
         presentOr(a) { completionHandler(nil) }
     }
 

@@ -47,7 +47,7 @@ async function handle(req, env, url, cors) {
     // 대시보드용. 가족코드는 앞 2자리만 보여 줌(코드 전체를 알아야 기록에 접근 가능).
     if (req.method === 'GET' && url.pathname === '/usage') {
       if (!env.DB) return json({ error: 'no db' }, 503, cors);
-      return json(await usageReport(env, Math.min(31, Math.max(1, +url.searchParams.get('days') || 14)), url.searchParams.get('fid') || ''), 200, cors);
+      return json(await usageReport(env, Math.min(KEEP_DAYS, Math.max(1, +url.searchParams.get('days') || 14)), url.searchParams.get('fid') || ''), 200, cors);
     }
 
     // 베타 테스터별 사용량 (운영자 화면 testers.html). 테스터 번호와 숫자뿐, 가족코드는 공유 여부만 알려 줌.
@@ -234,7 +234,10 @@ export async function usageReport(env, days, myFid) {
   // 달 단위 한도 (Codemagic 빌드 시간)
   let monthly = [];
   try { monthly = (await env.DB.prepare('SELECT month, kind, used, count, at FROM usage_monthly WHERE month >= ?1 ORDER BY month DESC').bind(utcDay(Date.now() - 62 * 864e5).slice(0, 7)).all()).results || []; } catch (_) {}
-  return { now: Date.now(), today: utcDay(), limits: LIMITS, calib, days: out, monthly };
+  // 계속 보관하는 하루 합계(가족코드 없음). 60일이 지난 날도 여기서 볼 수 있음.
+  let history = [];
+  try { history = (await env.DB.prepare('SELECT day, req, reads, writes, families, shared, src FROM usage_daily ORDER BY day DESC LIMIT 1000').bind().all()).results || []; } catch (_) {}
+  return { now: Date.now(), today: utcDay(), limits: LIMITS, calib, days: out, monthly, history };
 }
 
 // 자체 집계가 실제보다 얼마나 적게 세는지: 직접 집계가 있는 가장 최근 마감일의 비율(1~3배). 아직 없으면 읽기·쓰기 1.5배로 넉넉히.

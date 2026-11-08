@@ -55,7 +55,7 @@ a{color:var(--accent)}
 <ul>
 <li><b>휴대폰에 저장된 정보</b>: 이용자가 지울 때까지 보관해요. 설정 &gt; 데이터 &gt; "모든 기록 지우기"나 앱 삭제(아이폰은 홈 화면 앱과 Safari 데이터 삭제)로 지워져요.</li>
 <li><b>가족 공유 서버</b>: 기록을 하나 지우면 서버에서도 내용이 지워지고 "지워짐" 표시만 남아요. 가족에서 나가면 그 휴대폰은 더 이상 가족 정보를 받지 않아요. 가족 전체의 서버 정보를 지우고 싶으면 아래 문의처로 가족코드를 알려 주세요. 확인 후 지체 없이 삭제해요.</li>
-<li><b>사용량 숫자</b>: 60일이 지나면 자동으로 지워져요.</li>
+<li><b>사용량 숫자</b>: 60일이 지나면 자동으로 지워져요. 가족코드 없이 서비스 전체를 더한 하루 합계만 계속 남겨요.</li>
 <li><b>위젯 알림 서버</b>: 요약은 새 기록이 올 때마다 덮어써지고, 푸시 주소는 가족에서 나가거나 앱을 지우면 지워져요. 삭제 요청도 위 방법과 같아요.</li>
 </ul>
 
@@ -99,7 +99,7 @@ a{color:var(--accent)}
 
 <h2 lang="en">Summary in English</h2>
 <div class="card" lang="en">
-<p>Babylog has no accounts. Baby details and logs stay on the device. Only if the user turns on family sharing are they stored in Google Firebase (Cloud Firestore with anonymous sign-in) so that phones with the same family code stay in sync; the Galaxy app's widget feature also stores a short summary and a push token on Cloudflare Workers and uses Firebase Cloud Messaging. With family sharing on, the app also sends daily usage counts (family code, a random device number, read/write and request counts, no log content) to the same Cloudflare server to keep within free quotas; they are deleted after 60 days. Store builds may show Google AdMob banner ads; health logs are never sent to ad networks or used for personalised ads. The app never sends data to AI services; the export feature only copies text. Users can delete any record in the app; to delete family server data, email leecornell0131@gmail.com with the family code.</p>
+<p>Babylog has no accounts. Baby details and logs stay on the device. Only if the user turns on family sharing are they stored in Google Firebase (Cloud Firestore with anonymous sign-in) so that phones with the same family code stay in sync; the Galaxy app's widget feature also stores a short summary and a push token on Cloudflare Workers and uses Firebase Cloud Messaging. With family sharing on, the app also sends daily usage counts (family code, a random device number, read/write and request counts, no log content) to the same Cloudflare server to keep within free quotas; they are deleted after 60 days (only service-wide daily totals without family codes are kept). Store builds may show Google AdMob banner ads; health logs are never sent to ad networks or used for personalised ads. The app never sends data to AI services; the export feature only copies text. Users can delete any record in the app; to delete family server data, email leecornell0131@gmail.com with the family code.</p>
 </div>
 </main>
 </body>

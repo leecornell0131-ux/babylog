@@ -249,10 +249,10 @@ class MainActivity : Activity() {
         val m = getSystemService(AppWidgetManager::class.java)
         if (!m.isRequestPinAppWidgetSupported) return
         android.app.AlertDialog.Builder(this)
-            .setTitle("홈 화면 위젯")
-            .setMessage("홈 화면에 위젯을 두면 마지막 수유 후 지난 시간이 보이고, 버튼 한 번으로 소변·대변·수면을 기록할 수 있어요.")
+            .setTitle(Tr.t("홈 화면 위젯"))
+            .setMessage(Tr.t("홈 화면에 위젯을 두면 마지막 수유 후 지난 시간이 보이고, 버튼 한 번으로 소변·대변·수면을 기록할 수 있어요."))
             .setPositiveButton("위젯 추가") { _, _ -> m.requestPinAppWidget(ComponentName(this, QuickWidget::class.java), null, null) }
-            .setNegativeButton("나중에", null)
+            .setNegativeButton(Tr.t("나중에"), null)
             .show()
     }
 
@@ -293,6 +293,14 @@ class MainActivity : Activity() {
             }
         }
 
+        // 웹앱 화면 언어 (설정 > 화면·언어). 위젯·잠금화면·알림 글자도 같은 언어로
+        @JavascriptInterface
+        fun setLang(l: String) {
+            if (l == Tr.lang && getSharedPreferences("babylog_lang", android.content.Context.MODE_PRIVATE).contains("lang")) return
+            Tr.set(this@MainActivity, l)
+            runOnUiThread { LiveNotify.ensureChannel(this@MainActivity); Widgets.refresh(this@MainActivity) }
+        }
+
         // 웹앱이 알림 서버에 요약을 보낼 때 이 휴대폰은 빼도록 알려 줌
         @JavascriptInterface
         fun pushToken(): String = Push.token(this@MainActivity) ?: ""
@@ -309,13 +317,13 @@ class MainActivity : Activity() {
                 clipData = ClipData.newRawUri(safe, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            runOnUiThread { startActivity(Intent.createChooser(send, "백업 파일 저장·보내기")) }
+            runOnUiThread { startActivity(Intent.createChooser(send, Tr.t("백업 파일 저장·보내기"))) }
         }
 
         @JavascriptInterface
         fun shareText(text: String) {
             val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
-            runOnUiThread { startActivity(Intent.createChooser(send, "보내기")) }
+            runOnUiThread { startActivity(Intent.createChooser(send, Tr.t("보내기"))) }
         }
 
         @JavascriptInterface
@@ -340,7 +348,7 @@ class MainActivity : Activity() {
         fun pinWidget() = runOnUiThread {
             val m = getSystemService(AppWidgetManager::class.java)
             if (m.isRequestPinAppWidgetSupported) m.requestPinAppWidget(ComponentName(this@MainActivity, QuickWidget::class.java), null, null)
-            else Toast.makeText(this@MainActivity, "홈 화면을 길게 누르고 위젯 > 아기로그를 골라 주세요", Toast.LENGTH_LONG).show()
+            else Toast.makeText(this@MainActivity, Tr.t("홈 화면을 길게 누르고 위젯 > 아기로그를 골라 주세요"), Toast.LENGTH_LONG).show()
         }
     }
 }

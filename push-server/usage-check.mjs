@@ -122,15 +122,40 @@ async function saveMonthly(m) {
     if (!r.success) throw new Error(JSON.stringify(r.errors).slice(0, 200));
   } catch (e) { console.log('Codemagic 저장 실패: ' + e.message); }
 }
+// 마감된 날의 서비스 전체 합계를 usage_daily에 계속 보관 (가족코드 없음, 60일 뒤에도 남음)
+async function saveDaily(days) {
+  if (!days.length || !cfToken || !cfAccount) return;
+  try {
+    const list = await cfApi(`/accounts/${cfAccount}/d1/database?name=babylog-widget-summaries`);
+    const db = (list.result || []).find(d => d.name === 'babylog-widget-summaries');
+    if (!db) throw new Error('D1을 못 찾음');
+    const src = d => [d.actual && d.actual.req != null ? 'cf' : 'est', d.actual && d.actual.reads != null ? 'fs' : 'est×' + (data.calib ? data.calib.reads : 1.5)].join(',');
+    for (let i = 0; i < days.length; i += 10) {
+      const part = days.slice(i, i + 10);
+      const r = await cfApi(`/accounts/${cfAccount}/d1/database/${db.uuid}/query`, {
+        // 한 번에 10일씩 (D1 매개변수 100개 한도)
+        sql: `INSERT INTO usage_daily (day, req, reads, writes, families, shared, src, at) VALUES `
+          + part.map((_, j) => '(' + Array.from({ length: 8 }, (_, k) => '?' + (j * 8 + k + 1)).join(', ') + ')').join(', ')
+          + ` ON CONFLICT(day) DO UPDATE SET req = excluded.req, reads = excluded.reads, writes = excluded.writes,
+            families = excluded.families, shared = excluded.shared, src = excluded.src, at = excluded.at`,
+        params: part.flatMap(d => [d.day, d.req, d.reads, d.writes, d.families || 0, d.sharedFamilies || 0, src(d), Date.now()]),
+      });
+      if (!r.success) throw new Error(JSON.stringify(r.errors).slice(0, 200));
+    }
+    console.log(`하루 합계 ${days.length}일 보관`);
+  } catch (e) { console.log('하루 합계 저장 실패: ' + e.message); }
+}
+
 const cm = await codemagicMonth();
 if (cm) console.log(`${cm.month} Codemagic 빌드 ${cm.count}번 · ${cm.minutes}분`);
 await saveMonthly(cm);
 
 const cfg = JSON.parse(await readFile(new URL('../android-app/push-config.json', import.meta.url), 'utf8'));
-const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=3', { cache: 'no-store' }).catch(e => ({ ok: false, status: e.message }));
+const r = await fetch(cfg.worker.replace(/\/$/, '') + '/usage?days=60', { cache: 'no-store' }).catch(e => ({ ok: false, status: e.message }));
 // 서버를 못 읽는 것 자체도 알림 (배포가 안 됐거나 D1 한도 초과일 수 있음)
 if (!r.ok) { console.log('::warning::사용량을 못 읽었어요: ' + r.status); process.exit(1); }
 const data = await r.json(), L = data.limits;
+await saveDaily(data.days.filter(d => d.day < dayOf(0)));
 const get = k => data.days.find(d => d.day === k) || { day: k, req: 0, reads: 0, writes: 0, families: 0, sharedFamilies: 0, top: [] };
 const today = get(dayOf(0)), yday = get(dayOf(1));
 
@@ -147,7 +172,10 @@ const cap = capacity(yday.families ? yday : today, L);
 if (cap) lines.push('', `지금 방식이면 **약 ${n(cap.safe)}가족**까지(여유 20%), 먼저 막히는 곳: ${cap.bottleneck}. 가족당 하루 읽기 ${n(cap.per.reads)} · 쓰기 ${n(cap.per.writes)} · 요청 ${n(cap.per.req)}.`);
 if (cm) {
   const p = cm.minutes / L.codemagicMinutes * 100;
-  lvs.push(level(p));
+  // Codemagic은 Firebase·알림 서버와 대응이 다름: 다 쓰면 다음 달 1일까지 아이폰 빌드만 멈춤(카드가 없어 돈은 안 나감)
+  const lv = level(p);
+  lvs.push(lv.min >= 85 ? { ...lv, name: lv.name + '(Codemagic)', act: '아이폰 빌드는 꼭 필요한 것만. 다 쓰면 다음 달 1일까지 아이폰 빌드가 멈춤(돈은 안 나감). 다른 앱(PACE 등) 빌드도 같은 500분을 씀. 앱 사용·동기화는 영향 없음.' }
+    : lv.min >= 50 ? { ...lv, name: lv.name + '(Codemagic)', act: '아이폰 빌드를 몰아서 하기(한 번에 약 7분). 앱 사용·동기화는 영향 없음.' } : lv);
   lines.push('', `Codemagic 이번 달 빌드 ${cm.count}번 · **${n(cm.minutes)}분** / ${n(L.codemagicMinutes)}분 (${Math.round(p)}%)`);
 }
 const worstLv = lvs.reduce((a, b) => (b.min > a.min ? b : a));

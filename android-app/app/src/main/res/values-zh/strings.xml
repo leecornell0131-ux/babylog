@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 휴대폰 언어가 이 언어일 때 위젯 고르는 화면에 보이는 이름 -->
+<resources>
+    <string name="app_name">BabyLog</string>
+    <string name="widget_name">BabyLog 快速记录</string>
+    <string name="w_feed">BabyLog 喂奶计时</string>
+    <string name="w_feed_desc">大字显示距上次喂奶的时间，以及按平时间隔推算的下次喂奶时间</string>
+    <string name="w_card">BabyLog 上次喂奶</string>
+    <string name="w_card_desc">宝宝名字·月龄和上次喂奶的时间·量，以及多久以前</string>
+    <string name="w_sleep">BabyLog 睡眠·清醒时间</string>
+    <string name="w_sleep_desc">睡着时显示睡眠时间，醒着时显示醒来后的时间，附入睡·醒了按钮</string>
+    <string name="w_diaper">BabyLog 尿布</string>
+    <string name="w_diaper_desc">距上次换尿布的时间和小便·大便·都有按钮</string>
+    <string name="w_today">BabyLog 今日摘要</string>
+    <string name="w_today_desc">今天喂奶次数·量、睡眠合计、尿布次数、距上次喂奶时间</string>
+    <string name="widget_desc">距上次喂奶的时间和小便·大便·睡眠按钮</string>
+</resources>

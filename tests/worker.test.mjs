@@ -9,7 +9,8 @@ const { default: worker, cleanSummary, calibration } = await import('data:text/j
 const migration = (await readFile(new URL('../push-server/migrations/0001_summaries.sql', import.meta.url), 'utf8'))
   + (await readFile(new URL('../push-server/migrations/0002_usage.sql', import.meta.url), 'utf8'))
   + (await readFile(new URL('../push-server/migrations/0003_usage_actual.sql', import.meta.url), 'utf8'))
-  + (await readFile(new URL('../push-server/migrations/0004_usage_monthly.sql', import.meta.url), 'utf8'));
+  + (await readFile(new URL('../push-server/migrations/0004_usage_monthly.sql', import.meta.url), 'utf8'))
+  + (await readFile(new URL('../push-server/migrations/0006_usage_daily.sql', import.meta.url), 'utf8'));
 // 열 추가 마이그레이션은 wrangler가 한 번만 실행함
 const alters = await readFile(new URL('../push-server/migrations/0005_usage_actual_est.sql', import.meta.url), 'utf8');
 const fid = 'AAAAAAAAAA';
@@ -201,4 +202,11 @@ test('usage: monthly Codemagic minutes are returned with the limit', async () =>
   const j = await (await f.request('/usage')).json();
   assert.equal(j.limits.codemagicMinutes, 500);
   assert.deepEqual(j.monthly.map(m => [m.month, m.kind, m.used, m.count]), [[month, 'codemagic', 42, 3]]);
+});
+
+test('usage: kept daily totals are returned as history, and up to 60 days can be asked for', async () => {
+  const f = fixture();
+  await f.env.DB.prepare("INSERT INTO usage_daily (day, req, reads, writes, families, shared, src, at) VALUES ('2026-01-01', 300, 250, 50, 2, 2, 'cf', 1)").bind().run();
+  const j = await (await f.request('/usage?days=60')).json();
+  assert.deepEqual(j.history.map(h => [h.day, h.req, h.reads, h.shared]), [['2026-01-01', 300, 250, 2]]);
 });

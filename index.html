@@ -15,6 +15,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <script>try{var t=localStorage.getItem('babylog-v1-theme');if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(_){}</script>
+<script src="i18n.js"></script>
 <script src="firebase-config.js"></script>
 <script src="who_lms.js"></script>
 <script src="sleep_rules.js"></script>
@@ -30,6 +31,7 @@
   --feed-text:#B32F62; --sleep-text:#3B49B8; --pee-text:#1A6F66; --sleep-green:#237A49; --sleep-yellow:#926B00;
   --band1:#DDE7F7; --band2:#B9CCEF; --median:#3B49B8; --pt:#D9731F;
   --hatch1:#E4E8EE; --hatch2:#F3F5F8;
+  --sky-n1:#1F2760; --sky-n2:#3E4A9C; --sky-dusk:#F6B08C; --sky-d1:#FFD49A; --sky-d2:#FFE4BC; --dial:#FFFFFF; --track:rgba(255,255,255,.55); --rim-n:#1A2150; --rim-dusk:#E07F55; --rim-d:#E9A04A; --badge:#1C222B; --meal:#FBE6EE; --meal-edge:#F2C3D4; --meal:#FBE6EE; --meal-edge:#F2C3D4;
   --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
   --mono:ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
@@ -41,7 +43,7 @@
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9; --sleep-green:#8BD6A6; --sleep-yellow:#E8C65A;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
-  --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}}
+  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; --meal:#2E2229; --meal-edge:#4A3340; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12161C; --card:#1C222B; --fg:#E7EAF0; --muted:#9AA3B0; --line:#2B333E; --soft:#262D37;
   --ink:#E7EAF0; --on-ink:#12161C; --accent:#9AA6F5; --accent-soft:#252B48;
@@ -49,7 +51,7 @@
   --warn:#F2B8B5; --ok:#7FD39A; --warn-soft:#3A2224;
   --feed-text:#F59AB8; --sleep-text:#A9B2F7; --pee-text:#5CC7B9; --sleep-green:#8BD6A6; --sleep-yellow:#E8C65A;
   --band1:#232C40; --band2:#2F3B5C; --median:#9AA6F5; --pt:#F0A566;
-  --hatch1:#262D37; --hatch2:#1C222B; color-scheme:dark}
+  --hatch1:#262D37; --hatch2:#1C222B; --sky-n1:#090C24; --sky-n2:#1D2558; --sky-dusk:#8A4F4A; --sky-d1:#55432A; --sky-d2:#6A5634; --dial:#1C222B; --track:rgba(18,22,28,.55); --rim-n:#2A3370; --rim-dusk:#A05A4E; --rim-d:#8A6A3A; --badge:#1C222B; --meal:#2E2229; --meal-edge:#4A3340; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{min-height:100%;margin:0;touch-action:manipulation}
 button,a,label,input,select,.tile,.chip,.item{touch-action:manipulation}
@@ -136,6 +138,8 @@ body:has(#sheetRoot .sheetwrap) .adprev{display:none}
 .rec .feed{background:var(--feed)}.rec .sleep{background:var(--sleep)}.rec .diaper{background:var(--pee)}
 .rec button::before{display:block;font-size:17px;line-height:1.1;margin-bottom:2px}.rec .feed::before{content:"🍼"}.rec .sleep::before{content:"😴"}.rec .diaper::before{content:"";width:22px;height:20px;margin:0 auto 2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M3 4H21Q22 4 22 5V9.2C18.6 9.8 16.6 13.4 16.2 19.2Q16.1 20 15.3 20H8.7Q7.9 20 7.8 19.2C7.4 13.4 5.4 9.8 2 9.2V5Q2 4 3 4Z'/%3E%3Cpath fill='none' stroke='%2323917F' stroke-width='1.4' stroke-linecap='round' d='M3.6 7.4H20.4'/%3E%3Cpath fill='%2323917F' d='M3.2 5H5.4V6.4H3.2ZM18.6 5H20.8V6.4H18.6Z' opacity='.85'/%3E%3C/svg%3E") center/contain no-repeat}.rec .more::before{content:"➕"}.rec .sleep.awake::before{content:"☀️"}.rec .feed.live::before{content:"⏱️"}
 .rec .more{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.rec button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.rec .feed.pressing{transform:scale(.95);transition:transform .45s}
 :root[data-theme="dark"] .rec button:not(.more){color:#12161C}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rec button:not(.more){color:#12161C}}
 .dtypes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -249,7 +253,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.49';
+const VERSION='0.3.56';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -257,7 +261,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const pad=n=>String(n).padStart(2,'0');
 const hm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())};
 const md=t=>{const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()};
-const dow=t=>'일월화수목금토'[new Date(t).getDay()];
+const L10N=window.BabyI18n, dow=t=>L10N.dow(new Date(t).getDay()), dowLong=t=>L10N.dowLong(new Date(t).getDay());
 const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
 const ymdOf=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 // 걸린 시간은 모두 "1h 05m" / "25m" 꼴로 통일 (사용자 요청 10/20)
@@ -505,6 +509,8 @@ function fixLive(st){
   // tap: '깼어요'·'수유 끝' 버튼으로 끝낸 시각 (기록 수정으로 끝 시각을 바꾸면 지움). 가족 공유에서 두 휴대폰이 같은 잠을
   // 각자 끝냈을 때 먼저 누른 쪽을 고르는 데 씀 (sync.js)
   st.events.forEach(x=>{ if(x.tap!==undefined&&x.tap!==x.end) delete x.tap });
+  // 끝 시각이 숫자가 아니면(예전 수정 화면이 만든 NaN, 가족 휴대폰에서 받은 것 포함) '자는 중·수유 중'으로 봄
+  st.events.forEach(x=>{ if((x.type==='sleep'||x.type==='feed')&&x.end!==null&&x.end!==undefined&&!Number.isFinite(x.end)) x.end=null });
   let n=0;
   // 이미 끝난 잠 안에서 시작한 '자는 중'은 같은 잠을 다른 휴대폰에서 누른 것 (10/31: 아이폰 20:51 잠듦·08:05 깼어요,
   // 밤새 못 받은 갤럭시 21:05 잠듦이 아침에 도착해 계속 '수면 중'으로 남고 '깼어요'를 또 눌러 밤잠이 둘이 됨).
@@ -530,6 +536,11 @@ function dupPairs(d){
   const sl=list.filter(x=>x.type==='sleep');
   for(let i=0;i<sl.length;i++) for(let j=i+1;j<sl.length;j++){ const a=sl[i], b=sl[j], ae=a.end??Date.now();
     if(b.start>=ae) continue; const k=[a.id,b.id].sort().join('|');
+    if(!S.dups[k]&&!out.some(p=>p.k===k)) out.push({a,b,k,overlap:true}) }
+  // 두 휴대폰이 서로 모른 채 '잠듦'을 눌러 fixLive가 앞의 것을 뒤의 시작에 끊어 둔 경우 (20:51–21:05 + 21:05–08:05):
+  // 버튼으로 끝낸 게 아닌데 끝이 다음 잠 시작과 딱 맞으면 같은 잠으로 보고 묻기
+  for(let i=0;i<sl.length;i++) for(let j=i+1;j<sl.length;j++){ const a=sl[i], b=sl[j];
+    if(a.end!==b.start||a.tap!==undefined) continue; const k=[a.id,b.id].sort().join('|');
     if(!S.dups[k]&&!out.some(p=>p.k===k)) out.push({a,b,k,overlap:true}) }
   return out;
 }
@@ -582,7 +593,7 @@ function itemHTML(x){
   const live=(x.type==='sleep'||x.type==='feed')&&x.end===null;
   const sub=x.type==='sleep'||(x.type==='feed'&&x.end!==undefined)?hm(x.start)+(live?' 시작':' – '+hm(x.end)):hm(x.start);
   const fever=x.type==='etc'&&x.sub==='temp'&&x.val>=38;
-  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · <span class="tg" style="color:'+(x.type==='feed'?'var(--feed-text)':'var(--poo)')+'">'+esc(tagText(x))+'</span>':''}${x.note?' · <span class="nt">📝 '+esc(x.note)+'</span>':''}${x.src==='piyolog'?' · 삐요로그':x.src==='import'?' · '+esc(x.from||'가져옴'):''}</span></span></button>`;
+  return `<button class="item${live?' live':''}" type="button" data-ev="${x.id}"><span class="sw" style="--c:${evColor(x)}">${evIcon(x)}</span><span class="t"><b${fever?' style="color:var(--warn)"':''}>${esc(evTitle(x))}</b><span class="small muted">${sub}${tagText(x)?' · <span class="tg" style="color:'+(x.type==='feed'?'var(--feed-text)':'var(--poo)')+'">'+esc(tagText(x))+'</span>':''}${x.note?' · <span class="nt" translate="no">📝 '+esc(x.note)+'</span>':''}${x.src==='piyolog'?' · 삐요로그':x.src==='import'?' · '+esc(x.from||'가져옴'):''}</span></span></button>`;
 }
 function gapHTML(g){
   const label=g.open?'지금까지 '+dur(g.end-g.start)+' 기록 없음':'기록 공백 '+dur(g.end-g.start);
@@ -614,31 +625,76 @@ function arcPath(cx,cy,r1,r2,f0,f1){
   const big=f1-f0>0.5?1:0, [x0,y0]=pol(cx,cy,r2,f0), [x1,y1]=pol(cx,cy,r2,f1), [x2,y2]=pol(cx,cy,r1,f1), [x3,y3]=pol(cx,cy,r1,f0);
   return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r2} ${r2} 0 ${big} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}A${r1} ${r1} 0 ${big} 0 ${x3.toFixed(1)} ${y3.toFixed(1)}Z`;
 }
-// big: 오늘 화면용 (시각 눈금·지금 바늘·가운데 글씨), 작은 것: 주간 원형 달력
+// 2번 시안: 원판 전체가 하늘. 밤 시간대 가운데가 위로 가도록 그라데이션을 돌려서 밤=남색·별·달, 낮=살구빛·해
+let RID=0;
 function ringSVG(d,opt={}){
-  // 큰 원: 시각 숫자는 원 바깥, 가운데 글자는 안쪽 원 안에만 (겹치지 않게)
-  const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now();
-  const rS2=big?124:40, rS1=big?100:30, rF1=big?128:41, rF2=big?140:46, rD=big?90:24;
+  const big=!!opt.big, W=big?320:92, c=W/2, now=Date.now(), id='r'+(++RID);
+  const R=big?134:45, rT=big?114:37, tw=big?20:9, rFeed=big?150:0, rDia=big?90:0, rCore=big?60:24;
   const fr=t=>(t-d)/DAY;
-  let s=`<svg viewBox="${big?'-14 0 '+(W+28):'0 0 '+W} ${W}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
-  s+=`<circle cx="${c}" cy="${c}" r="${(rS1+rS2)/2}" fill="none" style="stroke:${opt.alert?'var(--warn-soft)':'var(--soft)'}" stroke-width="${rS2-rS1}"/>`;
-  gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rS1,rS2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".25"/>` });
-  const list=evOfDay(d);
-  list.forEach(x=>{
-    if(x.type==='sleep'){ const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b>a) s+=`<path d="${arcPath(c,c,rS1,rS2,fr(a),fr(b))}" style="fill:var(--${sleepKind(x)==='nap'?'nap':'sleep'})"/>` }
-    else if(x.type==='feed'){ const [x1,y1]=pol(c,c,rF1,fr(x.start)), [x2,y2]=pol(c,c,rF2,fr(x.start)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--feed)" stroke-width="${big?5:3}" stroke-linecap="round"/>` }
-    else if(x.type==='diaper'&&big){ const [px,py]=pol(c,c,rD,fr(x.start)); s+=x.sub==='pee'?`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" style="fill:var(--pee)"/>`:`<rect x="${(px-4.5).toFixed(1)}" y="${(py-4.5).toFixed(1)}" width="9" height="9" rx="2" style="fill:var(--poo)"/>` }
-    else if(big){ const [px,py]=pol(c,c,rD-14,fr(x.start)); s+=`<rect x="${(px-3.5).toFixed(1)}" y="${(py-3.5).toFixed(1)}" width="7" height="7" rx="1" transform="rotate(45 ${px.toFixed(1)} ${py.toFixed(1)})" style="fill:${evColor(x)}"/>` }
+  const {from,to}=nightWin(), span=(((to-from)%24)+24)%24||12, mid=(from+span/2)%24;
+  const half=Math.PI*span/24, hz=(1-Math.cos(half))/2;   // 수평선 위치 (0=위, 1=아래)
+  const isNightF=f=>{ const h=f*24; return from>to?(h>=from||h<to):(h>=from&&h<to) };
+  const pad=big?28:2;
+  let s=`<svg viewBox="${-pad} ${-pad} ${W+pad*2} ${W+pad*2}" role="img" aria-label="${opt.label||md(d)+' 24시간 원형 기록'}">`;
+  s+=`<defs><linearGradient id="${id}g" x1="0" y1="${c-R}" x2="0" y2="${c+R}" gradientUnits="userSpaceOnUse" gradientTransform="rotate(${(mid/24*360).toFixed(1)} ${c} ${c})">
+    <stop offset="0" style="stop-color:var(--sky-n1)"/><stop offset="${(hz*0.8).toFixed(3)}" style="stop-color:var(--sky-n2)"/>
+    <stop offset="${hz.toFixed(3)}" style="stop-color:var(--sky-dusk)"/><stop offset="${Math.min(1,hz+0.12).toFixed(3)}" style="stop-color:var(--sky-d1)"/><stop offset="1" style="stop-color:var(--sky-d2)"/></linearGradient>
+    <linearGradient id="${id}rim" x1="0" y1="${c-R}" x2="0" y2="${c+R}" gradientUnits="userSpaceOnUse" gradientTransform="rotate(${(mid/24*360).toFixed(1)} ${c} ${c})"><stop offset="${(hz*0.8).toFixed(3)}" style="stop-color:var(--rim-n)"/><stop offset="${hz.toFixed(3)}" style="stop-color:var(--rim-dusk)"/><stop offset="${Math.min(1,hz+0.15).toFixed(3)}" style="stop-color:var(--rim-d)"/></linearGradient>
+    <filter id="${id}s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="${big?3:1}" stdDeviation="${big?6:2}" flood-opacity=".18"/></filter></defs>`;
+  s+=`<circle cx="${c}" cy="${c}" r="${R}" fill="url(#${id}g)"/><circle cx="${c}" cy="${c}" r="${R-(big?1.5:1)}" fill="none" stroke="${opt.alert?'var(--warn)':`url(#${id}rim)`}" stroke-width="${big?3:2}"/>`;
+  if(big){ // 별
+    for(let i=0;i<26;i++){ const f=((i*0.6180339)%1), rr=rCore+6+((i*37)%60); if(!isNightF(f)) continue; if(rr>rT-tw/2-3&&rr<rT+tw/2+3) continue;
+      const [x,y]=pol(c,c,rr,f); s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i%5===0?1.6:0.9}" fill="#fff" opacity="${i%3===0?.9:.55}"/>` }
+  }
+  // 바깥 기록 길
+  s+=`<circle cx="${c}" cy="${c}" r="${rT}" fill="none" style="stroke:var(--track)" stroke-width="${tw}"/>`;
+  gapsOfDay(d).filter(g=>g.state!=='slept').forEach(g=>{ s+=`<path d="${arcPath(c,c,rT-tw/2,rT+tw/2,fr(g.start),fr(g.end))}" style="fill:var(--muted)" opacity=".3"/>` });
+  const list=evOfDay(d), sw=tw-(big?6:3), cap=sw/2/(2*Math.PI*rT);
+  // 수면: 둥근 막대 + 살짝 뜬 그림자
+  const arcD=(r,f0,f1)=>{ const [x0,y0]=pol(c,c,r,f0), [x1,y1]=pol(c,c,r,f1); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${f1-f0>0.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}` };
+  s+=`<defs><filter id="${id}c" filterUnits="userSpaceOnUse" x="${-pad}" y="${-pad}" width="${W+pad*2}" height="${W+pad*2}"><feDropShadow dx="0" dy="${big?2.5:1}" stdDeviation="${big?2.2:.8}" flood-color="#0B1030" flood-opacity=".35"/></filter></defs>`;
+  list.forEach(x=>{ if(x.type!=='sleep') return; const a=Math.max(x.start,d), b=Math.min(x.end??now,d+DAY); if(b<=a) return;
+    let f0=fr(a)+cap, f1=fr(b)-cap; if(f1<f0){ const m=(f0+f1)/2; f0=f1=m }
+    const col=`var(--${sleepKind(x)==='nap'?'nap':'sleep'})`, dot=f1-f0<0.0005;
+    if(dot){ const [px,py]=pol(c,c,rT,f0);
+      s+=`<g filter="url(#${id}c)"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${sw/2}" style="fill:${col}"/></g>`; return }
+    s+=`<g filter="url(#${id}c)"><path d="${arcD(rT,f0,f1)}" fill="none" style="stroke:${col}" stroke-width="${sw}" stroke-linecap="round"/></g>`;
   });
   if(big){
-    for(let h=0;h<24;h+=3){ const f=h/24;
-      if(h%6===0){ const [px,py]=pol(c,c,151,f); s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--muted)">${h}시</text>` }
-      else { const [px,py]=pol(c,c,151,f); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.6" style="fill:var(--muted)" opacity=".6"/>` }
-      const [a1,b1]=pol(c,c,rS1,f), [a2,b2]=pol(c,c,rS1+5,f); s+=`<line x1="${a1.toFixed(1)}" y1="${b1.toFixed(1)}" x2="${a2.toFixed(1)}" y2="${b2.toFixed(1)}" style="stroke:var(--muted)" stroke-width="1" opacity=".5"/>` }
-    if(d===dayStart(now)){ const [x1,y1]=pol(c,c,rS1-6,fr(now)), [x2,y2]=pol(c,c,rF2+4,fr(now)); s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:var(--fg)" stroke-width="2"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="4" style="fill:var(--fg)"/>` }
-    const [l1,l2,l3]=opt.center||['','',''];
-    s+=`<text x="${c}" y="${c-18}" text-anchor="middle" font-size="13" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+9}" text-anchor="middle" font-size="${String(l2).length>7?20:24}" font-weight="700" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+32}" text-anchor="middle" font-size="13" style="fill:var(--muted)">${esc(l3)}</text>`;
-  } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="600" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
+    // 해·달: 배지와 헷갈리지 않게 크고 흐릿한 하늘 장식 (테두리 없음, 기록보다 뒤에)
+    const [mx,my]=pol(c,c,74,mid/24), [sx,sy]=pol(c,c,74,((mid+12)%24)/24);
+    s+=`<defs><radialGradient id="${id}sun"><stop offset="0" stop-color="#FFD36B" stop-opacity=".95"/><stop offset=".38" stop-color="#FFC24A" stop-opacity=".75"/><stop offset=".55" stop-color="#FFB238" stop-opacity=".25"/><stop offset="1" stop-color="#FFB238" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}moon"><stop offset=".4" stop-color="#FFF4C8" stop-opacity=".35"/><stop offset="1" stop-color="#FFF4C8" stop-opacity="0"/></radialGradient>
+      <mask id="${id}cres"><rect x="${(mx-30).toFixed(1)}" y="${(my-30).toFixed(1)}" width="60" height="60" fill="#fff"/><circle cx="${(mx+8).toFixed(1)}" cy="${(my-6).toFixed(1)}" r="15" fill="#000"/></mask></defs>`;
+    s+=`<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="34" fill="url(#${id}sun)"/><circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="15" fill="#FFC042" opacity=".9"/>`;
+    for(let k=0;k<12;k++){ const a=k*Math.PI/6, x1=sx+Math.cos(a)*19, y1=sy+Math.sin(a)*19, x2=sx+Math.cos(a)*(k%2?24:28), y2=sy+Math.sin(a)*(k%2?24:28);
+      s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFA928" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>` }
+    s+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="32" fill="url(#${id}moon)"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="17" fill="#FFF1C2" opacity=".9" mask="url(#${id}cres)"/>`;
+    // 아이콘 배지: 수유(🍼/🤱)·이유식(🥣)은 바깥 궤도, 대변(💩)은 안쪽 궤도. 소변·기타는 작은 점
+    const badge=(px,py,ic,col,r=12)=>`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r}" style="fill:var(--badge);stroke:${col}" stroke-width="2"/><text x="${px.toFixed(1)}" y="${(py+0.5).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${(r*1.4).toFixed(1)}">${ic}</text>`;
+    // 식사 띠: 원판 바깥에 따로 두른 수유·이유식 전용 고리
+    s+=`<circle cx="${c}" cy="${c}" r="${rFeed}" fill="none" style="stroke:var(--meal)" stroke-width="28"/><circle cx="${c}" cy="${c}" r="${rFeed+14}" fill="none" style="stroke:var(--meal-edge)" stroke-width="1.2"/><circle cx="${c}" cy="${c}" r="${rFeed-14}" fill="none" style="stroke:var(--meal-edge)" stroke-width="1.2"/>`;
+    const later=[];
+    list.forEach(x=>{
+      if(x.type==='feed'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,x.sub==='breastL'||x.sub==='breastR'?'🤱':'🍼','var(--feed)')) }
+      else if(x.type==='etc'&&x.sub==='solid'){ const [px,py]=pol(c,c,rFeed,fr(x.start)); later.push(badge(px,py,'🥣','#E8913A')) }
+      else if(x.type==='diaper'){ const [px,py]=pol(c,c,rDia,fr(x.start));
+        if(x.sub==='pee') later.unshift(badge(px,py,'💦','var(--pee)',10));
+        else later.unshift(badge(px,py,'💩','var(--poo)',10.5)) }
+      else if(x.type!=='sleep'){ const [px,py]=pol(c,c,rDia,fr(x.start)); s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" style="fill:${evColor(x)};stroke:var(--dial)" stroke-width="1.2"/>` } });
+    s+=later.join('');
+    // 시각: 원판 바깥 작은 숫자
+    for(let h=0;h<24;h+=1){ const f=h/24, [px,py]=pol(c,c,R+43,f);
+      if(h%6===0) s+=`<text x="${px.toFixed(1)}" y="${(py+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--muted)">${h}</text>`;
+      else if(h%3===0) s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.6" style="fill:var(--muted)" opacity=".5"/>` }
+  }
+  // 가운데 접시
+  s+=`<circle cx="${c}" cy="${c}" r="${rCore}" style="fill:var(--dial)" filter="url(#${id}s)"/>`;
+  if(big&&d===dayStart(now)){ const f=fr(now), [hx,hy]=pol(c,c,rT,f), [ix,iy]=pol(c,c,rCore+2,f);
+    s+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="13" fill="#fff" opacity=".35"/><circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="7.5" style="fill:var(--dial);stroke:var(--fg)" stroke-width="3"/>` }
+  if(big){ const [l1,l2,l3]=opt.center||['','',''];
+    s+=`<text x="${c}" y="${c-20}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l1)}</text><text x="${c}" y="${c+7}" text-anchor="middle" font-size="${String(l2).length>7?17:21}" font-weight="800" style="fill:var(--fg)">${esc(l2)}</text><text x="${c}" y="${c+28}" text-anchor="middle" font-size="12" style="fill:var(--muted)">${esc(l3)}</text>`;
+  } else s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="12" font-weight="700" style="fill:${opt.alert?'var(--warn)':'var(--fg)'}">${esc(opt.center||'')}</text>`;
   return s+'</svg>';
 }
 
@@ -725,7 +781,7 @@ function renderToday(){
   if(view.todayMode==='ring'){
     const center=d===today?(lfl?['지금 '+(FEEDN[lfl.sub]||'수유')+' 중',dur(now-lfl.start),hm(lfl.start)+' 시작']:ls?['지금 '+(new Date(ls.start).getHours()>=19||new Date(ls.start).getHours()<5?'밤잠':'낮잠')+' 중',dur(now-ls.start),hm(ls.start)+' 잠듦']:lf?['마지막 수유',dur(now-lf.start)+' 전',hm(lf.start)+(lf.ml?' · '+lf.ml+'ml':'')]:['오늘','기록 없음','']):(st.list.some(x=>x.type==='sleep')?(()=>{const z=sleepSummary(d);return ['수면 합계',durS(st.sleep),'밤잠 '+durS(z.night)+' · 낮잠 '+z.naps+'회']})():['수유 '+st.feeds+'회',st.ml+'ml','수면 기록 없음']);
     body=`<div class="card ring">${ringSVG(d,{big:true,center,label:`${md(d)} 24시간 원형 기록: 수면 ${durS(st.sleep)}, 수유 ${st.feeds}회, 기저귀 ${st.pee+st.poo}회`})}
-    <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span><i style="background:var(--feed);height:4px"></i>수유</span><span><i style="background:var(--pee);border-radius:5px"></i>소변</span><span><i style="background:var(--poo)"></i>대변</span><span><i style="background:var(--etc);transform:rotate(45deg) scale(.8)"></i>기타</span></div></div>
+    <div class="legend"><span><i style="background:var(--sleep)"></i>밤잠</span><span><i style="background:var(--nap)"></i>낮잠</span><span>🍼 수유</span><span>🥣 이유식</span><span>💩 대변</span><span>💦 소변</span></div></div>
     <div class="list">${listHTML}</div>`;
   } else {
     // 위치는 % 로 두고, 막대 전체 높이는 render() 뒤에 오른쪽 목록 높이에 맞춤 (fitBar)
@@ -745,7 +801,7 @@ function renderToday(){
   }
   const comp=Math.round(completeness(d)*100);
   return `${sampleBanner()}${d===today?installBanner():''}
-  <header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${esc(S.baby.name)}${S.baby.name&&ageText(d)?' · ':''}${ageText(d)}</span><label class="datepick"><h1>${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일</h1><input type="date" data-pick="day" value="${ymdOf(d)}" max="${ymdOf(today)}" aria-label="날짜 골라 이동"></label></div>
+  <header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${esc(S.baby.name)}${S.baby.name&&ageText(d)?' · ':''}${ageText(d)}</span><label class="datepick"><h1>${L10N.dateLong(d)}</h1><input type="date" data-pick="day" value="${ymdOf(d)}" max="${ymdOf(today)}" aria-label="날짜 골라 이동"></label></div>
   <div class="row"><button class="iconbtn" type="button" aria-label="이전 날" data-act="prev">${ICON.prev}</button><button class="iconbtn" type="button" aria-label="다음 날" data-act="next" ${d>=today?'disabled':''}>${ICON.next}</button></div></header>
   ${d===today?feverCard():''}${d===today?voiceTipHTML(false):''}${top}${feedCheckCard(d)}${dups.map(dupHTML).join('')}
   <div class="stats">
@@ -765,7 +821,7 @@ function renderWeek(){
   if(view.weekMode==='ring'){
     const sl=sts.map(s=>s.sleep), avg=sl.reduce((a,b)=>a+b,0)/7;
     main=`<div class="card"><div class="wring">${days.map((d,i)=>{ const frag=sts[i].list.filter(x=>x.type==='sleep').length, alert=frag>=9||(sts[i].sleep&&sts[i].sleep<avg*0.75);
-      return `<button type="button" data-goday="${d}" aria-label="${md(d)} 보기">${ringSVG(d,{center:d===today?'오늘':String(new Date(d).getDate()),alert,label:md(d)+' '+dow(d)+'요일'})}<span style="${alert?'color:var(--warn);font-weight:600':''}">${dow(d)} · ${sts[i].list.some(x=>x.type==='sleep')?(sts[i].sleep/H).toFixed(1)+'h':sts[i].ml+'ml'}</span></button>` }).join('')}</div>
+      return `<button type="button" data-goday="${d}" aria-label="${md(d)} 보기">${ringSVG(d,{center:d===today?'오늘':String(new Date(d).getDate()),alert,label:md(d)+' '+dowLong(d)})}<span style="${alert?'color:var(--warn);font-weight:600':''}">${dow(d)} · ${sts[i].list.some(x=>x.type==='sleep')?(sts[i].sleep/H).toFixed(1)+'h':sts[i].ml+'ml'}</span></button>` }).join('')}</div>
     <div class="row small muted" style="padding:0 14px 12px;gap:12px;flex-wrap:wrap"><span><i style="display:inline-block;width:10px;height:10px;background:var(--sleep);border-radius:2px"></i> 수면</span><span><i style="display:inline-block;width:10px;height:4px;background:var(--feed)"></i> 수유</span><span>0시가 위, 시계 방향 · 탭하면 그날 보기</span></div></div>`;
   } else {
     let cols='<div class="axis">'+[0,6,12,18,24].map(h=>`<span style="top:${h/24*hgt}px">${h}</span>`).join('')+'</div>';
@@ -875,17 +931,29 @@ function redFlags(days){
   ev.filter(x=>x.type==='diaper'&&x.tags&&(x.tags.includes('blood')||x.tags.includes('pale'))).forEach(x=>out.push(`${md(x.start)} ${hm(x.start)} 대변 ${x.tags.includes('blood')?'피 섞임':'흰색·회색'} (진료 권고 기준)`));
   return out;
 }
+// 수유 회차: 모유 양쪽을 바꿔 가며 30분 안에 이어 먹인 건 1회로 묶음. 간격은 직전 회차 시작 → 이번 회차 시작
+// 12시간 넘는 간격은 기록을 안 한 시간일 수 있어 평균·최장에서 빼고 따로 알림
+const FEED_JOIN=30*MIN, FEED_GAP_MAX=12*H;
+function feedSessions(from,to){
+  const fs=S.events.filter(x=>x.type==='feed'&&x.start<to&&x.start>=from-2*DAY).sort((a,c)=>a.start-c.start), out=[];
+  fs.forEach(x=>{ const c=out[out.length-1], ce=c&&(c.items[c.items.length-1].end??c.items[c.items.length-1].start);
+    if(c&&x.start-ce<=FEED_JOIN) c.items.push(x); else out.push({start:x.start,items:[x]}) });
+  out.forEach((c,i)=>{ c.ml=c.items.reduce((a,x)=>a+(x.ml||0),0); c.bMin=c.items.reduce((a,x)=>a+(/^breast/.test(x.sub)&&x.min||0),0); c.gap=i?c.start-out[i-1].start:null; c.night=inNight(c.start) });
+  return out.filter(c=>c.start>=from);
+}
+function inNight(t){ const w=nightWin(), h=new Date(t).getHours(); return w.from>w.to?(h>=w.from||h<w.to):(h>=w.from&&h<w.to) }
+function feedItemText(x){ return `${FEEDN[x.sub]||'수유'}${x.ml?' '+x.ml+'ml':''}${x.min?' '+fmtMin(x.min):''}${x.end===null?' (진행 중)':''}${tagText(x)?' ('+tagText(x)+')':''}${x.note?' 메모: '+L10N.keep(x.note):''}` }
+function feedSessionText(c){ return `${hm(c.start)} ${c.items.map(feedItemText).join(' → ')}${c.gap==null?' · 직전 기록 없음':' · 간격 '+dur(c.gap)+(c.gap>FEED_GAP_MAX?' (기록 빠졌을 수 있음)':'')}` }
 function exportText(){
   const ex=view.exp, today=dayStart(Date.now());
   // 기록이 하나도 없는 날은 평균에서 빼고 따로 알림 (0으로 계산하면 AI가 잘못 판단함)
   const range=ex.days===1?[today]:[...Array(ex.days)].map((_,i)=>today-(ex.days-i)*DAY);
   const emptyDays=range.filter(d=>!dayStats(d).list.length);
   let days=range.filter(d=>dayStats(d).list.length); if(!days.length) days=[today];
-  const b=S.baby, nm=ex.anon?'아기':(b.name||'아기'), age=(ageText(Date.now()).split(' · ')[0]||'').replace('생후 ','')||'(태어난 날 미입력)';
+  const b=S.baby, nm=ex.anon?'아기':(b.name?L10N.keep(b.name):'아기'), age=(ageText(Date.now()).split(' · ')[0]||'').replace('생후 ','')||'(태어난 날 미입력)';
   const sts=days.map(dayStats), n=days.length;
   const avg=f=>sts.reduce((s,x)=>s+f(x),0)/n;
-  const feedsAll=days.flatMap(d=>dayStats(d).list.filter(x=>x.type==='feed').map(x=>x.start)).sort((a,c)=>a-c);
-  let gi=0; for(let i=1;i<feedsAll.length;i++) gi+=feedsAll[i]-feedsAll[i-1]; const gapAvg=feedsAll.length>1?gi/(feedsAll.length-1)/H:0;
+  const sessOf=d=>feedSessions(d,d+DAY), sessByDay=days.map(sessOf), sessAll=sessByDay.flat();
   const longestNight=Math.max(0,...days.map(d=>Math.max(0,...S.events.filter(x=>x.type==='sleep'&&x.end&&x.start>=d-5*H&&x.start<d+DAY).map(x=>x.end-x.start))));
   const comps=days.map(completeness), comp=Math.round(comps.reduce((a,c)=>a+c,0)/n*100);
   const missed=days.flatMap(d=>gapsOfDay(d).filter(g=>g.state!=='slept'&&g.state!=='none').map(g=>`${md(g.start)} ${hm(g.start)}–${g.open?'지금':hm(g.end)}${g.state==='missed'?' (기록 못 함)':' (확인 안 됨)'}`));
@@ -899,7 +967,13 @@ function exportText(){
   const has=t=>sts.filter(x=>x.list.some(e=>e.type===t)), avgOf=(arr,f)=>arr.reduce((a,x)=>a+f(x),0)/arr.length;
   const partial=(arr)=>arr.length<n?` · ${n}일 중 ${arr.length}일만 기록함`:'';
   const fd=has('feed'), sl=has('sleep'), dp=has('diaper');
-  if(S.items.feed) lines.push(fd.length?`수유 평균 ${avgOf(fd,s=>s.feeds).toFixed(1)}회/일${avgOf(fd,s=>s.ml)>0?`, 분유·유축 ${Math.round(avgOf(fd,s=>s.ml))}ml/일`:''}, 수유 간격 평균 ${gapAvg.toFixed(1)}h${partial(fd)}`:'수유 기록 없음');
+  if(S.items.feed){ if(!fd.length) lines.push('수유 기록 없음'); else {
+    const fdays=sessByDay.filter(a=>a.length), nd=fdays.length, mlS=sessAll.filter(c=>c.ml>0), minS=sessAll.filter(c=>c.bMin>0);
+    const gaps=sessAll.filter(c=>c.gap!=null&&c.gap<=FEED_GAP_MAX), longG=sessAll.filter(c=>c.gap>FEED_GAP_MAX).length;
+    const gAvg=a=>a.length?dur(a.reduce((t,c)=>t+c.gap,0)/a.length):'없음', gD=gaps.filter(c=>!c.night), gN=gaps.filter(c=>c.night);
+    const mx=gaps.reduce((m,c)=>!m||c.gap>m.gap?c:m,null), mn=gaps.reduce((m,c)=>!m||c.gap<m.gap?c:m,null);
+    lines.push(`수유 평균 ${(sessAll.length/nd).toFixed(1)}회/일${mlS.length?`, 분유·유축 ${Math.round(mlS.reduce((a,c)=>a+c.ml,0)/nd)}ml/일 (1회 평균 ${Math.round(mlS.reduce((a,c)=>a+c.ml,0)/mlS.length)}ml)`:''}${minS.length?`, 모유 1회 평균 ${fmtMin(minS.reduce((a,c)=>a+c.bMin,0)/minS.length)} (양쪽 합)`:''}${partial(fd)}`);
+    lines.push(`수유 간격 평균 ${gAvg(gaps)} (낮 ${gAvg(gD)}, 밤 ${gAvg(gN)})${mx?`, 최장 ${dur(mx.gap)} (${md(mx.start-mx.gap)} ${hm(mx.start-mx.gap)}→${hm(mx.start)}), 최단 ${dur(mn.gap)}`:''} · 간격은 직전 수유 시작부터 이번 수유 시작까지, 밤은 ${nightWin().from}~${nightWin().to}시에 시작한 수유, 모유 양쪽을 30분 안에 이어 먹인 건 1회로 셈${longG?` · 12시간 넘는 간격 ${longG}건은 기록이 빠졌을 수 있어 평균에서 뺌`:''}`) } }
   if(S.items.sleep){ const sd=days.map(sleepSummary).filter(x=>x.has), av=f=>sd.reduce((a,x)=>a+f(x),0)/sd.length, wk=sd.flatMap(x=>x.wakes);
     lines.push(sd.length?`수면 평균 ${(avgOf(sl.length?sl:sts,s=>s.sleep)/H).toFixed(1)}h/일 (밤잠 ${(av(x=>x.night)/H).toFixed(1)}h, 낮잠 ${av(x=>x.naps).toFixed(1)}회 ${(av(x=>x.nap)/H).toFixed(1)}h), 깨어 있는 시간 평균 ${wk.length?dur(wk.reduce((a,b)=>a+b,0)/wk.length):'?'}, 최장 연속 수면 ${(longestNight/H).toFixed(1)}h${partial(sl)} · 밤잠은 ${nightWin().from}~${nightWin().to}시에 절반 이상 걸친 잠으로 앱이 자동 구분하며, 날짜별 밤잠은 전날 밤~그날 아침 합계`:'수면 기록 없음 (기록을 안 한 것이며 실제로 안 잔 게 아님)'); }
   if(S.items.diaper) lines.push(dp.length?`소변 ${avgOf(dp,s=>s.pee).toFixed(1)}회 · 대변 ${avgOf(dp,s=>s.poo).toFixed(1)}회/일${partial(dp)}`:'기저귀 기록 없음');
@@ -909,18 +983,19 @@ function exportText(){
     const ks=Object.keys(cnt);
     // 4일 이상은 시각별 상세가 없으니 특이사항·메모가 있는 수유·기저귀만 따로 나열
     const odd=n>3?S.events.filter(x=>x.start>=f0&&x.start<t0&&(x.type==='feed'||x.type==='diaper')&&(tagText(x)||x.note)).sort((a,c)=>a.start-c.start):[];
-    if(odd.length) lines.push(`[특이사항·메모 있는 기록] ${odd.slice(-40).map(x=>`${md(x.start)} ${hm(x.start)} ${x.type==='feed'?(FEEDN[x.sub]||'수유'):'기저귀 '+({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' '+tagText(x):''}${x.note?' (메모: '+x.note+')':''}`).join(', ')}`);
+    if(odd.length) lines.push(`[특이사항·메모 있는 기록] ${odd.slice(-40).map(x=>`${md(x.start)} ${hm(x.start)} ${x.type==='feed'?(FEEDN[x.sub]||'수유'):'기저귀 '+({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' '+tagText(x):''}${x.note?' (메모: '+L10N.keep(x.note)+')':''}`).join(', ')}`);
     lines.push(`[수유·대변 특이사항] ${ks.length?ks.map(k=>k+' '+cnt[k]+'회').join(', ')+' (표시 안 한 수유·대변은 부모가 정상으로 본 것)':'없음 (따로 표시하지 않으면 정상 수유·정상 변으로 기록함)'}`) }
   const from=days[0], to=days[n-1]+DAY, etc=S.events.filter(x=>x.type==='etc'&&x.start>=from&&x.start<to&&x.sub!=='memo').sort((a,c)=>a.start-c.start);
-  if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+x.note+')':''}`).join(', ')}`);
+  if(etc.length) lines.push(`[기타 기록] ${etc.map(x=>`${md(x.start)} ${hm(x.start)} ${evTitle(x)}${x.note?' ('+L10N.keep(x.note)+')':''}`).join(', ')}`);
   const gr=S.events.filter(x=>x.type==='growth').sort((a,c)=>a.start-c.start).slice(-4);
   if(gr.length&&(ex.q==='growth'||ex.q==='normal')) lines.push(`[성장 측정] ${gr.map(x=>`${md(x.start)} ${[x.kg&&x.kg+'kg'+(pctText('wfa',x.kg,x.start)?'('+pctText('wfa',x.kg,x.start)+')':''),x.cm&&x.cm+'cm',x.head&&'머리 '+x.head+'cm'].filter(Boolean).join(' ')}`).join(', ')} · WHO 기준`);
-  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t); lines.push(`[상세 · ${md(d)} ${dow(d)}] 수유 ${hs('feed')?s.feeds+'회'+(s.ml?' '+s.ml+'ml':''):'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
-    if(n<=3) s.list.forEach(x=>{ if(x.type==='feed') lines.push(`${hm(x.start)} ${FEEDN[x.sub]||'수유'} ${x.ml?x.ml+'ml':''}${x.min?fmtMin(x.min):''}${tagText(x)?' ('+tagText(x)+')':''}${x.note?' 메모: '+x.note:''}`);
+  days.forEach((d,i)=>{const s=sts[i], hs=t=>s.list.some(e=>e.type===t), fs=sessByDay[i], fMin=fs.reduce((a,c)=>a+c.bMin,0), fMl=fs.reduce((a,c)=>a+c.ml,0); lines.push(`[상세 · ${md(d)} ${dow(d)}] 수유 ${hs('feed')?fs.length+'회'+(fMl?' 총 '+fMl+'ml':'')+(fMin?' 모유 총 '+fmtMin(fMin):''):'기록 없음'}, 수면 ${hs('sleep')?(()=>{const z=sleepSummary(d);return durS(s.sleep)+' (밤잠 '+durS(z.night)+', 낮잠 '+z.naps+'회 '+durS(z.nap)+')'})():'기록 없음'}, ${hs('diaper')?'소'+s.pee+' 대'+s.poo:'기저귀 기록 없음'}`);
+    if(n>3&&fs.length) lines.push(`수유: ${fs.map(feedSessionText).join(' / ')}`);
+    if(n<=3){ const fsStart=new Map(fs.map(c=>[c.items[0],c])); s.list.forEach(x=>{ if(x.type==='feed'){ if(fsStart.has(x)) lines.push(feedSessionText(fsStart.get(x))) }
       else if(x.type==='sleep') lines.push(`${hm(x.start)}–${x.end?hm(x.end):'진행 중'} ${sleepKind(x)==='night'?'밤잠':'낮잠'}`);
-      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' ('+tagText(x)+')':''}${x.note?' 메모: '+x.note:''}`) })});
+      else if(x.type==='diaper') lines.push(`${hm(x.start)} 기저귀 ${({pee:'소변',poo:'대변',both:'소변+대변'})[x.sub]}${tagText(x)?' ('+tagText(x)+')':''}${x.note?' 메모: '+L10N.keep(x.note):''}`) }) }});
   const rf=redFlags(days); lines.push(`[앱 위험신호 점검 · 고정 규칙] ${rf.length?rf.join(', '):'걸린 항목 없음 (기록된 것만 확인함)'}`);
-  const q=ex.q==='custom'?(ex.custom||'(질문을 적어 주세요)'):QS[ex.q][1].replace('{age}',age);
+  const q=ex.q==='custom'?(ex.custom?L10N.keep(ex.custom):'(질문을 적어 주세요)'):L10N.t(QS[ex.q][1]).replace('{age}',age);
   lines.push(`[질문] ${q}`);
   lines.push(...EXP_RULES);
   return lines.join('\n');
@@ -962,7 +1037,7 @@ const SET_CATS=[
   ['record','📝','기록 항목',()=>[['feed','수유'],['sleep','수면'],['diaper','기저귀']].filter(([k])=>S.items[k]).map(x=>x[1]).join('·')+' · 밤 '+nightWin().from+'~'+nightWin().to+'시'],
   ['family','👨‍👩‍👧','가족 공유',()=>{ const st=window.BabySync&&window.FIREBASE_CONFIG?window.BabySync.status():null; return !st?'꺼져 있음':!st.fid?'초대코드로 함께 기록':st.state==='on'?'연결됨':'연결 안 됨' }],
   ['backup','💾','백업·가져오기',()=>{ const t=+pref('lastBackup'); return t?'마지막 백업 '+md(t):'아직 백업 없음' }],
-  ['screen','🎨','화면',()=>({auto:'자동',light:'라이트',dark:'다크'})[pref('theme')||'auto']+' · '+(view.order==='desc'?'최신이 위':'최신이 아래')],
+  ['screen','🎨','화면·언어',()=>L10N.langs.find(x=>x[0]===L10N.lang)[1]+' · '+({auto:'자동',light:'라이트',dark:'다크'})[pref('theme')||'auto']+' · '+(view.order==='desc'?'최신이 위':'최신이 아래')],
   ['voice','🎙️','음성 명령',()=>iosVoice()?'Siri':(window.BabyNative&&BabyNative.voiceHelp)?'빅스비·구글 어시스턴트':'앱에서만 돼요'],
   ['data','🗂️','데이터',()=>'기록 '+S.events.length+'개'],
   ['beta','🎁','베타 테스트·의견',()=>testerNo()?'얼리버드 '+testerNo()+'번 · 광고 없음':'테스터 코드 · 문제 알리기'],
@@ -1021,6 +1096,8 @@ function renderSettings(){
   <button class="btn ghost full" style="margin-top:8px" type="button" data-act="otherApp">다른 육아 앱 기록 가져오기 (AI로 변환)</button>
 `,
     screen:`  <p class="small muted" style="margin:0 4px">이 휴대폰에만 적용돼요.</p>
+  <div class="card panel"><div class="field"><span translate="no">🌐 ${({ko:'언어 · Language',en:'Language',zh:'语言 · Language',ja:'言語 · Language'})[L10N.lang]}</span><div class="chips">${L10N.langs.map(([k,n])=>`<button class="chip" type="button" aria-pressed="${L10N.lang===k}" data-lang-set="${k}" translate="no">${n}</button>`).join('')}</div></div>
+  <span class="small muted">처음에는 휴대폰 언어를 따라가요.</span></div>
   <div class="card panel"><div class="field"><span>화면 모드</span><div class="chips">${[['auto','자동'],['light','라이트'],['dark','다크']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${(pref('theme')||'auto')===k}" data-theme-set="${k}">${n}</button>`).join('')}</div></div>
   <div class="field"><span>오늘 기록 순서</span><div class="chips">${[['asc','최신이 아래'],['desc','최신이 위']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${view.order===k}" data-order="${k}">${n}</button>`).join('')}</div></div></div>
   <p class="small muted" style="margin:0 4px">자동은 휴대폰의 라이트·다크 설정을 따라가요. "최신이 아래"는 세로 차트처럼 위에서 아래로 시간이 흘러요.</p>
@@ -1230,8 +1307,11 @@ function evSheet(id){
     let dsub=x.sub, kind=x.kind||'auto'; const tags=[...(x.tags||[])]; bindTags(tags);
     const tb=$('#sw .tagbox[data-tg="poo"]'); if(tb) tb.hidden=dsub==='pee'; $('#sw').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{ kind=b.dataset.kind; $('#sw').querySelectorAll('[data-kind]').forEach(c=>c.setAttribute('aria-pressed',c===b)) });
     $('#sw').querySelectorAll('[data-dsub]').forEach(b=>b.onclick=()=>{ dsub=b.dataset.dsub; $('#sw').querySelectorAll('[data-dsub]').forEach(c=>c.setAttribute('aria-pressed',c===b)); if(tb) tb.hidden=dsub==='pee' });
-    $('#eSave').onclick=()=>{ x.start=nearTime(x.start,$('#eTime').value); if(x.end===null&&x.start>Date.now()) x.start-=DAY;
-      if($('#eEnd')){ let end=withTime(x.start,$('#eEnd').value); if(end<=x.start) end+=DAY; x.end=end }
+    $('#eSave').onclick=()=>{ if($('#eTime').value) x.start=nearTime(x.start,$('#eTime').value);
+      // 깬 시각을 지우면 다시 '자는 중'(end:null). 예전엔 빈칸이 NaN이 돼서 화면은 자는 중으로 안 보고 '수면'을 다시 열어 줘서
+      // 같은 밤에 '자는 중'이 둘 생겼음 (11/01 갤럭시 05:48)
+      if($('#eEnd')){ const v=$('#eEnd').value; if(!v) x.end=null; else { let end=withTime(x.start,v); if(end<=x.start) end+=DAY; x.end=end } }
+      if(x.end===null&&x.start>Date.now()) x.start-=DAY;
       if($('#eMl')){ const v=+$('#eMl').value; if(v>0) x.ml=v; else delete x.ml }
       if(x.type==='diaper') x.sub=dsub;
       x.note=$('#eNote').value.trim(); if(!x.note) delete x.note;
@@ -1363,13 +1443,32 @@ function otherPreview(j){
 function dayGuard(fn,skip){ return ()=>{
   rollDay(); const today=dayStart(Date.now());
   if(view.tab!=='today'||view.day===today||(skip&&skip())) return fn();
-  const d=view.day, label=`${new Date(d).getMonth()+1}월 ${new Date(d).getDate()}일 ${dow(d)}요일`+(d===today-DAY?' (어제)':'');
+  const d=view.day, label=L10N.dateLong(d)+(d===today-DAY?' (어제)':'');
   openSheet(`<h2>지난 날짜에 기록할까요?</h2><p style="margin:0">지금 <b>${label}</b> 기록을 보고 있어요.</p>
   <button class="btn full" style="height:52px" type="button" id="gToday">오늘로 기록하기</button>
   <button class="btn ghost full" type="button" id="gPast">${label.replace(' (어제)','')}에 기록하기</button>`,()=>{
     $('#gToday').onclick=()=>{ closeSheet(); view.day=today; view.scrollLatest=true; render(); fn() };
     $('#gPast').onclick=()=>{ closeSheet(); fn() } }) } }
-$('#bFeed').onclick=dayGuard(feedSheet,()=>!!liveFeed()); $('#bDiaper').onclick=dayGuard(diaperSheet); $('#bSleep').onclick=dayGuard(sleepAction,()=>!!liveSleep()); $('#bMore').onclick=dayGuard(moreSheet);
+$('#bFeed').onclick=e=>{ if(feedHold.fired){ feedHold.fired=false; e.preventDefault(); return } dayGuard(feedSheet,()=>!!liveFeed())() };
+// 수유 버튼 꾹 누르기(0.5초) → 수유/이유식 고르기. 더보기를 거치지 않고 이유식을 바로 기록
+function feedPick(){
+  const lf=liveFeed();
+  openSheet(`<h2>무엇을 기록할까요?</h2>
+  <div class="grid3" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <button class="tile" type="button" id="pkFeed" style="min-height:84px;font-size:16px"><span class="ic" style="--c:var(--feed);font-size:26px">${lf?'⏱️':'🍼'}</span>${lf?'수유 끝':'수유'}</button>
+    <button class="tile" type="button" id="pkSolid" style="min-height:84px;font-size:16px"><span class="ic" style="--c:var(--feed);font-size:26px">🥣</span>${ETC.solid.label}</button>
+  </div>`,()=>{
+    const at=Date.now(); $('#sw').addEventListener('click',e=>{ if(Date.now()-at<700) e.stopImmediatePropagation() },true); // 손을 떼는 순간의 클릭으로 바로 닫히지 않게
+    $('#pkFeed').onclick=()=>feedSheet(); $('#pkSolid').onclick=()=>etcSheet('solid');
+  });
+}
+const feedHold={t:0,fired:false,x:0,y:0};
+(()=>{ const b=$('#bFeed'), stop=()=>{ clearTimeout(feedHold.t); feedHold.t=0; b.classList.remove('pressing') };
+  b.addEventListener('pointerdown',e=>{ if(e.button>0) return; feedHold.fired=false; feedHold.x=e.clientX; feedHold.y=e.clientY; b.classList.add('pressing');
+    feedHold.t=setTimeout(()=>{ stop(); feedHold.fired=true; try{ navigator.vibrate&&navigator.vibrate(15) }catch(_){} dayGuard(feedPick)() },500) });
+  b.addEventListener('pointermove',e=>{ if(feedHold.t&&Math.hypot(e.clientX-feedHold.x,e.clientY-feedHold.y)>10) stop() });
+  ['pointerup','pointercancel','pointerleave'].forEach(n=>b.addEventListener(n,stop));
+  b.addEventListener('contextmenu',e=>e.preventDefault()) })(); $('#bDiaper').onclick=dayGuard(diaperSheet); $('#bSleep').onclick=dayGuard(sleepAction,()=>!!liveSleep()); $('#bMore').onclick=dayGuard(moreSheet);
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; view.tab=b.dataset.tab; if(view.tab==='today'){ view.day=dayStart(Date.now()); view.scrollLatest=true } if(view.tab==='week') view.weekOff=0; if(view.tab==='settings') view.setCat=null;
   pref('tab',JSON.stringify({tab:view.tab})); render(); window.scrollTo(0,0)});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#sw')) closeSheet() });
@@ -1409,6 +1508,7 @@ $('#app').addEventListener('click',async e=>{
   if(t.dataset.setcat){ const k=t.dataset.setcat; view.setCat=view.setCat===k?null:k; render(); const r=$('#set-'+k); if(r&&view.setCat) r.scrollIntoView({block:'nearest',behavior:'smooth'}); return }
   if(t.dataset.tabgo){view.tab=t.dataset.tabgo;return render()}
   if(t.dataset.goday){ view.tab='today'; view.day=+t.dataset.goday; render(); window.scrollTo(0,0); return }
+  if(t.dataset.langSet){ L10N.set(t.dataset.langSet); try{ window.BabyNative&&BabyNative.setLang&&BabyNative.setLang(t.dataset.langSet) }catch(_){} location.reload(); return }
   if(t.dataset.themeSet){ const k=t.dataset.themeSet; pref('theme',k); if(k==='auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=k; return render() }
   if(t.dataset.order){ view.order=t.dataset.order; pref('order',view.order); return render() }
   if(t.dataset.mode){ view.todayMode=t.dataset.mode; pref('todayMode',view.todayMode); return render() }
@@ -1451,7 +1551,7 @@ $('#app').addEventListener('click',async e=>{
   if(a==='journal') journalExport();
   if(a==='import') $('#importFile').click();
   if(a==='otherApp') otherAppSheet();
-  if(a==='copy'){const txt=exportText(); const ok=()=>toast('복사했어요. AI 앱에 붙여넣으세요');
+  if(a==='copy'){const txt=L10N.t(exportText()); const ok=()=>toast('복사했어요. AI 앱에 붙여넣으세요');
     const fallback=()=>{const r=document.createRange(); r.selectNodeContents($('#out')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('텍스트를 선택해 두었어요. 길게 눌러 복사하세요')};
     try{ navigator.clipboard.writeText(txt).then(ok,fallback) }catch(_){ fallback() } }
   if(a==='clear'){ if(t.dataset.ok){ const wasSample=S.sample; S={...emptyState(),onboarded:true,items:S.items,baby:wasSample?emptyBaby():S.baby}; save(); view.tab='settings'; render(); toast(wasSample?'비웠어요. 아기 정보부터 넣어 주세요':'모든 기록을 지웠어요') }

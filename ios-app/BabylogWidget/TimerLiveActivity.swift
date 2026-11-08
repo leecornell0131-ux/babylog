@@ -11,7 +11,7 @@ struct TimerLiveActivity: Widget {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(ctx.attributes.name + " · " + ctx.state.label).font(.subheadline).foregroundStyle(.secondary)
                     timer(ctx.state.start).font(.system(size: 32, weight: .bold)).foregroundStyle(color(ctx.attributes))
-                    Text(Fmt.clock(ctx.state.start) + "부터").font(.caption).foregroundStyle(.secondary)
+                    Text(Tr.f("{0}부터", Fmt.clock(ctx.state.start))).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Link(destination: BabyLink.url(ctx.attributes.stopAction)) {

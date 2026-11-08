@@ -12,7 +12,7 @@ struct BabyTimerAttributes: ActivityAttributes {
     var name: String
 
     var stopAction: String { kind == "sleep" ? "stop_sleep" : "stop_feed" }
-    var stopTitle: String { kind == "sleep" ? "깼어요" : "수유 끝" }
+    var stopTitle: String { kind == "sleep" ? Tr.t("깼어요") : Tr.t("수유 끝") }
     var icon: String { kind == "sleep" ? "😴" : "🍼" }
 }
 
