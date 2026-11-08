@@ -39,15 +39,20 @@ jobs:
 
       # Play 스토어용 AAB (업로드 키 Secrets가 있을 때만). 같은 빌드 번호라 APK와 버전이 같음.
       # 키 만들기·넣는 법: guide 폴더의 Play 안내서
+      # AAB가 실패해도 갤럭시용 APK 릴리스는 계속 올라가게 함
       - name: Build Play AAB
         id: aab
+        continue-on-error: true
         env:
           PLAY_UPLOAD_KEYSTORE: ${{ secrets.PLAY_UPLOAD_KEYSTORE }}
           PLAY_UPLOAD_PASSWORD: ${{ secrets.PLAY_UPLOAD_PASSWORD }}
         working-directory: android-app
         run: |
           if [ -z "$PLAY_UPLOAD_KEYSTORE" ]; then echo "업로드 키 없음: AAB 건너뜀"; exit 0; fi
-          echo "$PLAY_UPLOAD_KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          # 붙여넣을 때 섞인 줄바꿈·공백·윈도우 줄끝(CR)·certutil 머리줄(-----)을 걷어내고 풂
+          printf '%s' "$PLAY_UPLOAD_KEYSTORE" | tr -d '\r' | grep -v '^-----' | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/upload.jks" \
+            || { echo "::error::PLAY_UPLOAD_KEYSTORE 값이 base64 형식이 아님. 비밀_Play업로드키 폴더의 base64 텍스트 전체를 다시 붙여넣어 주세요."; exit 1; }
+          echo "키 파일 크기: $(wc -c < "$RUNNER_TEMP/upload.jks") 바이트"
           PLAY_UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks" ./gradlew --no-daemon bundleRelease -Pstore=true
           cp app/build/outputs/bundle/release/app-release.aab babylog-play.aab
           rm -f "$RUNNER_TEMP/upload.jks"
