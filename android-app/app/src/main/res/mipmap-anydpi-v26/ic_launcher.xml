@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8+: 휴대폰마다 다른 모양(원·둥근 사각형)으로 잘라 보여 주는 아이콘. 그림 전체가 앞면, 가장자리 색이 뒷면 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_bg" />
+    <foreground android:drawable="@drawable/ic_launcher_fg" />
+</adaptive-icon>

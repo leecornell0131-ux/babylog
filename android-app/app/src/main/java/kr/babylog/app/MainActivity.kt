@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Base64
 import android.view.WindowInsets
+import android.window.OnBackInvokedDispatcher
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -132,7 +133,10 @@ class MainActivity : Activity() {
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) web.loadUrl(START_URL)
         takeAction(intent)
 
-        Updater.check(this)
+        // Play 스토어 버전은 스토어가 업데이트를 맡음 (스토어 정책상 앱이 직접 APK를 받으라고 하면 안 됨)
+        if (!BuildConfig.STORE) Updater.check(this)
+        // Android 13+: 뒤로가기를 새 방식으로 받음 (targetSdk 36부터는 onBackPressed가 불리지 않음)
+        if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { handleBack() }
         Push.refreshConfig(this)
         offerWidgetOnce()
     }
@@ -217,7 +221,9 @@ class MainActivity : Activity() {
     }
 
     @Deprecated("Activity API")
-    override fun onBackPressed() {
+    override fun onBackPressed() = handleBack()
+
+    private fun handleBack() {
         // 열린 입력 창이 있으면 닫고, 없으면 앱을 뒤로 보냄
         web.evaluateJavascript("(function(){var s=document.getElementById('sheetRoot');if(s&&s.innerHTML){s.innerHTML='';return 1}return 0})()") { r ->
             if (r != "1") moveTaskToBack(true)
