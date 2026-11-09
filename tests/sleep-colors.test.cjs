@@ -9,7 +9,7 @@ test('missing age/record coverage keeps all default colors',()=>{const color=loa
 test('tomorrow resets today and finished historical days keep their colors',()=>{const color=load();assert.equal(color({...input(),day:+new Date(2026,9,21),now:+new Date(2026,9,21,0)}).total,'');assert.equal(color({...input(),now:+new Date(2026,9,21,0)}).total,'sleep-green')});
 test('an ongoing short wake stays purple instead of becoming a warning',()=>{const color=load();assert.equal(color({...input(),wake:10*MIN,wakeOpen:true}).wake,'');assert.equal(color({...input(),wake:130*MIN,wakeOpen:true}).wake,'sleep-yellow')});
 test('no wake data and invalid numbers never turn green',()=>{const color=load();assert.equal(color({...input(),wake:null}).wake,'');assert.equal(color({...input(),wake:NaN}).wake,'');assert.equal(color({...input(),ready:false}).total,'')});
-test('no evaluation labels are added by the UI integration',()=>{const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.match(html,/sleep-colors\.js/);assert.match(html,/data-sleep-metric="total"/);assert.match(html,/data-sleep-metric="nap"/);assert.match(html,/data-sleep-metric="wake"/);const card=html.slice(html.indexOf('function sleepCard('),html.indexOf('// 통잠 기준'));assert.doesNotMatch(card,/정상입니다|비정상|수면 부족 경고/)});
+test('no evaluation labels are added by the UI integration',()=>{const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.match(html,/sleep-colors\.js/);assert.match(html,/data-sleep-metric="total"/);assert.match(html,/data-sleep-metric="nap"/);assert.match(html,/data-sleep-metric="wake"/);const card=html.slice(html.indexOf('function sleepCard('),html.indexOf('function sleepInfoSheet('));assert.doesNotMatch(card,/정상입니다|비정상|수면 부족 경고/)});
 
 function renderCard({gap=false,noNap=false,overlap=false,openNap=false,now=at(20)}={}) {
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
@@ -23,8 +23,8 @@ function renderCard({gap=false,noNap=false,overlap=false,openNap=false,now=at(20
     SR:{newbornNoRhythmMonths:2},dayStart:t=>+new Date(new Date(t).setHours(0,0,0,0)),
     sleepSummary:()=>({night:12*H,nap:4*H,naps:1,nightN:1,nightMax:12*H,wakes:[90*MIN],awakeNow:null,awakeTotal:8*H,live:null}),
     sleepRef:()=>({...input().ref,months:4}),sleepKind:e=>e.kind,sleepDate:e=>e.day,
-    tongjamH:()=>6,gapsOfDay:()=>gap?[{state:'missed'}]:[],durS:n=>String(n),md:()=>'',refText:()=>''};
-  vm.runInNewContext(html.slice(html.indexOf('function sleepCard('),html.indexOf('// 통잠 기준')),context);
+    gapsOfDay:()=>gap?[{state:'missed'}]:[],durS:n=>String(n),md:()=>'',refText:()=>''};
+  vm.runInNewContext(html.slice(html.indexOf('function sleepCard('),html.indexOf('function sleepInfoSheet(')),context);
   return context.sleepCard(day);
 }
 test('actual card suppresses color for marked gaps, absent naps, and unfinished records',()=>{
