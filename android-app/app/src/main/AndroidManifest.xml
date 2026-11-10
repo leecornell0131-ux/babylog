@@ -49,9 +49,12 @@
             android:turnScreenOn="true"
             android:theme="@style/AppTheme" />
 
+        <!-- taskAffinity="": 앱이 이미 켜져 있을 때 "소변기록" 같은 아이콘(빅스비 음성 포함)을 누르면
+             안드로이드가 켜진 앱 화면만 앞으로 가져오고 이 화면을 건너뛰어 기록이 안 되던 것 막음 -->
         <activity
             android:name=".ActionActivity"
             android:exported="false"
+            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:showWhenLocked="true"
