@@ -12,6 +12,7 @@ class ActionActivity : Activity() {
         // 음성 명령용 이름표(AndroidManifest의 activity-alias). 빅스비·구글 어시스턴트에 "아기깼어 열어"처럼 말하면 이 이름으로 열림
         val VOICE = mapOf(
             "kr.babylog.app.VoiceSleep" to "sleep_start",
+            "kr.babylog.app.VoiceSleep2" to "sleep_start", // "아기잔다"
             "kr.babylog.app.VoiceWake" to "stop_sleep",
             "kr.babylog.app.VoiceFeed" to "feed_ml",
             "kr.babylog.app.VoicePee" to "pee",

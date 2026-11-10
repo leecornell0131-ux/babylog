@@ -72,6 +72,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- "아기잠듦"과 같은 동작, 다른 말 -->
+        <activity-alias
+            android:name=".VoiceSleep2"
+            android:label="아기잔다"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias
             android:name=".VoiceWake"
             android:label="아기깼어"
