@@ -49,9 +49,12 @@
             android:turnScreenOn="true"
             android:theme="@style/AppTheme" />
 
+        <!-- taskAffinity="": 앱이 이미 켜져 있을 때 "소변기록" 같은 아이콘(빅스비 음성 포함)을 누르면
+             안드로이드가 켜진 앱 화면만 앞으로 가져오고 이 화면을 건너뛰어 기록이 안 되던 것 막음 -->
         <activity
             android:name=".ActionActivity"
             android:exported="false"
+            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:showWhenLocked="true"
@@ -61,6 +64,18 @@
         <activity-alias
             android:name=".VoiceSleep"
             android:label="아기잠듦"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:targetActivity=".ActionActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- "아기잠듦"과 같은 동작, 다른 말 -->
+        <activity-alias
+            android:name=".VoiceSleep2"
+            android:label="아기잔다"
             android:icon="@mipmap/ic_launcher"
             android:exported="true"
             android:targetActivity=".ActionActivity">

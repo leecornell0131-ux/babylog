@@ -119,7 +119,7 @@ struct BabyShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: VoiceWakeIntent(), phrases: ["\(.applicationName) 아기 깼어", "\(.applicationName) 아기깼어", "\(.applicationName) 깼어"],
                     shortTitle: "아기깼어", systemImageName: "sun.max")
-        AppShortcut(intent: VoiceSleepIntent(), phrases: ["\(.applicationName) 아기 잠듦", "\(.applicationName) 아기잠듦", "\(.applicationName) 잠들었어"],
+        AppShortcut(intent: VoiceSleepIntent(), phrases: ["\(.applicationName) 아기 잠듦", "\(.applicationName) 아기잠듦", "\(.applicationName) 아기잔다", "\(.applicationName) 잠들었어"],
                     shortTitle: "아기잠듦", systemImageName: "moon")
         AppShortcut(intent: VoiceFeedIntent(), phrases: ["\(.applicationName) 수유 \(\.$amount)", "\(.applicationName) 수유 \(\.$amount) 미리",
                                                           "\(.applicationName) 수유", "\(.applicationName) 수유 기록"],
