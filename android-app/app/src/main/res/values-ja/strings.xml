@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 휴대폰 언어가 이 언어일 때 위젯 고르는 화면에 보이는 이름 -->
 <resources>
-    <string name="app_name">BabyLog</string>
-    <string name="widget_name">BabyLog クイック記録</string>
-    <string name="w_feed">BabyLog 授乳タイマー</string>
+    <string name="app_name">BabyNote</string>
+    <string name="widget_name">BabyNote クイック記録</string>
+    <string name="w_feed">BabyNote 授乳タイマー</string>
     <string name="w_feed_desc">最後の授乳からの時間を大きく、いつもの間隔から見た次の授乳時刻</string>
-    <string name="w_card">BabyLog 最後の授乳</string>
+    <string name="w_card">BabyNote 最後の授乳</string>
     <string name="w_card_desc">赤ちゃんの名前・月齢と最後の授乳の時刻・量、何時間前か</string>
-    <string name="w_sleep">BabyLog 睡眠・起きている時間</string>
+    <string name="w_sleep">BabyNote 睡眠・起きている時間</string>
     <string name="w_sleep_desc">寝ているときは睡眠時間、起きているときは起きてからの時間と寝た・起きたボタン</string>
-    <string name="w_diaper">BabyLog おむつ</string>
+    <string name="w_diaper">BabyNote おむつ</string>
     <string name="w_diaper_desc">最後のおむつからの時間とおしっこ・うんち・両方ボタン</string>
-    <string name="w_today">BabyLog 今日のまとめ</string>
+    <string name="w_today">BabyNote 今日のまとめ</string>
     <string name="w_today_desc">今日の授乳回数・量、睡眠合計、おむつ回数、最後の授乳からの時間</string>
     <string name="widget_desc">最後の授乳からの時間とおしっこ・うんち・睡眠ボタン</string>
 </resources>

@@ -29,7 +29,7 @@ import android.widget.Toast
 import org.json.JSONObject
 import java.io.File
 
-// 아기로그 안드로이드 앱.
+// 베이비노트 안드로이드 앱.
 // 화면은 아이폰과 같은 웹앱(GitHub Pages)을 그대로 띄우고, 위젯·잠금화면 타이머만 안드로이드 기능으로 덧붙임.
 // 그래서 웹앱을 고치면 이 앱도 다시 설치하지 않고 같이 바뀜.
 class MainActivity : Activity() {
@@ -329,7 +329,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun copy(text: String) {
             runOnUiThread {
-                (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("아기로그", text))
+                (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("베이비노트", text))
             }
         }
 
@@ -348,7 +348,7 @@ class MainActivity : Activity() {
         fun pinWidget() = runOnUiThread {
             val m = getSystemService(AppWidgetManager::class.java)
             if (m.isRequestPinAppWidgetSupported) m.requestPinAppWidget(ComponentName(this@MainActivity, QuickWidget::class.java), null, null)
-            else Toast.makeText(this@MainActivity, Tr.t("홈 화면을 길게 누르고 위젯 > 아기로그를 골라 주세요"), Toast.LENGTH_LONG).show()
+            else Toast.makeText(this@MainActivity, Tr.t("홈 화면을 길게 누르고 위젯 > 베이비노트를 골라 주세요"), Toast.LENGTH_LONG).show()
         }
     }
 }

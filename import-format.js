@@ -127,7 +127,7 @@
 
   function prompt() {
     const amt = Object.entries(KINDS).map(([n, k]) => '- ' + n + (k.unit ? ' (amount = ' + k.unit + ')' : k.type === 'sleep' ? ' (time = 잠든 시각, end = 깬 시각 필수)' : k.type === 'growth' ? ' (kg, cm, head 중 아는 것)' : '')).join('\n');
-    return `아래에 붙인 육아 앱 기록(내보내기 파일·PDF·표·캡처)을 "아기로그 가져오기 양식" JSON으로 바꿔 주세요.
+    return `아래에 붙인 육아 앱 기록(내보내기 파일·PDF·표·캡처)을 "베이비노트 가져오기 양식" JSON으로 바꿔 주세요.
 
 [양식]
 {"format":"babylog-import","v":1,"source":"원래 앱 이름","baby":{"birth":"YYYY-MM-DD","sex":"남 또는 여","birthKg":3.1},

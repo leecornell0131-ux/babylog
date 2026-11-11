@@ -1,6 +1,6 @@
 {
-  "name": "아기로그",
-  "short_name": "아기로그",
+  "name": "베이비노트",
+  "short_name": "베이비노트",
   "description": "수유·수면·기저귀 기록과 AI 질문용 내보내기",
   "lang": "ko",
   "start_url": "./",

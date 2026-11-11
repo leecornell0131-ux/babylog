@@ -131,7 +131,7 @@ enum Tr {
         "홈 화면에 위젯을 두면 마지막 수유 후 지난 시간이 보이고, 버튼 한 번으로 소변·대변·수면을 기록할 수 있어요.": ["Put a widget on your home screen to see the time since the last feed and log pee, poop or sleep with one tap.", "在主屏幕放置小组件，就能看到距上次喂奶的时间，一键记录小便·大便·睡眠。", "ホーム画面にウィジェットを置くと、最後の授乳からの時間が見られ、ボタン1つでおしっこ・うんち・睡眠を記録できます。"],
         "나중에": ["Later", "以后", "あとで"],
         "확인": ["OK", "确定", "OK"],
-        "홈 화면을 길게 누르고 위젯 > 아기로그를 골라 주세요": ["Long-press the home screen, then pick Widgets > BabyLog", "长按主屏幕，然后选择 小组件 > BabyLog", "ホーム画面を長押しして ウィジェット > BabyLog を選んでください"],
+        "홈 화면을 길게 누르고 위젯 > 베이비노트를 골라 주세요": ["Long-press the home screen, then pick Widgets > BabyNote", "长按主屏幕，然后选择 小组件 > BabyNote", "ホーム画面を長押しして ウィジェット > BabyNote を選んでください"],
         "백업 파일 저장·보내기": ["Save·send backup file", "保存·发送备份文件", "バックアップファイルを保存・送信"],
         "보내기": ["Send", "发送", "送る"],
         "새 버전이 있어요": ["A new version is available", "有新版本", "新しいバージョンがあります"],
