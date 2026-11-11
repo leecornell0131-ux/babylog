@@ -142,9 +142,9 @@ struct VoiceSettingsView: View {
                 }
 
                 Section("설정 없이 바로 되는 말") {
-                    Text("\"시리야, 아기로그 아기 깼어\"").font(.subheadline)
-                    Text("\"시리야, 아기로그 수유 120\"").font(.subheadline)
-                    Text("아기 잠듦 · 소변 · 대변도 같아요. 앞에 \"아기로그\"를 붙여요.").font(.caption).foregroundStyle(.secondary)
+                    Text("\"시리야, 베이비노트 아기 깼어\"").font(.subheadline)
+                    Text("\"시리야, 베이비노트 수유 120\"").font(.subheadline)
+                    Text("아기 잠듦 · 소변 · 대변도 같아요. 앞에 \"베이비노트\"를 붙여요.").font(.caption).foregroundStyle(.secondary)
                 }
 
                 Section("부르는 말 바꾸기") {

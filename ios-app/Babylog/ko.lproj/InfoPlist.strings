@@ -1,0 +1,2 @@
+/* 한국어 기기에서 홈 화면·Siri에 보이는 앱 이름 (다른 언어는 Info.plist의 BabyNote) */
+"CFBundleDisplayName" = "베이비노트";

@@ -4,7 +4,7 @@ import Foundation
 // 위젯 버튼 (iOS 17 버튼). 작은 위젯도 버튼만 눌리고 나머지 자리는 앱만 엶 (갤럭시 위젯과 같게).
 // 누르면 동작을 저장하고 앱을 열고, 앱이 그 동작을 웹앱에 넣음 (AppDelegate.runPending)
 struct BabyActionIntent: AppIntent {
-    static var title: LocalizedStringResource = "아기로그 기록"
+    static var title: LocalizedStringResource = "베이비노트 기록"
     static var openAppWhenRun = true
     static var isDiscoverable = false
 
