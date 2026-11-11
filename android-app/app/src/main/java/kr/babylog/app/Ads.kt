@@ -16,8 +16,11 @@ import java.util.Calendar
 // 밤(21시~7시)에는 끔, 건강 기록으로 맞춤 광고하지 않게 비맞춤(npa=1)으로만 요청.
 // 개발자 모드에서 광고를 끄면(웹앱 localStorage 'babylog-v1-ads' = '0') 안 띄움.
 object Ads {
-    // 구글 테스트 배너 ID. 스토어 출시 때 AdMob에서 받은 실제 ID로 바꿈
-    private const val UNIT = "ca-app-pub-3940256099942544/6300978111"
+    // 출시 직전에 USE_REAL을 true로 바꾸면 실제 광고가 나옴. 그 전엔 구글 테스트 배너(테스터가 눌러도 문제없음)
+    private const val USE_REAL = false
+    private const val TEST_UNIT = "ca-app-pub-3940256099942544/6300978111"
+    private const val REAL_UNIT = "ca-app-pub-7474055336195838/9850900789" // AdMob: BabyNote(Android) home_banner
+    private val UNIT = if (USE_REAL) REAL_UNIT else TEST_UNIT
     private var started = false
     private var loaded = false
 
