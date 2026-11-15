@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BabyNote</string>
+    <string name="tile_name">BabyNote</string>
+    <string name="comp_name">Awake time</string>
+</resources>

@@ -36,6 +36,7 @@ object Widgets {
         for (k in STR_KEYS) e.putString(k, if (o.isNull(k)) "" else o.optString(k))
         e.apply()
         refresh(ctx)
+        WatchSync.sendSummary(ctx, o)
     }
 
     // 잠금화면에서 "깼어요"·"끝"을 누르면 위젯도 바로 바꿈

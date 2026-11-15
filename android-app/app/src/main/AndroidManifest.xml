@@ -211,6 +211,16 @@
                 android:resource="@xml/today_widget_info" />
         </receiver>
 
+        <!-- 갤럭시워치에서 누른 기록 받기 (WatchSync.kt) -->
+        <service
+            android:name=".WatchService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/babylog/act" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".PushService"
             android:exported="false">

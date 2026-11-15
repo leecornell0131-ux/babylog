@@ -15,6 +15,7 @@ enum NativeSync {
               let s = try? JSONDecoder().decode(BabySummary.self, from: data) else { return }
         SharedStore.summary = s
         apply(s, canStart: appActive)
+        WatchLink.shared.sendSummary()
     }
 
     static func apply(_ s: BabySummary, canStart: Bool) {
