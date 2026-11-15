@@ -52,6 +52,9 @@ android {
 
     buildFeatures { buildConfig = true }
 
+    // 위젯·알림 글자 사전(Tr.kt)은 갤럭시워치 앱과 같이 씀
+    sourceSets["main"].java.srcDir("../shared")
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -65,4 +68,6 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     // 광고 (AdMob 배너, 비맞춤). 지금은 구글 테스트 광고 ID라 수익 없음
     implementation("com.google.android.gms:play-services-ads:23.6.0")
+    // 갤럭시워치와 기록·요약 주고받기 (워치가 없으면 아무 일도 안 함)
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
 }

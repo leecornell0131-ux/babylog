@@ -42,7 +42,8 @@ class MainActivity : Activity() {
         // 웹앱에 넘겨도 되는 동작 (밖에서 들어온 다른 값은 버림)
         val ACTIONS = setOf("feed", "feed_start", "stop_feed", "sleep", "sleep_start", "stop_sleep", "pee", "poo", "both")
         // "feed_ml:120"처럼 양이 붙은 음성 수유 기록도 받음
-        fun isAction(a: String) = a in ACTIONS || Regex("feed_ml:\\d{1,3}").matches(a)
+        // 워치는 종류까지 붙여 보냄: "feed_ml:120:pump", "feed_start:breastL" (bridge.js __babyQuick이 풂)
+        fun isAction(a: String) = a in ACTIONS || Regex("feed_ml:\\d{1,3}(:(formula|pump))?|feed_start:(formula|pump|breastL|breastR)").matches(a)
         private const val REQ_FILE = 41
         // 떠 있는 화면 (잠금화면 "깼어요"를 바로 웹앱에 넣을 때 씀)
         var live: java.lang.ref.WeakReference<MainActivity>? = null
@@ -191,11 +192,8 @@ class MainActivity : Activity() {
     }
 
     // "feed_ml:120"은 bridge.js에 __babyQuick('feed_ml', at, 120)으로 넘김 (아이폰 Siri "수유 120"과 같은 형식)
-    private fun quick(a: String, at: Long): String {
-        val ml = a.removePrefix("feed_ml:").takeIf { a.startsWith("feed_ml:") }
-        val act = if (ml != null) "feed_ml" else a
-        return "window.__babyQuick?__babyQuick(${JSONObject.quote(act)},$at${if (ml != null) ",$ml" else ""}):'notready'"
-    }
+    private fun quick(a: String, at: Long): String =
+        "window.__babyQuick?__babyQuick(${JSONObject.quote(a)},$at):'notready'"
 
     // bridge.js가 돌려준 'ok:수면 40분 기록했어요'에서 문구만
     private fun said(r: String) = runCatching { org.json.JSONArray("[$r]").getString(0) }.getOrDefault("").substringAfter("ok:", "")
@@ -299,6 +297,7 @@ class MainActivity : Activity() {
             if (l == Tr.lang && getSharedPreferences("babylog_lang", android.content.Context.MODE_PRIVATE).contains("lang")) return
             Tr.set(this@MainActivity, l)
             runOnUiThread { LiveNotify.ensureChannel(this@MainActivity); Widgets.refresh(this@MainActivity) }
+            WatchSync.resend(this@MainActivity)
         }
 
         // 웹앱이 알림 서버에 요약을 보낼 때 이 휴대폰은 빼도록 알려 줌

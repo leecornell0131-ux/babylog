@@ -51,7 +51,7 @@ test('Korean stays as-is', () => {
 });
 
 test('Galaxy and iPhone widget dictionaries cover the same words', () => {
-  const kt = [...read('android-app/app/src/main/java/kr/babylog/app/Tr.kt').matchAll(/^\s*"((?:[^"\\]|\\.)*)" to listOf\(/gm)].map(m => m[1]);
+  const kt = [...read('android-app/shared/kr/babylog/app/Tr.kt').matchAll(/^\s*"((?:[^"\\]|\\.)*)" to listOf\(/gm)].map(m => m[1]);
   const sw = new Set([...read('ios-app/Shared/Tr.swift').matchAll(/^\s*"((?:[^"\\]|\\.)*)": \[/gm)].map(m => m[1]));
   assert.ok(kt.length > 50);
   assert.deepEqual(kt.filter(k => !sw.has(k)), [], '갤럭시 Tr.kt에만 있는 말 → 아이폰 Tr.swift에도');
@@ -62,4 +62,9 @@ test('Galaxy and iPhone widget dictionaries cover the same words', () => {
     assert.deepEqual(used(read('android-app/app/src/main/java/kr/babylog/app/' + f)).filter(k => !ktSet.has(k)), [], f);
   for (const f of ['BabylogWidget/Widgets.swift', 'BabylogWidget/TimerLiveActivity.swift', 'Shared/Summary.swift', 'Shared/TimerActivity.swift', 'Babylog/NativeSync.swift', 'Babylog/WebViewController.swift'])
     assert.deepEqual(used(read('ios-app/' + f)).filter(k => !sw.has(k)), [], f);
+  // 애플워치·갤럭시워치 앱
+  for (const f of ['ios-app/BabylogWatch/WatchApp.swift', 'ios-app/BabylogWatchWidget/WatchWidgets.swift'])
+    assert.deepEqual(used(read(f)).filter(k => !sw.has(k)), [], f);
+  for (const f of ['WearActivity.kt', 'Surfaces.kt'])
+    assert.deepEqual(used(read('android-app/wear/src/main/java/kr/babylog/wear/' + f)).filter(k => !ktSet.has(k)), [], f);
 });

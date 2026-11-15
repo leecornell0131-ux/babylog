@@ -88,6 +88,11 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         web.evaluateJavaScript("window.BabySync&&BabySync.flush&&BabySync.flush()", completionHandler: nil)
     }
 
+    // 워치 기록을 넣은 뒤 가족에게 바로 올리기 (앱이 뒤에 있을 때)
+    func flushSync() {
+        web.evaluateJavaScript("window.BabySync&&BabySync.flush&&BabySync.flush()", completionHandler: nil)
+    }
+
     private func endBg() {
         guard bgTask != .invalid else { return }
         UIApplication.shared.endBackgroundTask(bgTask)
@@ -100,6 +105,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     private static let resend = "(function(){var v=localStorage.getItem('babylog-v1');if(v)localStorage.setItem('babylog-v1',v)})()"
 
     @objc private func becameActive() {
+        WatchLink.shared.drain()
         web.evaluateJavaScript("window.BabyApp&&BabyApp.refresh()", completionHandler: nil)
         web.evaluateJavaScript(Self.resend, completionHandler: nil)
     }
@@ -108,13 +114,19 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     static let actions: Set<String> = ["feed", "feed_start", "stop_feed", "feed_ml", "sleep", "sleep_start", "stop_sleep", "pee", "poo", "both"]
 
+    // 애플워치는 종류·양을 동작 이름에 붙여 보냄 ("feed_ml:120:pump", "feed_start:breastL"). bridge.js __babyQuick이 풂
+    static func valid(_ action: String) -> Bool {
+        if actions.contains(action) { return true }
+        return action.range(of: "^(feed_ml:[0-9]{1,3}(:(formula|pump))?|feed_start:(formula|pump|breastL|breastR))$", options: .regularExpression) != nil
+    }
+
     // ml: 음성 "수유 120"(feed_ml)의 양
     private func quick(_ action: String, _ at: Date, _ ml: Int?) -> String {
         "window.__babyQuick?__babyQuick('\(action)',\(Int64(at.timeIntervalSince1970 * 1000)),\(ml.map(String.init) ?? "null")):'notready'"
     }
 
     func runAction(_ action: String, at: Date, ml: Int? = nil) {
-        guard Self.actions.contains(action), isViewLoaded else { return }
+        guard Self.valid(action), isViewLoaded else { return }
         web.evaluateJavaScript(quick(action, at, ml)) { [weak self] r, _ in
             if (r as? String) ?? "notready" == "notready" { self?.pending.append((action, at, ml)) }
         }
@@ -122,7 +134,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
     // 음성 명령용: 웹앱이 준비됐으면 기록하고 결과 문구("수면 1h 05m 기록했어요")를, 아직이면 nil
     func tryAction(_ action: String, at: Date, ml: Int? = nil) async -> String? {
-        guard Self.actions.contains(action), isViewLoaded else { return nil }
+        guard Self.valid(action), isViewLoaded else { return nil }
         let js = quick(action, at, ml)
         let r: String = await withCheckedContinuation { c in
             web.evaluateJavaScript(js) { r, _ in
@@ -142,6 +154,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         // 웹앱이 기록을 다 불러올 때까지 잠깐 기다렸다가 넣음
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             todo.forEach { self?.runAction($0.0, at: $0.1, ml: $0.2) }
+            WatchLink.shared.drain()
         }
     }
 
@@ -232,6 +245,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             // 웹앱 설정 > 화면·언어 (위젯·잠금화면 타이머 글자도 같은 언어로)
             if let l = m["l"] as? String, l != Tr.lang || SharedStore.load(account: "lang") == nil {
                 Tr.set(l)
+                WatchLink.shared.sendSummary()
                 WidgetCenter.shared.reloadAllTimelines()
             }
         default:

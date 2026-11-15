@@ -36,6 +36,8 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk babylog.apk
+          # 갤럭시워치 앱 (휴대폰 앱과 같은 키로 서명)
+          cp wear/build/outputs/apk/release/wear-release.apk babylog-watch.apk
 
       # Play 스토어용 AAB (업로드 키 Secrets가 있을 때만). 같은 빌드 번호라 APK와 버전이 같음.
       # 키 만들기·넣는 법: guide 폴더의 Play 안내서
@@ -55,6 +57,8 @@ jobs:
           echo "키 파일 크기: $(wc -c < "$RUNNER_TEMP/upload.jks") 바이트"
           PLAY_UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks" ./gradlew --no-daemon bundleRelease -Pstore=true
           cp app/build/outputs/bundle/release/app-release.aab babylog-play.aab
+          # 갤럭시워치용 AAB는 Play Console > 테스트 및 출시 > Wear OS 트랙에 따로 올림
+          cp wear/build/outputs/bundle/release/wear-release.aab babylog-watch-play.aab
           rm -f "$RUNNER_TEMP/upload.jks"
           echo "built=1" >> "$GITHUB_OUTPUT"
 
@@ -63,7 +67,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: babylog-play-aab
-          path: android-app/babylog-play.aab
+          path: |
+            android-app/babylog-play.aab
+            android-app/babylog-watch-play.aab
 
       # 다른 브랜치에서 만든 APK는 내려받기용으로만 남기고, 설치 주소(최신 릴리스)에는 main만 올림
       - name: Keep APK (branch build)
@@ -71,7 +77,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: babylog-apk
-          path: android-app/babylog.apk
+          path: |
+            android-app/babylog.apk
+            android-app/babylog-watch.apk
 
       - name: Publish release
         if: github.ref == 'refs/heads/main'
@@ -80,8 +88,9 @@ jobs:
         run: |
           TAG="android-${{ github.run_number }}"
           MSG="$(git log -1 --pretty=%s)"
-          FILES="android-app/babylog.apk"
+          FILES="android-app/babylog.apk android-app/babylog-watch.apk"
           [ -f android-app/babylog-play.aab ] && FILES="$FILES android-app/babylog-play.aab"
+          [ -f android-app/babylog-watch-play.aab ] && FILES="$FILES android-app/babylog-watch-play.aab"
           gh release create "$TAG" $FILES \
             --target "${{ github.sha }}" \
             --title "아기로그 안드로이드 0.1.${{ github.run_number }}" \

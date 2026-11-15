@@ -55,9 +55,18 @@ class StopReceiver : BroadcastReceiver() {
             }
         }
 
-        private fun add(ctx: Context, a: String, at: Long) {
+        fun add(ctx: Context, a: String, at: Long) {
             val list = pending(ctx).put(JSONObject().put("a", a).put("at", at))
             ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString(KEY, list.toString()).commit()
+        }
+
+        fun has(ctx: Context, a: String, at: Long): Boolean {
+            val src = pending(ctx)
+            for (i in 0 until src.length()) {
+                val o = src.optJSONObject(i) ?: continue
+                if (o.optString("a") == a && o.optLong("at") == at) return true
+            }
+            return false
         }
 
         // 웹앱에 넣고 나서야 지움 (넣기 전에 앱이 꺼져도 다음에 열 때 다시 넣음)
