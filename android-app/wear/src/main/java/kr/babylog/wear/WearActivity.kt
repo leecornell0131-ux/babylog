@@ -153,9 +153,9 @@ fun Home(s: Sum, now: Long, onFeed: () -> Unit, onSleep: () -> Unit, onDiaper: (
             Text(if (!s.has) Tr.t("폰 앱을 한 번 열어 주세요") else info, color = Color(0xFF9A95AD), fontSize = 12.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 3.dp, start = 20.dp, end = 20.dp))
         }
-        Round("🍼", Tr.t("수유"), FeedC, Modifier.align(Alignment.Center).offset(x = (-50).dp, y = (-4).dp), onFeed)
-        Round("💩", Tr.t("기저귀"), PooC, Modifier.align(Alignment.Center).offset(x = 50.dp, y = (-4).dp), onDiaper)
-        Round("😴", Tr.t("재우기"), SleepC, Modifier.align(Alignment.Center).offset(y = 58.dp), onSleep)
+        Round("🍼", Tr.t("수유"), FeedC, Modifier.align(Alignment.Center).offset(x = (-50).dp, y = (-4).dp), onClick = onFeed)
+        Round("💩", Tr.t("기저귀"), PooC, Modifier.align(Alignment.Center).offset(x = 50.dp, y = (-4).dp), onClick = onDiaper)
+        Round("😴", Tr.t("재우기"), SleepC, Modifier.align(Alignment.Center).offset(y = 58.dp), onClick = onSleep)
     }
 }
 
