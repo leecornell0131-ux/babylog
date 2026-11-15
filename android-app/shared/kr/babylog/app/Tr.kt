@@ -124,6 +124,8 @@ object Tr {
         "위젯이나 잠금화면 기능이 바뀐 새 버전이에요. 받은 파일을 열어 설치하면 기록은 그대로 남아요." to listOf("This version changes widget or lock screen features. Open the downloaded file to install; your records stay as they are.", "这是小组件或锁屏功能有变化的新版本。打开下载的文件安装，记录会保留。", "ウィジェットやロック画面の機能が変わった新しいバージョンです。ダウンロードしたファイルを開いてインストールしても記録はそのまま残ります。"),
         "받기" to listOf("Download", "下载", "ダウンロード"),
         // 애플워치·갤럭시워치 (워치 앱도 이 파일을 같이 씀)
+        "크라운을 돌리거나 위아래로 밀어 5ml씩" to listOf("Turn the crown or swipe up/down (5 ml)", "转动表冠或上下滑动（每次5ml）", "クラウンを回すか上下にスワイプ（5mlずつ）"),
+        "베젤을 돌리거나 위아래로 밀어 5ml씩" to listOf("Turn the bezel or swipe up/down (5 ml)", "转动表圈或上下滑动（每次5ml）", "ベゼルを回すか上下にスワイプ（5mlずつ）"),
         "😴 수면 중 {0}" to listOf("😴 Sleeping {0}", "😴 睡眠中 {0}", "😴 睡眠中 {0}"),
         "👀 깬 지 {0}" to listOf("👀 Awake {0}", "👀 已醒 {0}", "👀 起きてから {0}"),
         "👀 깼어요" to listOf("👀 Woke up", "👀 醒了", "👀 起きた"),

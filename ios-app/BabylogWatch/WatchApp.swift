@@ -186,6 +186,31 @@ struct FeedView: View {
     @Binding var path: [String]
     @State private var kind = "formula"   // formula·pump·breast
     @FocusState private var focused: Bool
+    @State private var crown: Double = 120
+    @State private var dragStart = 120
+    @State private var dragSteps = 0
+
+    private var amount: Int { Int((m.ml / 5).rounded()) * 5 }
+
+    // 5~300ml 안에서 5ml 단위로
+    private func set(_ v: Double) {
+        let n = min(300, max(5, Int((v / 5).rounded()) * 5))
+        if n != amount { WKInterfaceDevice.current().play(.click) }
+        m.ml = Double(n)
+    }
+
+    private func step(_ t: String, _ d: Int) -> some View {
+        Button {
+            set(Double(amount + d))
+            crown = Double(amount)
+            dragStart = amount
+        } label: {
+            Text(t).font(.system(size: 22, weight: .heavy)).foregroundStyle(Color.feed)
+                .frame(width: 30, height: 40)
+                .background(Color.white.opacity(0.12), in: Circle())
+        }
+        .buttonStyle(.plain)
+    }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -201,13 +226,28 @@ struct FeedView: View {
                     side("breastR", Tr.t("오른쪽"), Tr.t("모유 오른쪽"))
                 }
             } else {
-                Text("\(Int(m.ml))")
-                    .font(.system(size: 50, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.feed)
-                    + Text(" ml").font(.system(size: 18, weight: .bold)).foregroundStyle(Color.feed)
-                Text(Tr.t("크라운을 돌려 양 조절")).font(.system(size: 12)).foregroundStyle(.secondary)
+                // 크라운 한 칸·화면 위아래로 밀기·−/+ 버튼 모두 5ml씩 (크라운이 뻑뻑하거나 못 쓸 때도)
+                HStack(spacing: 2) {
+                    step("−", -5)
+                    (Text("\(amount)")
+                        .font(.system(size: 46, weight: .heavy, design: .rounded))
+                        + Text(" ml").font(.system(size: 16, weight: .bold)))
+                        .foregroundStyle(Color.feed)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .gesture(DragGesture(minimumDistance: 4).onChanged { g in
+                            // 12pt 밀 때마다 5ml (위로 밀면 늘고, 아래로 밀면 줄어듦)
+                            let steps = Int((-g.translation.height / 12).rounded(.towardZero))
+                            if steps != dragSteps { set(Double(dragStart + (steps) * 5)); dragSteps = steps }
+                        }.onEnded { _ in dragSteps = 0; dragStart = amount })
+                        .onAppear { dragStart = amount }
+                    step("+", 5)
+                }
+                Text(Tr.t("크라운을 돌리거나 위아래로 밀어 5ml씩")).font(.system(size: 11)).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
                 Button {
-                    let n = Int(m.ml)
+                    let n = amount
                     let name = kind == "pump" ? Tr.t("유축 수유") : Tr.t("분유")
                     m.feedSub = kind
                     path.removeAll()
@@ -222,9 +262,15 @@ struct FeedView: View {
         }
         .focusable(kind != "breast")
         .focused($focused)
-        .digitalCrownRotation($m.ml, from: 10, through: 300, by: 10, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+        .digitalCrownRotation($crown, from: 5, through: 300, by: 5, sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true)
+        .onChange(of: crown) { _, v in
+            let n = Int((v / 5).rounded()) * 5
+            if n != amount { set(Double(n)); dragStart = amount }
+        }
         .onAppear {
             kind = m.feedSub == "pump" ? "pump" : "formula"
+            set(m.ml)
+            crown = Double(amount)
             focused = true
         }
         .navigationTitle(Tr.t("수유"))
