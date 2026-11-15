@@ -159,6 +159,8 @@ enum Tr {
         "수면": ["Sleep", "睡眠", "睡眠"],
         "먼저 앱에서 아기 정보를 넣어 주세요": ["Enter your baby's info in the app first", "请先在应用中填写宝宝信息", "まずアプリで赤ちゃんの情報を入れてください"],
         // 애플워치·갤럭시워치
+        "크라운을 돌리거나 위아래로 밀어 5ml씩": ["Turn the crown or swipe up/down (5 ml)", "转动表冠或上下滑动（每次5ml）", "クラウンを回すか上下にスワイプ（5mlずつ）"],
+        "베젤을 돌리거나 위아래로 밀어 5ml씩": ["Turn the bezel or swipe up/down (5 ml)", "转动表圈或上下滑动（每次5ml）", "ベゼルを回すか上下にスワイプ（5mlずつ）"],
         "👀 깼어요": ["👀 Woke up", "👀 醒了", "👀 起きた"],
         "재우기": ["Sleep", "哄睡", "寝かしつけ"],
         "베이비노트": ["BabyNote", "BabyNote", "BabyNote"],

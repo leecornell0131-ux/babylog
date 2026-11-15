@@ -20,6 +20,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -196,7 +198,7 @@ fun Feed(ctx: android.content.Context, back: () -> Unit) {
             .onRotaryScrollEvent { e ->
                 acc += e.verticalScrollPixels
                 if (kotlin.math.abs(acc) > 40f) {
-                    ml = (ml + if (acc > 0) 10 else -10).coerceIn(10, 300)
+                    ml = (ml + if (acc > 0) 5 else -5).coerceIn(5, 300)
                     acc = 0f
                     buzz(ctx)
                 }
@@ -220,12 +222,25 @@ fun Feed(ctx: android.content.Context, back: () -> Unit) {
             }
         } else {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("−", color = FeedC, fontSize = 26.sp, modifier = Modifier.clickable { ml = (ml - 10).coerceAtLeast(10) }.padding(horizontal = 10.dp))
-                Text("$ml", color = FeedC, fontSize = 46.sp, fontWeight = FontWeight.ExtraBold)
+                Text("−", color = FeedC, fontSize = 26.sp, modifier = Modifier.clickable { ml = (ml - 5).coerceAtLeast(5) }.padding(horizontal = 10.dp))
+                // 베젤이 없는 워치: 숫자를 위아래로 밀어도 5ml씩
+                Text("$ml", color = FeedC, fontSize = 46.sp, fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.pointerInput(Unit) {
+                        var drag = 0f
+                        detectVerticalDragGestures(onDragEnd = { drag = 0f }) { ch, dy ->
+                            ch.consume()
+                            drag += dy
+                            if (kotlin.math.abs(drag) > 30f) {
+                                ml = (ml + if (drag < 0) 5 else -5).coerceIn(5, 300)
+                                drag = 0f
+                                buzz(ctx)
+                            }
+                        }
+                    })
                 Text("ml", color = FeedC, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                Text("+", color = FeedC, fontSize = 26.sp, modifier = Modifier.clickable { ml = (ml + 10).coerceAtMost(300) }.padding(horizontal = 10.dp))
+                Text("+", color = FeedC, fontSize = 26.sp, modifier = Modifier.clickable { ml = (ml + 5).coerceAtMost(300) }.padding(horizontal = 10.dp))
             }
-            Text(Tr.t("베젤을 돌려 양 조절"), color = Color(0xFF9A95AD), fontSize = 11.sp)
+            Text(Tr.t("베젤을 돌리거나 위아래로 밀어 5ml씩"), color = Color(0xFF9A95AD), fontSize = 11.sp)
             Spacer(Modifier.height(6.dp))
             Text("✓ " + Tr.t("저장"), color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center,
                 modifier = Modifier.width(130.dp).background(FeedC, RoundedCornerShape(50)).clickable {
