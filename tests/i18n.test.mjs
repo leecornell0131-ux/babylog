@@ -68,3 +68,16 @@ test('Galaxy and iPhone widget dictionaries cover the same words', () => {
   for (const f of ['WearActivity.kt', 'Surfaces.kt'])
     assert.deepEqual(used(read('android-app/wear/src/main/java/kr/babylog/wear/' + f)).filter(k => !ktSet.has(k)), [], f);
 });
+
+// 11/16 애플 심사 2.1 거절: 번역문에 한국어(음성 명령)가 남으면 화면 감시가 그 결과를 또 번역해 끝없이 길어지며 앱이 멈췄음
+test('translating an already translated text does not change it again', () => {
+  for (const l of LANGS) {
+    const b = load(l);
+    for (const s of ['"시리야, 베이비노트 아기 깼어"처럼 말하면 손 안 대고 기록돼요. 따로 설정하지 않아도 돼요.',
+      '"시리야, 아기 깼어"처럼 더 짧게 말하려면 단축어 앱에서 한 번 설정해야 해요.',
+      '"하이 빅스비, 아기깼어 열어"처럼 말하면 손 안 대고 기록돼요. 따로 설정하지 않아도 돼요.']) {
+      const once = b.t(s);
+      assert.equal(b.t(once), once, `${l}: 두 번째 번역에서 바뀜`);
+    }
+  }
+});

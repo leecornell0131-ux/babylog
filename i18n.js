@@ -14,7 +14,7 @@
   }
   var saved=null; try{ saved=localStorage.getItem(KEY) }catch(_){}
   var lang=LANGS.some(function(x){return x[0]===saved})?saved:detect();
-  var dict={}, trie=null, cache=new Map(), miss=new Set();
+  var dict={}, trie=null, cache=new Map(), done=new Set(), miss=new Set();
   var KO=/[가-힣]/, KOC=/[가-힣ㄱ-ㅎㅏ-ㅣ]/;
   var NUM=/\d+(?:[.,:/~]\d+)*/g;
 
@@ -41,12 +41,15 @@
   }
   function t(s){
     if(lang==='ko'||s==null) return s; s=String(s); if(!KO.test(s)) return s.indexOf('\uE000')<0?s:s.replace(/[\uE000\uE001]/g,'');
+    // 이미 번역해 넣은 결과는 다시 번역하지 않음: 번역문에 한국어(음성 명령 "시리야, …" 등)가 남아 있으면
+    // 화면 감시(MutationObserver)가 그 결과를 또 번역해 글이 끝없이 길어지고 앱이 멈췄음 (11/16 애플 심사 2.1 거절 원인)
+    if(done.has(s)) return s;
     var c=cache.get(s); if(c!==undefined) return c;
     if(!trie) build();
     // L10N.keep()으로 감싼 부분(메모·이름 같은 사용자 글)은 번역하지 않고 표시만 지움
     var r=s.split(/(\uE000[\s\S]*?\uE001)/).map(function(part){ if(part.charAt(0)==='\uE000') return part.slice(1,-1);
       return part.split('\n').map(function(l){ var m=l.match(/^(\s*)([\s\S]*?)(\s*)$/); return m[1]+line(m[2])+m[3] }).join('\n') }).join('');
-    if(cache.size>5000) cache.clear(); cache.set(s,r); return r;
+    if(cache.size>5000){ cache.clear(); done.clear() } cache.set(s,r); if(r!==s) done.add(r); return r;
   }
   // ---- 화면에 적용 ----
   var ATTRS=['placeholder','aria-label','title','alt'];
@@ -65,7 +68,7 @@
   var BabyI18n={
     lang:lang, langs:LANGS, t:t, miss:miss, walk:walk,
     keep:function(x){ return lang==='ko'||x==null||x===''?x:'\uE000'+x+'\uE001' },
-    load:function(l,d){ if(l!==lang) return; for(var k in d) dict[k]=d[k]; trie=null; cache.clear() },
+    load:function(l,d){ if(l!==lang) return; for(var k in d) dict[k]=d[k]; trie=null; cache.clear(); done.clear() },
     set:function(l){ try{ localStorage.setItem(KEY,l) }catch(_){} },
     saved:function(){ try{ return localStorage.getItem(KEY) }catch(_){ return null } },
     // 요일 한 글자 / 긴 이름 (일=0)
