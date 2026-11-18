@@ -252,7 +252,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.58';
+const VERSION='0.3.59';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -560,7 +560,8 @@ const ICON={prev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" st
 function sampleBanner(){ return S.sample?`<div class="sample"><span>지금 보이는 기록은 <b>예시 데이터</b>예요.</span><button class="linkbtn" type="button" data-act="clear">비우고 내 기록 시작</button></div>`:'' }
 let installHidden=pref('install-hide')==='1';
 function installBanner(){
-  if(!isIOS||standalone||!topLevel||installHidden) return '';
+  // 아이폰·갤럭시 앱 안에서는 'Safari 공유 버튼으로 홈 화면에 추가' 안내가 맞지 않으므로 숨김 (웹앱 Safari에서만)
+  if(!isIOS||standalone||!topLevel||installHidden||window.BabyNative||/BabylogIOS/.test(navigator.userAgent)) return '';
   return `<div class="install"><b>아이폰 홈 화면에 앱으로 추가하기</b>
   <ol><li>Safari 아래쪽의 공유 버튼(네모에 위쪽 화살표)을 눌러요</li><li>"홈 화면에 추가"를 눌러요</li><li>홈 화면의 베이비노트 아이콘으로 열어요</li></ol>
   <span class="small muted">홈 화면으로 열어야 기록이 오래 안전하게 남아요.</span>
