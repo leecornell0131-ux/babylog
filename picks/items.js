@@ -13,7 +13,7 @@ window.PICKS = [
     link: "https://link.coupang.com/a/iNehV6I4g8",
     short: "가장 좋은 크레아틴은 그냥 가장 저렴한 크레아틴이에요",
     desc: "언제 먹는 게 제일 좋냐고요? 유명한 피트니스 인플루언서분은 운동 전후로 나눠 먹는 게 조금 더 도움이 된다고 하네요. 하지만 언제 먹어도 큰 차이가 없다고 해서 저는 무식하게 바로 한 스쿱 퍼서 입으로 직행! 바로 물 500ml 원샷 때려 줍니다!",
-    photo: ""
+    photo: "p-creatine.jpg"
   },
   {
     name: "제로투히어로 논슬립 헬스스트랩",
@@ -21,7 +21,7 @@ window.PICKS = [
     link: "https://link.coupang.com/a/iNd05kh7v2",
     short: "",
     desc: "",
-    photo: ""
+    photo: "p-strap.jpg"
   },
 ];
 
