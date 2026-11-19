@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>써본템 추가</title>
+<style>
+:root{--bg:#F6F3EE;--card:#FFFFFF;--fg:#26221D;--muted:#7A7166;--line:#E8E1D6;--accent:#E8590C;--warn:#B42318}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17150F;--card:#221F19;--fg:#F0EBE3;--muted:#A69C8F;--line:#35302A;--accent:#FF8A3D;--warn:#FF8A80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:21px;margin:0 0 4px}
+.muted{color:var(--muted);font-size:13px;margin:0 0 14px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 5px}
+label small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=url],textarea{width:100%;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
+textarea{min-height:110px;resize:vertical}
+.seg{display:flex;gap:8px}
+.seg label{flex:1;margin:0;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px;text-align:center;font-weight:500;cursor:pointer}
+.seg input{display:none}
+.seg label:has(input:checked){background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.warn{color:var(--warn);font-size:12.5px;margin:4px 0 0;display:none}
+#prev{display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;margin-top:8px;border:1px solid var(--line)}
+button,.btn{display:block;width:100%;margin:10px 0 0;border:0;border-radius:12px;padding:12px;font:inherit;font-weight:700;text-align:center;text-decoration:none;cursor:pointer;background:var(--accent);color:#fff}
+.btn.ghost,button.ghost{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+#out{display:none;margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+#out h2{font-size:16px;margin:0 0 6px}
+ol{padding-left:20px;margin:6px 0;font-size:14px}
+pre{background:var(--bg);border-radius:10px;padding:10px;font-size:12.5px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0}
+.ok{color:var(--accent);font-size:13px;text-align:center;min-height:18px;margin:6px 0 0}
+</style>
+</head>
+<body>
+<main>
+<h1>써본템 추가</h1>
+<p class="muted">칸을 채우고 "다 됐어요"를 누르면 목록에 넣을 글이 만들어져요. 쓰던 내용은 이 휴대폰에 남아 있어요.</p>
+
+<form id="f" autocomplete="off">
+  <label for="name">물건 이름</label>
+  <input type="text" id="name" required placeholder="예) 제로투히어로 논슬립 헬스스트랩">
+
+  <label>분류</label>
+  <div class="seg">
+    <label><input type="radio" name="cat" value="육아">👶 육아</label>
+    <label><input type="radio" name="cat" value="헬스" checked>🏋️ 헬스</label>
+  </div>
+
+  <label for="link">쿠팡 파트너스 링크</label>
+  <input type="url" id="link" required placeholder="https://link.coupang.com/a/...">
+  <p class="warn" id="linkwarn">쿠팡 파트너스 링크(link.coupang.com)가 아니에요. 이대로면 수수료가 안 붙을 수 있어요.</p>
+
+  <label for="short">한 줄 후기 <small>(선택)</small></label>
+  <input type="text" id="short" maxlength="60" placeholder="예) 손바닥 안 까지고 데드 마지막 세트까지 버텨요">
+
+  <label for="desc">자세한 설명 <small>(선택, 나중에 채워도 돼요)</small></label>
+  <textarea id="desc" placeholder="언제부터 썼는지, 좋았던 점, 아쉬운 점을 편하게 적어 주세요."></textarea>
+
+  <label for="photo">사진 <small>(선택)</small></label>
+  <input type="file" id="photo" accept="image/*">
+  <img id="prev" alt="사진 미리보기">
+
+  <button type="submit">다 됐어요</button>
+</form>
+
+<section id="out">
+  <h2>이제 두 가지만 하면 돼요</h2>
+  <ol>
+    <li id="step-photo">사진 저장 → "사진 올리기"에서 그 파일을 올리고 <b>Commit changes</b>.</li>
+    <li>"글 복사" → "목록 고치기"에서 <code>window.PICKS = [</code> 바로 아래 줄에 붙여 넣고 <b>Commit changes</b>.</li>
+  </ol>
+  <p class="muted" style="margin:6px 0 0">1~2분 뒤 써본템 페이지에 나와요. 귀찮으면 "글 복사"한 걸 Claude에게 보내도 돼요.</p>
+  <a class="btn ghost" id="savephoto" download>① 사진 저장</a>
+  <a class="btn ghost" id="upphoto" href="https://github.com/leecornell0131-ux/babylog/upload/main/picks/img" target="_blank" rel="noopener">① 사진 올리기 (GitHub)</a>
+  <button type="button" id="copy">② 글 복사</button>
+  <a class="btn ghost" href="https://github.com/leecornell0131-ux/babylog/edit/main/picks/items.js" target="_blank" rel="noopener">② 목록 고치기 (GitHub)</a>
+  <p class="ok" id="okmsg"></p>
+  <pre id="code"></pre>
+  <button type="button" class="ghost" id="reset">새 물건 쓰기</button>
+</section>
+<p class="muted" style="margin-top:22px;text-align:center"><a href="./" style="color:inherit">써본템 페이지 보기</a></p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = 'picks-draft';
+const fields = ['name', 'link', 'short', 'desc'];
+let photoBlob = null, photoName = '';
+
+// 쓰던 내용 불러오기
+try {
+  const d = JSON.parse(localStorage.getItem(KEY) || '{}');
+  fields.forEach(k => { if (d[k]) $(k).value = d[k]; });
+  if (d.cat) document.querySelector(`input[name=cat][value="${d.cat}"]`).checked = true;
+} catch (e) {}
+const cat = () => document.querySelector('input[name=cat]:checked').value;
+function saveDraft(){
+  try { const d = {cat: cat()}; fields.forEach(k => d[k] = $(k).value); localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {}
+}
+$('f').addEventListener('input', saveDraft);
+$('f').addEventListener('change', saveDraft);
+
+function checkLink(){
+  const v = $('link').value.trim();
+  $('linkwarn').style.display = v && !/^https:\/\/link\.coupang\.com\//.test(v) ? 'block' : 'none';
+}
+$('link').addEventListener('input', checkLink); checkLink();
+
+// 사진은 가로세로 800px 안으로 줄여서 jpg로
+$('photo').addEventListener('change', async () => {
+  const file = $('photo').files[0];
+  photoBlob = null; photoName = '';
+  if (!file) { $('prev').style.display = 'none'; return; }
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+  await img.decode();
+  const s = Math.min(1, 800 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  photoBlob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+  const t = new Date(), p = n => String(n).padStart(2, '0');
+  photoName = `p${String(t.getFullYear()).slice(2)}${p(t.getMonth()+1)}${p(t.getDate())}-${p(t.getHours())}${p(t.getMinutes())}.jpg`;
+  $('prev').src = URL.createObjectURL(photoBlob); $('prev').style.display = 'block';
+});
+
+const js = s => JSON.stringify(String(s || '').trim());
+function block(){
+  return `  {
+    name: ${js($('name').value)},
+    cat: ${js(cat())},
+    link: ${js($('link').value)},
+    short: ${js($('short').value)},
+    desc: ${js($('desc').value)},
+    photo: ${js(photoName)}
+  },`;
+}
+
+$('f').addEventListener('submit', e => {
+  e.preventDefault();
+  $('code').textContent = block();
+  const hasPhoto = !!photoBlob;
+  $('step-photo').style.display = $('savephoto').style.display = $('upphoto').style.display = hasPhoto ? '' : 'none';
+  if (hasPhoto) { $('savephoto').href = URL.createObjectURL(photoBlob); $('savephoto').download = photoName; }
+  $('okmsg').textContent = '';
+  $('out').style.display = 'block';
+  $('out').scrollIntoView({behavior: 'smooth'});
+});
+
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('code').textContent); $('okmsg').textContent = '복사했어요'; }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($('code'));
+    getSelection().removeAllRanges(); getSelection().addRange(r);
+    $('okmsg').textContent = '글을 길게 눌러 복사해 주세요';
+  }
+};
+
+$('reset').onclick = () => {
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  $('f').reset(); photoBlob = null; photoName = '';
+  $('prev').style.display = 'none'; $('out').style.display = 'none'; checkLink();
+  scrollTo({top: 0, behavior: 'smooth'});
+};
+</script>
+</body>
+</html>

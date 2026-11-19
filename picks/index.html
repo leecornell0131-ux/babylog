@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>아무랩 써본템</title>
+<meta name="description" content="육아휴직 아빠가 직접 써 보고 남긴 육아·헬스 물건 목록">
+<meta property="og:title" content="아무랩 써본템">
+<meta property="og:description" content="육아휴직 아빠가 직접 써 보고 남긴 육아·헬스 물건 목록">
+<meta property="og:image" content="img/app-babynote.jpg">
+<style>
+:root{--bg:#F6F3EE;--card:#FFFFFF;--fg:#26221D;--muted:#7A7166;--line:#E8E1D6;--accent:#E8590C;--chip:#F1EBE2;--note:#FFF6E5;--noteline:#F2DDB4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17150F;--card:#221F19;--fg:#F0EBE3;--muted:#A69C8F;--line:#35302A;--accent:#FF8A3D;--chip:#2E2A23;--note:#2A2418;--noteline:#4A3D22}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+header{text-align:center;padding:8px 0 4px}
+h1{font-size:22px;margin:0}
+.sub{color:var(--muted);font-size:13.5px;margin:4px 0 0}
+.notice{background:var(--note);border:1px solid var(--noteline);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--muted);margin:14px 0}
+h2{font-size:15px;margin:22px 0 10px;color:var(--muted);font-weight:600}
+.app{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin:8px 0;text-decoration:none;color:inherit}
+.app img{width:56px;height:56px;border-radius:13px;flex:none}
+.app b{display:block;font-size:15.5px}
+.app span{display:block;font-size:13px;color:var(--muted)}
+.app i{margin-left:auto;font-style:normal;color:var(--accent);font-weight:600;font-size:13px;flex:none}
+.tabs{display:flex;gap:6px;margin:6px 0 12px}
+.tabs button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:9px 0;font:inherit;font-size:14px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:10px 0}
+.row{display:flex;gap:12px;padding:12px}
+.ph{width:88px;height:88px;border-radius:12px;flex:none;object-fit:cover;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:36px}
+.meta{min-width:0;flex:1}
+.chip{display:inline-block;background:var(--chip);border-radius:6px;padding:0 7px;font-size:11.5px;color:var(--muted)}
+.name{font-weight:700;font-size:15.5px;margin:3px 0 2px;word-break:keep-all}
+.short{font-size:13.5px;color:var(--muted);margin:0}
+.desc{padding:0 12px;font-size:14px;white-space:pre-line;margin:0 0 4px}
+details{padding:0 12px 4px}
+summary{cursor:pointer;color:var(--muted);font-size:13px;padding:2px 0 6px}
+.buy{display:block;margin:4px 12px 12px;text-align:center;background:var(--accent);color:#fff;border-radius:12px;padding:11px 0;font-weight:700;text-decoration:none}
+.empty{text-align:center;color:var(--muted);padding:24px 0}
+footer{text-align:center;color:var(--muted);font-size:12px;margin-top:28px;line-height:1.7}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>아무랩 써본템</h1>
+  <p class="sub">육아휴직 아빠가 직접 써 보고 남긴 것만 모았어요</p>
+</header>
+
+<p class="notice">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+
+<h2>제가 만든 앱</h2>
+<div id="apps"></div>
+
+<h2>써본템</h2>
+<div class="tabs" role="group" aria-label="분류">
+  <button data-cat="전체" aria-pressed="true">전체</button>
+  <button data-cat="육아" aria-pressed="false">👶 육아</button>
+  <button data-cat="헬스" aria-pressed="false">🏋️ 헬스</button>
+</div>
+<div id="list"></div>
+
+<footer>
+  이 포스팅은 쿠팡 파트너스 활동의 일환으로,<br>이에 따른 일정액의 수수료를 제공받습니다.<br>
+  가격과 재고는 쿠팡에서 확인해 주세요.<br>
+  <a href="https://www.instagram.com/amoo._.lab/">@amoo._.lab</a>
+</footer>
+</main>
+
+<script src="items.js"></script>
+<script>
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const EMOJI = {'육아':'👶','헬스':'🏋️'};
+
+document.getElementById('apps').innerHTML = (window.APPS || []).map(a => `
+  <a class="app" href="${esc(a.link)}" target="_blank" rel="noopener">
+    <img src="${esc(a.icon)}" alt="${esc(a.name)} 아이콘">
+    <div><b>${esc(a.name)} by AmooLab</b><span>${esc(a.tagline)}</span></div>
+    <i>보기</i>
+  </a>`).join('');
+
+function render(cat){
+  const items = (window.PICKS || []).filter(p => p && p.name && (cat === '전체' || p.cat === cat));
+  document.getElementById('list').innerHTML = items.length ? items.map(p => {
+    const ph = p.photo
+      ? `<img class="ph" src="img/${esc(p.photo)}" alt="${esc(p.name)}" loading="lazy">`
+      : `<div class="ph" aria-hidden="true">${EMOJI[p.cat] || '📦'}</div>`;
+    const desc = (p.desc || '').trim();
+    const long = desc.length > 90;
+    return `<article class="item">
+      <div class="row">${ph}
+        <div class="meta"><span class="chip">${esc(p.cat)}</span>
+          <div class="name">${esc(p.name)}</div>
+          ${p.short ? `<p class="short">${esc(p.short)}</p>` : ''}
+        </div>
+      </div>
+      ${desc ? (long ? `<details><summary>후기 자세히 보기</summary><p class="desc" style="padding:0">${esc(desc)}</p></details>` : `<p class="desc">${esc(desc)}</p>`) : ''}
+      <a class="buy" href="${esc(p.link)}" target="_blank" rel="sponsored nofollow noopener">쿠팡에서 보기</a>
+    </article>`;
+  }).join('') : '<p class="empty">곧 채워질 예정이에요.</p>';
+}
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  render(b.dataset.cat);
+  try { history.replaceState(null, '', b.dataset.cat === '전체' ? '#' : '#' + b.dataset.cat); } catch (e) {}
+});
+const start = decodeURIComponent(location.hash.slice(1));
+const btn = [...document.querySelectorAll('.tabs button')].find(b => b.dataset.cat === start);
+btn ? btn.click() : render('전체');
+</script>
+</body>
+</html>
