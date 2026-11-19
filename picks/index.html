@@ -18,7 +18,7 @@ main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
 header{text-align:center;padding:8px 0 4px}
 h1{font-size:22px;margin:0}
 .sub{color:var(--muted);font-size:13.5px;margin:4px 0 0}
-.notice{background:var(--note);border:1px solid var(--noteline);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--muted);margin:14px 0}
+.notice{background:var(--note);border:1px solid var(--noteline);border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:600;color:var(--fg);margin:14px 0}
 h2{font-size:15px;margin:22px 0 10px;color:var(--muted);font-weight:600}
 .app{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin:8px 0;text-decoration:none;color:inherit}
 .app img{width:56px;height:56px;border-radius:13px;flex:none}
@@ -38,7 +38,13 @@ h2{font-size:15px;margin:22px 0 10px;color:var(--muted);font-weight:600}
 .desc{padding:0 12px;font-size:14px;white-space:pre-line;margin:0 0 4px}
 details{padding:0 12px 4px}
 summary{cursor:pointer;color:var(--muted);font-size:13px;padding:2px 0 6px}
-.buy{display:block;margin:4px 12px 12px;text-align:center;background:var(--accent);color:#fff;border-radius:12px;padding:11px 0;font-weight:700;text-decoration:none}
+.top{padding:12px 12px 4px}
+.lead{font-size:13px;color:var(--muted);margin:2px 12px 6px}
+.lc{display:flex;gap:12px;align-items:center;margin:0 12px 12px;border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:inherit;background:var(--card)}
+.lc .ph{width:72px;height:72px;font-size:30px}
+.lc b{display:block;font-size:14.5px;font-weight:600;word-break:keep-all}
+.lc small{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.lc em{display:block;font-style:normal;font-size:12.5px;color:#2F9E44}
 .empty{text-align:center;color:var(--muted);padding:24px 0}
 footer{text-align:center;color:var(--muted);font-size:12px;margin-top:28px;line-height:1.7}
 footer a{color:var(--muted)}
@@ -51,7 +57,7 @@ footer a{color:var(--muted)}
   <p class="sub">육아휴직 아빠가 직접 써 보고 남긴 것만 모았어요</p>
 </header>
 
-<p class="notice">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
+<p class="notice">* 이 게시물은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
 
 <h2>제가 만든 앱</h2>
 <div id="apps"></div>
@@ -65,7 +71,7 @@ footer a{color:var(--muted)}
 <div id="list"></div>
 
 <footer>
-  이 포스팅은 쿠팡 파트너스 활동의 일환으로,<br>이에 따른 일정액의 수수료를 제공받습니다.<br>
+  이 게시물은 쿠팡 파트너스 활동의 일환으로,<br>이에 따른 일정액의 수수료를 제공받습니다.<br>
   가격과 재고는 쿠팡에서 확인해 주세요.<br>
   <a href="https://www.instagram.com/amoo._.lab/">@amoo._.lab</a>
 </footer>
@@ -91,15 +97,17 @@ function render(cat){
       : `<div class="ph" aria-hidden="true">${EMOJI[p.cat] || '📦'}</div>`;
     const desc = (p.desc || '').trim();
     const long = desc.length > 90;
+    let host = 'link.coupang.com';
+    try { host = new URL(p.link).host; } catch (e) {}
     return `<article class="item">
-      <div class="row">${ph}
-        <div class="meta"><span class="chip">${esc(p.cat)}</span>
-          <div class="name">${esc(p.name)}</div>
-          ${p.short ? `<p class="short">${esc(p.short)}</p>` : ''}
-        </div>
+      <div class="top"><span class="chip">${esc(p.cat)}</span>
+        ${p.short ? `<div class="name">${esc(p.short)}</div>` : ''}
       </div>
       ${desc ? (long ? `<details><summary>후기 자세히 보기</summary><p class="desc" style="padding:0">${esc(desc)}</p></details>` : `<p class="desc">${esc(desc)}</p>`) : ''}
-      <a class="buy" href="${esc(p.link)}" target="_blank" rel="sponsored nofollow noopener">쿠팡에서 보기</a>
+      <p class="lead">더 자세한 정보는 아래 링크를 확인하세요.</p>
+      <a class="lc" href="${esc(p.link)}" target="_blank" rel="sponsored nofollow noopener">${ph}
+        <div><b>${esc(p.name)}</b><small>COUPANG</small><em>${esc(host)}</em></div>
+      </a>
     </article>`;
   }).join('') : '<p class="empty">곧 채워질 예정이에요.</p>';
 }
