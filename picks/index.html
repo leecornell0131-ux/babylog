@@ -26,7 +26,7 @@ h2{font-size:15px;margin:22px 0 10px;color:var(--muted);font-weight:600}
 .app span{display:block;font-size:13px;color:var(--muted)}
 .app i{margin-left:auto;font-style:normal;color:var(--accent);font-weight:600;font-size:13px;flex:none}
 .tabs{display:flex;gap:6px;margin:6px 0 12px}
-.tabs button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:9px 0;font:inherit;font-size:14px;cursor:pointer}
+.tabs button{flex:1;min-width:0;white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:9px 0;font:inherit;font-size:14px;cursor:pointer}
 .tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .item{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:10px 0}
 .row{display:flex;gap:12px;padding:12px}
@@ -67,6 +67,7 @@ footer a{color:var(--muted)}
   <button data-cat="전체" aria-pressed="true">전체</button>
   <button data-cat="육아" aria-pressed="false">👶 육아</button>
   <button data-cat="헬스" aria-pressed="false">🏋️ 헬스</button>
+  <button data-cat="일상" aria-pressed="false">🕶️ 일상</button>
 </div>
 <div id="list"></div>
 
@@ -80,7 +81,7 @@ footer a{color:var(--muted)}
 <script src="items.js"></script>
 <script>
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const EMOJI = {'육아':'👶','헬스':'🏋️'};
+const EMOJI = {'육아':'👶','헬스':'🏋️','일상':'🕶️'};
 
 document.getElementById('apps').innerHTML = (window.APPS || []).map(a => `
   <a class="app" href="${esc(a.link)}" target="_blank" rel="noopener">
