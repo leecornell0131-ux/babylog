@@ -61,6 +61,6 @@ window.APPS = [
     name: "베이비노트",
     tagline: "수유·수면·기저귀를 한 손으로 남기는 육아 기록 앱",
     icon: "img/app-babynote.jpg",
-    link: "https://leecornell0131-ux.github.io/babylog/"
+    link: ""  // 출시되면 App Store 주소를 넣으면 '보기' 버튼이 생겨요
   },
 ];

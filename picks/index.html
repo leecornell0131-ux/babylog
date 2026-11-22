@@ -7,7 +7,7 @@
 <meta name="description" content="육아휴직 아빠가 직접 써 보고 남긴 육아·헬스 물건 목록">
 <meta property="og:title" content="아무랩 써본템">
 <meta property="og:description" content="육아휴직 아빠가 직접 써 보고 남긴 육아·헬스 물건 목록">
-<meta property="og:image" content="img/app-babynote.jpg">
+<meta property="og:image" content="img/app-hellchang.jpg">
 <style>
 :root{--bg:#F6F3EE;--card:#FFFFFF;--fg:#26221D;--muted:#7A7166;--line:#E8E1D6;--accent:#E8590C;--chip:#F1EBE2;--note:#FFF6E5;--noteline:#F2DDB4}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17150F;--card:#221F19;--fg:#F0EBE3;--muted:#A69C8F;--line:#35302A;--accent:#FF8A3D;--chip:#2E2A23;--note:#2A2418;--noteline:#4A3D22}}
@@ -24,6 +24,7 @@ h2{font-size:15px;margin:22px 0 10px;color:var(--muted);font-weight:600}
 .app img{width:56px;height:56px;border-radius:13px;flex:none}
 .app b{display:block;font-size:15.5px}
 .app span{display:block;font-size:13px;color:var(--muted)}
+.app i.soon{color:var(--muted);font-weight:500}
 .app i{margin-left:auto;font-style:normal;color:var(--accent);font-weight:600;font-size:13px;flex:none}
 .tabs{display:flex;gap:6px;margin:6px 0 12px}
 .tabs button{flex:1;min-width:0;white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:9px 0;font:inherit;font-size:14px;cursor:pointer}
@@ -83,12 +84,13 @@ footer a{color:var(--muted)}
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const EMOJI = {'육아':'👶','헬스':'🏋️','일상':'🕶️'};
 
-document.getElementById('apps').innerHTML = (window.APPS || []).map(a => `
-  <a class="app" href="${esc(a.link)}" target="_blank" rel="noopener">
-    <img src="${esc(a.icon)}" alt="${esc(a.name)} 아이콘">
-    <div><b>${esc(a.name)} by AmooLab</b><span>${esc(a.tagline)}</span></div>
-    <i>보기</i>
-  </a>`).join('');
+document.getElementById('apps').innerHTML = (window.APPS || []).map(a => {
+  const inner = `<img src="${esc(a.icon)}" alt="${esc(a.name)} 아이콘">
+    <div><b>${esc(a.name)} by AmooLab</b><span>${esc(a.tagline)}</span></div>`;
+  return a.link
+    ? `<a class="app" href="${esc(a.link)}" target="_blank" rel="noopener">${inner}<i>보기</i></a>`
+    : `<div class="app">${inner}<i class="soon">준비 중</i></div>`;
+}).join('');
 
 function render(cat){
   const items = (window.PICKS || []).filter(p => p && p.name && (cat === '전체' || p.cat === cat));
