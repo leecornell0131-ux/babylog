@@ -79,7 +79,7 @@ footer a{color:var(--muted)}
 </footer>
 </main>
 
-<script src="items.js"></script>
+<script src="items.js?v=2"></script>
 <script>
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const EMOJI = {'육아':'👶','헬스':'🏋️','일상':'🕶️'};
@@ -89,7 +89,7 @@ document.getElementById('apps').innerHTML = (window.APPS || []).map(a => {
     <div><b>${esc(a.name)} by AmooLab</b><span>${esc(a.tagline)}</span></div>`;
   return a.link
     ? `<a class="app" href="${esc(a.link)}" target="_blank" rel="noopener">${inner}<i>보기</i></a>`
-    : `<div class="app">${inner}<i class="soon">준비 중</i></div>`;
+    : `<div class="app">${inner}<i class="soon">앱 심사 중ㅠ</i></div>`;
 }).join('');
 
 function render(cat){
