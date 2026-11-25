@@ -200,6 +200,9 @@ h2.sec{font-size:13px;color:var(--muted);font-weight:500;margin:6px 4px 0}
 .wring button{border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
 .wring svg{width:92px;height:92px}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+/* 성장 기록 표: 줄을 누르거나 꾹 누르면 수정 화면 */
+tr.gRow{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;transition:opacity .2s}
+tr.gRow.pressing{opacity:.5}
 th,td{padding:8px 6px;text-align:right;border-top:1px solid var(--soft)}
 th{font-weight:500;color:var(--muted);font-size:12px;border-top:0}
 th:first-child,td:first-child{text-align:left}
@@ -252,7 +255,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.60';
+const VERSION='0.3.61';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -887,7 +890,7 @@ function renderGrowth(){
   <label class="field" for="sBirth">태어난 날<input type="date" id="sBirth" value="${esc(b.birth)}"></label>
   <div class="field"><span>성별</span><div class="chips">${[['m','남아'],['f','여아']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${b.sex===k}" data-sex="${k}">${n}</button>`).join('')}</div></div></div>`;
   const pts=growthPoints(key), last=pts[pts.length-1];
-  const rows=S.events.filter(e=>e.type==='growth').sort((a,c)=>c.start-a.start).map(e=>`<tr><td><button class="linkbtn" style="padding:0;min-height:0" type="button" data-ev="${e.id}">${md(e.start)}</button></td><td>${e.kg?e.kg+'kg':'–'}</td><td>${e.cm?e.cm+'cm':'–'}</td><td>${e.head?e.head+'cm':'–'}</td></tr>`).join('');
+  const rows=S.events.filter(e=>e.type==='growth').sort((a,c)=>c.start-a.start).map(e=>`<tr class="gRow" data-gev="${e.id}"><td><button class="linkbtn" style="padding:0;min-height:0" type="button" data-ev="${e.id}">${md(e.start)}</button></td><td>${e.kg?e.kg+'kg':'–'}</td><td>${e.cm?e.cm+'cm':'–'}</td><td>${e.head?e.head+'cm':'–'}</td></tr>`).join('');
   return `${sampleBanner()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${b.sex==='m'?'남아':'여아'} · ${ageText(Date.now())}</span><h1>성장곡선</h1></div><button class="btn" type="button" data-act="addGrowth">측정 기록</button></header>
   <div class="chips">${Object.entries(GLAB).map(([k,v])=>`<button class="chip" type="button" aria-pressed="${ind===k}" data-gind="${k}">${v[0]}</button>`).join('')}</div>
   ${last?`<div class="alertline">최근 ${name} <b>${last[key]}${unit}</b> · ${md(last.start)} · ${pctText(ind,last[key],last.start)||'백분위 계산 불가'}</div>`:`<div class="alertline">${name} 기록이 아직 없어요. "측정 기록"으로 넣어 보세요.</div>`}
@@ -897,7 +900,8 @@ function renderGrowth(){
     return fc?`<div class="card chart" style="padding-top:6px"><div class="row between small" style="padding:0 6px"><b style="color:var(--feed-text)">하루 수유량</b><span class="muted">위 그래프와 같은 개월 축</span></div>${fc}</div>
   <div class="legend"><span><i style="background:var(--feed);opacity:.35"></i>하루 합계</span><span><i style="background:var(--feed);height:3px"></i>7일 평균</span><span>분유·유축 ml만, 오늘 제외</span></div>`:'' })()}
   <p class="small muted" style="margin:0">WHO 아동 성장 기준(2006). 한국 소아청소년 성장도표도 만 3세 미만은 이 기준을 써요. 백분위는 참고용이에요. 곡선을 크게 벗어나거나 갑자기 꺾이면 소아과에 물어보세요.</p>
-  ${rows?`<div class="card" style="overflow-x:auto;padding:4px 10px"><table><thead><tr><th>날짜</th><th>몸무게</th><th>키</th><th>머리둘레</th></tr></thead><tbody>${rows}</tbody></table></div>`:''}`;
+  ${rows?`<div class="card" style="overflow-x:auto;padding:4px 10px"><table><thead><tr><th>날짜</th><th>몸무게</th><th>키</th><th>머리둘레</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="small muted" style="margin:0 4px">줄을 꾹 누르면 고치거나 지울 수 있어요.</p>`:''}`;
 }
 
 // ---------- 내보내기 ----------
@@ -1497,6 +1501,17 @@ $('#app').addEventListener('change',e=>{ const i=e.target.closest('[data-pick]')
   const [y,m,dd]=i.value.split('-').map(Number), t=Math.min(dayStart(Date.now()),new Date(y,m-1,dd).getTime());
   if(i.dataset.pick==='day'){ view.day=t; view.scrollLatest=true } else view.weekOff=Math.floor((dayStart(Date.now())-t)/(7*DAY));
   render() });
+// 성장 기록 표: 줄을 꾹 누르면(0.5초) 수정·삭제 화면. 그냥 눌러도 열림
+const gHold={t:0,row:null,x:0,y:0,fired:0};
+(()=>{ const app=$('#app'), stop=()=>{ clearTimeout(gHold.t); gHold.t=0; if(gHold.row) gHold.row.classList.remove('pressing'); gHold.row=null };
+  app.addEventListener('pointerdown',e=>{ const r=e.target.closest('tr[data-gev]'); if(!r||e.button>0) return; stop(); gHold.row=r; gHold.x=e.clientX; gHold.y=e.clientY; r.classList.add('pressing');
+    gHold.t=setTimeout(()=>{ const id=r.dataset.gev; stop(); gHold.fired=Date.now(); try{ navigator.vibrate&&navigator.vibrate(15) }catch(_){} evSheet(id) },500) });
+  app.addEventListener('pointermove',e=>{ if(gHold.t&&Math.hypot(e.clientX-gHold.x,e.clientY-gHold.y)>10) stop() });
+  ['pointerup','pointercancel'].forEach(n=>app.addEventListener(n,stop));
+  app.addEventListener('contextmenu',e=>{ if(e.target.closest('tr[data-gev]')) e.preventDefault() });
+  app.addEventListener('click',e=>{ const r=e.target.closest('tr[data-gev]'); if(!r) return;
+    if(Date.now()-gHold.fired<800){ e.stopImmediatePropagation(); e.preventDefault(); return } // 꾹 누른 뒤 손 뗄 때의 클릭은 무시
+    if(!e.target.closest('button')) evSheet(r.dataset.gev) },true) })();
 $('#app').addEventListener('click',async e=>{
   const t=e.target.closest('button'); if(!t) return;
   if(t.dataset.ev) return evSheet(t.dataset.ev);
