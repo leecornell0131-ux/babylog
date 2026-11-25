@@ -252,7 +252,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.59';
+const VERSION='0.3.60';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -275,7 +275,7 @@ const pref=(k,v)=>{try{ if(v===undefined) return localStorage.getItem(KEY+'-'+k)
 let DEVICE=pref('device'); if(!DEVICE){ DEVICE=uid(); pref('device',DEVICE) }
 // 베타 테스터(얼리버드) 코드: LN07-K3QX 꼴. 공개 저장소라 SHA-256 앞 24자리만 둠. 순서+1 = 테스터 번호.
 // 맞는 코드를 넣으면 pref 'tester'=번호, 광고 끔(얼리버드 약속). 사용량 숫자에 번호가 붙어 운영자가 테스터별로 볼 수 있음(testers.html)
-const TESTER_H=["9dab6538abf56aed278f3043", "a2ba93e4f8fd8c5609231373", "646ecb5a65bf89942ac6e10d", "7d46773e575d10d67a51bc3d", "e2a03a0421e9c20352c5e829", "6df5b2ae47b30f32958cc13a", "1c95b7e22d1cea7f3990f42a", "1717cdc705641623afb2efed", "951b647267eff2ad72284513", "324e9cb2776fce68cb117170", "b75338a874e5337c40430ebb", "0e3d119fc4c6300e71d9b207", "0c9cf4089e753f8e6c6c4689", "92919606d7570f40faef2011", "7e8320e079a2c5db268a930c", "488194765afb7cba777327ca", "aceb7b3fba293435c1365d32", "fb05fb3ee0e8f6677b53371a", "c382bc3dc096119cc4f69376", "7fa8dfa17cceebec99438c36", "5a6a31c3f1b499733b708a1f", "fe79892f4aed8ce0a812e6aa", "d2fda5959ab38bdb219ace1c", "037561c45bc6da35094d1664", "0b0e9b1fe8ddbb5594d0eec4", "9aac93fdb887dccab2a86304", "1c394a72796fa7716d91de2e", "9be72a46d75cff4ae182caea", "a94442a3ebced9f987ae8e5f", "2dc8bcddab72a66673a18f23"];
+const TESTER_H=["9dab6538abf56aed278f3043", "a2ba93e4f8fd8c5609231373", "646ecb5a65bf89942ac6e10d", "7d46773e575d10d67a51bc3d", "e2a03a0421e9c20352c5e829", "6df5b2ae47b30f32958cc13a", "1c95b7e22d1cea7f3990f42a", "1717cdc705641623afb2efed", "951b647267eff2ad72284513", "324e9cb2776fce68cb117170", "b75338a874e5337c40430ebb", "0e3d119fc4c6300e71d9b207", "0c9cf4089e753f8e6c6c4689", "92919606d7570f40faef2011", "7e8320e079a2c5db268a930c", "488194765afb7cba777327ca", "aceb7b3fba293435c1365d32", "fb05fb3ee0e8f6677b53371a", "c382bc3dc096119cc4f69376", "7fa8dfa17cceebec99438c36", "5a6a31c3f1b499733b708a1f", "fe79892f4aed8ce0a812e6aa", "d2fda5959ab38bdb219ace1c", "037561c45bc6da35094d1664", "0b0e9b1fe8ddbb5594d0eec4", "9aac93fdb887dccab2a86304", "1c394a72796fa7716d91de2e", "9be72a46d75cff4ae182caea", "a94442a3ebced9f987ae8e5f", "2dc8bcddab72a66673a18f23", "beb05410eaf4b62c41a00a7a", "b397bc21444f1247d76812e0", "6cd0ba0cd3cadcd74641aa9a", "3c21e610c212ab9b223cf2ee", "227495d10b62c201f1e64f65", "96c613fed0e14c4eb89c99dd", "e1a29c8387080584a57c0d95", "7769ecd1eccd11b07dde49e3", "f8aa9d0fc986fe4fea3db2f3", "6949324b47859191f7698446", "99772d1c2aabf642b5bfc5f0", "9edc60b46fe98cea98681747", "0470fdcc5c4017d57da6e9a6", "648973bdc70fd6b8389ae66a", "b308206b1c7162f7da123447", "4a7fd43866044ed5650a6ffe", "017174b9330e517bf17feba3", "fb14bfb5dbea80c39e0f85a2", "a25d9184a0560c045216ac31", "b7406d19f812d6f02519f775", "f6971eb5d0dc0e89c02a51c1", "99ac4f422bbc539362b7dda6", "1f891c6799a8aeb9054363bd", "c1e3a2866947bec79db338ed", "6eae18ba239f8cf57f27d3df", "3055f21be7ea46c61980e95f", "361a32518ab59a3b6b54b078", "7a4d08a955ec7c6697e8b81c", "9a3e84d2c413489ddc1ef967", "9d3e1210128dc3d5862b18cc"];
 const testerNo=()=>+pref('tester')||0;
 async function testerMatch(raw){
   const v=String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(!/^LN\d{2}[A-Z0-9]{4}$/.test(v)) return 0;
