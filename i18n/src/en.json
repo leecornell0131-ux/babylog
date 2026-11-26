@@ -777,5 +777,10 @@
  "#가 #차": "#-in-1 dose #",
  "혼합 백신": "Combination vaccine",
  "#가는 B형간염도 함께 체크돼요.": "#-in-1 also checks off Hepatitis B.",
- "뒤": "later"
+ "뒤": "later",
+ "전체": "All",
+ "이전": "Earlier",
+ "축소": "Zoom out",
+ "확대": "Zoom in",
+ "그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대돼요.": "Swipe the chart sideways to move, pinch with two fingers to zoom."
 }

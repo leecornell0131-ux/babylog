@@ -264,7 +264,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.64';
+const VERSION='0.3.65';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -914,32 +914,56 @@ function feverChart(from,to){
   s+=`<rect x="${L}" y="${f(Y(yMax))}" width="${pw}" height="${f(Y(38)-Y(yMax))}" style="fill:var(--warn-soft)" opacity=".7"/>`;
   for(let v=yMin;v<=yMax;v++) s+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(v))}" y2="${f(Y(v))}" style="stroke:var(--soft)"/><text x="${L-4}" y="${f(Y(v)+3)}" text-anchor="end">${v}</text>`;
   s+=`<line x1="${L}" x2="${W-R}" y1="${f(Y(38))}" y2="${f(Y(38))}" style="stroke:var(--warn)" stroke-dasharray="4 3"/><text x="${L+3}" y="${f(Y(38)-3)}" style="fill:var(--warn)">38℃</text>`;
-  // 가로축: 48시간이면 0시·12시, 7일이면 날마다 0시
-  const step=to-from<=3*DAY?12*H:DAY; for(let t=dayStart(from)+step;t<to;t+=step){ if(t<=from) continue; const d=new Date(t), mid=!d.getHours();
-    s+=`<line x1="${f(X(t))}" x2="${f(X(t))}" y1="${T}" y2="${T+ph}" style="stroke:var(--${mid?'line':'soft'})"/>`;
-    if(X(t)>L+12&&X(t)<W-R-12) s+=`<text x="${f(X(t))}" y="${Hh-8}" text-anchor="middle">${mid?md(t):'12시'}</text>` }
-  s+=`<text x="${W-R}" y="${Hh-8}" text-anchor="end">지금</text>`;
+  // 가로축: 보는 길이에 따라 12시간 · 하루 · 일주일 · 한 달 간격
+  const span=to-from, ticks=[]; if(span<=3*DAY){ for(let t=dayStart(from)+12*H;t<to;t+=12*H) if(t>from) ticks.push([t,new Date(t).getHours()?'12시':md(t),!new Date(t).getHours()]) }
+  else if(span<=16*DAY){ const st=span>9*DAY?2:1; for(let t=dayStart(from)+DAY,i=0;t<to;t+=DAY,i++) ticks.push([t,i%st?'':md(t),true]) }
+  else if(span<=120*DAY){ const st=span>60*DAY?14:7; for(let t=dayStart(from)+DAY;t<to;t+=DAY) if(new Date(t).getDay()===1&&(st===7||Math.floor(t/DAY/7)%2===0)) ticks.push([t,md(t),true]) }
+  else { const d=new Date(from); d.setDate(1); d.setHours(0,0,0,0); const st=span>540*DAY?3:1; for(d.setMonth(d.getMonth()+1);d.getTime()<to;d.setMonth(d.getMonth()+st)) ticks.push([d.getTime(),d.getMonth()?md(d.getTime()):d.getFullYear()+'.1',true]) }
+  ticks.forEach(([t,lab,major])=>{ s+=`<line x1="${f(X(t))}" x2="${f(X(t))}" y1="${T}" y2="${T+ph}" style="stroke:var(--${major?'line':'soft'})"/>`;
+    if(lab&&X(t)>L+12&&X(t)<W-R-22) s+=`<text x="${f(X(t))}" y="${Hh-8}" text-anchor="middle">${lab}</text>` });
+  if(to>=Date.now()-H) s+=`<text x="${W-R}" y="${Hh-8}" text-anchor="end">지금</text>`;
   // 접종·병원: 그 시각에 세로 점선 + 위쪽 표시 (이름은 겹치지 않을 때만)
-  let lastEnd=-1; marks.forEach(x=>{ const vac=x.sub==='vaccine', c=vac?'var(--accent)':'var(--care)', cx=X(x.start);
-    s+=`<line x1="${f(cx)}" x2="${f(cx)}" y1="${T-6}" y2="${T+ph}" style="stroke:${c}" stroke-width="1.4" stroke-dasharray="3 3"/><circle cx="${f(cx)}" cy="12" r="9" style="fill:var(--card);stroke:${c}"/><text x="${f(cx)}" y="15.5" text-anchor="middle" style="font-size:10px">${vac?'💉':'🏥'}</text>`;
+  // 넓게 볼 때(2주 넘게)는 이름을 빼고 아이콘만, 12px 안에 겹치는 표시는 하나만 그림
+  const showName=to-from<=14*DAY; let lastEnd=-1, lastX=-99; marks.forEach(x=>{ const vac=x.sub==='vaccine', c=vac?'var(--accent)':'var(--care)', cx=X(x.start);
+    s+=`<line x1="${f(cx)}" x2="${f(cx)}" y1="${T-6}" y2="${T+ph}" style="stroke:${c}" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+    if(cx-lastX<12) return; lastX=cx;
+    s+=`<circle cx="${f(cx)}" cy="12" r="9" style="fill:var(--card);stroke:${c}"/><text x="${f(cx)}" y="15.5" text-anchor="middle" style="font-size:10px">${vac?'💉':'🏥'}</text>`;
+    if(!showName) return;
     const name=(x.note||(vac?'접종':'병원')).slice(0,10), w=name.length*9, left=cx+12+w>W-2, lx=left?cx-12-w:cx+12; if(lx>lastEnd&&lx>=2){ s+=`<text x="${f(left?cx-12:cx+12)}" y="15" text-anchor="${left?'end':'start'}" style="fill:${c};font-weight:700" translate="no">${esc(name)}</text>`; lastEnd=left?cx+10:cx+12+w } else lastEnd=Math.max(lastEnd,cx+10) });
   meds.forEach(x=>{ const cx=X(x.start); s+=`<text x="${f(cx)}" y="${f(T+ph-4)}" text-anchor="middle" style="font-size:12px">💊</text>` });
-  if(temps.length>1) s+=`<path d="M${temps.map(x=>f(X(x.start))+' '+f(Y(x.val))).join('L')}" fill="none" style="stroke:var(--health)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  // 체온은 띄엄띄엄 재는 집이 많아 2일 넘게 빈 곳은 선을 끊음
+  const segs=[]; temps.forEach((x,i)=>{ if(!i||x.start-temps[i-1].start>2*DAY) segs.push([]); segs[segs.length-1].push(x) });
+  segs.filter(g=>g.length>1).forEach(g=>s+=`<path d="M${g.map(x=>f(X(x.start))+' '+f(Y(x.val))).join('L')}" fill="none" style="stroke:var(--health)" stroke-width="2.2" stroke-linejoin="round"/>`);
   temps.forEach(x=>s+=`<circle cx="${f(X(x.start))}" cy="${f(Y(x.val))}" r="3.8" style="fill:${x.val>=38?'var(--health)':'var(--card)'};stroke:var(--health)" stroke-width="1.8"/>`);
   return s+'</svg>';
 }
+// 열 그래프 보기 구간. view.fevWin(드래그·확대·접종 바로 가기)이 있으면 그것, 없으면 48시간·7일·전체
+function fevBounds(){ const now=Date.now(), b=new Date(S.baby.birth+'T00:00:00').getTime();
+  const first=S.events.filter(x=>x.type==='etc'&&HEALTH_SUBS.includes(x.sub)).reduce((m,x)=>Math.min(m,x.start),now-7*DAY);
+  return [Math.min(first-DAY,isNaN(b)?Infinity:b),now+H] }
+function fevWindow(){ const now=Date.now(); if(view.fevWin) return [view.fevWin.from,view.fevWin.to];
+  const R=view.fevR===undefined?2:view.fevR; if(!R){ const [a]=fevBounds(); return [a,now] } return [now-R*DAY,now] }
+function fevClamp(from,to){ const [a,b]=fevBounds(); let sp=Math.min(Math.max(to-from,6*H),b-a); if(from<a){ from=a; to=a+sp } if(to>b){ to=b; from=b-sp } return {from,to:from+sp} }
+function fevSpanText(from,to){ const d=(to-from)/DAY; return `${fmtDay(from)} ~ ${to>=Date.now()-H?'지금':fmtDay(to)} · ${d<3?Math.round(d*24)+'시간':Math.round(d)+'일'}` }
+// 접종 뒤 3일 안의 가장 높은 체온 (예전 접종 뒤 열이 얼마나 났는지 찾아보기용)
+function vacFever(v){ let mx=null; S.events.forEach(x=>{ if(x.type==='etc'&&x.sub==='temp'&&x.val&&x.start>=v.start-2*H&&x.start<=v.start+3*DAY&&(!mx||x.val>mx.val)) mx=x }); return mx }
+function vacJumps(){ const vs=S.events.filter(x=>x.type==='etc'&&x.sub==='vaccine').sort((a,c)=>c.start-a.start); if(!vs.length) return '';
+  return `<div class="chips" style="overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px">${vs.map(v=>{ const m=vacFever(v); return `<button class="chip" type="button" data-fevjump="${v.id}" style="flex:none">💉 ${fmtDay(v.start)} <span translate="no">${esc((v.note||'예방접종').slice(0,14))}</span>${m?` · <b${m.val>=38?' style="color:var(--warn)"':''}>${m.val}℃</b>`:''}</button>` }).join('')}</div>` }
 function renderFever(){
-  const R=view.fevR||2, to=Date.now(), from=to-R*DAY;
+  const R=view.fevR===undefined?2:view.fevR, [from,to]=fevWindow(), now=Date.now();
   const lt=lastOf(x=>x.type==='etc'&&x.sub==='temp'&&x.val), lm=lastOf(x=>x.type==='etc'&&x.sub==='med');
-  const info=feverCard()||(lt&&to-lt.start<R*DAY?`<div class="alertline">최근 체온 <b>${lt.val}℃</b> · ${md(lt.start)} ${hm(lt.start)}${lm&&to-lm.start<R*DAY?`<br>💊 ${lm.note?`<span translate="no">${esc(lm.note)}</span>`:'약'} · ${agoText(to-lm.start)} 전`:''}</div>`:'');
-  const medLine=feverCard()&&lm&&to-lm.start<2*DAY?`<div class="alertline">💊 ${lm.note?`<span translate="no">${esc(lm.note)}</span>`:'약'} 먹은 지 <b>${agoText(to-lm.start)}</b> · ${hm(lm.start)}</div>`:'';
+  const info=feverCard()||(lt&&now-lt.start<2*DAY?`<div class="alertline">최근 체온 <b>${lt.val}℃</b> · ${md(lt.start)} ${hm(lt.start)}${lm&&now-lm.start<2*DAY?`<br>💊 ${lm.note?`<span translate="no">${esc(lm.note)}</span>`:'약'} · ${agoText(now-lm.start)} 전`:''}</div>`:'');
+  const medLine=feverCard()&&lm&&now-lm.start<2*DAY?`<div class="alertline">💊 ${lm.note?`<span translate="no">${esc(lm.note)}</span>`:'약'} 먹은 지 <b>${agoText(now-lm.start)}</b> · ${hm(lm.start)}</div>`:'';
   const list=S.events.filter(x=>x.type==='etc'&&HEALTH_SUBS.includes(x.sub)&&x.start>=from&&x.start<=to).sort((a,c)=>c.start-a.start);
-  const rows=list.map(x=>`<tr class="gRow" data-gev="${x.id}"><td class="muted" style="white-space:nowrap">${dayStart(x.start)===dayStart(to)?'오늘':md(x.start)} ${hm(x.start)}</td><td style="white-space:nowrap"><span aria-hidden="true">${ETC[x.sub].ic}</span> <b${x.sub==='temp'&&x.val>=38?' style="color:var(--warn)"':''}>${x.sub==='temp'?x.val+'℃':ETC[x.sub].label}</b></td><td class="muted"${x.note?' translate="no"':''}>${esc(x.note||'')}</td></tr>`).join('');
-  return `${sampleBanner()}${growthSeg()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${ageText(to)}</span><h1>열</h1></div><button class="btn" type="button" data-etcq="temp">체온 기록</button></header>
+  const rows=list.map(x=>`<tr class="gRow" data-gev="${x.id}"><td class="muted" style="white-space:nowrap">${dayStart(x.start)===dayStart(now)?'오늘':fmtDay(x.start)} ${hm(x.start)}</td><td style="white-space:nowrap"><span aria-hidden="true">${ETC[x.sub].ic}</span> <b${x.sub==='temp'&&x.val>=38?' style="color:var(--warn)"':''}>${x.sub==='temp'?x.val+'℃':ETC[x.sub].label}</b></td><td class="muted"${x.note?' translate="no"':''}>${esc(x.note||'')}</td></tr>`).join('');
+  return `${sampleBanner()}${growthSeg()}<header class="row between"><div class="row" style="flex-direction:column;align-items:flex-start;gap:0"><span class="small muted">${ageText(now)}</span><h1>열</h1></div><button class="btn" type="button" data-etcq="temp">체온 기록</button></header>
   ${info}${medLine}
   <div class="grid3">${['temp','med','hospital'].map(k=>`<button class="tile" type="button" data-etcq="${k}"><span class="ic" style="--c:var(--health)">${ETC[k].ic}</span>${ETC[k].label}</button>`).join('')}</div>
-  <div class="chips">${[[2,'48시간'],[7,'7일']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${R===k}" data-fevr="${k}">${n}</button>`).join('')}</div>
-  <div class="card chart">${feverChart(from,to)}</div>
+  <div class="chips">${[[2,'48시간'],[7,'7일'],[0,'전체']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${!view.fevWin&&R===k}" data-fevr="${k}">${n}</button>`).join('')}</div>
+  ${vacJumps()}
+  <div class="card chart" id="fevChart" style="touch-action:pan-y;user-select:none;-webkit-user-select:none">${feverChart(from,to)}</div>
+  <div class="row between" style="gap:6px"><button class="iconbtn" type="button" data-fevpan="-1" aria-label="이전">‹</button><span class="small muted" id="fevSpan" style="flex:1;text-align:center">${fevSpanText(from,to)}</span><button class="iconbtn" type="button" data-fevzoom="2" aria-label="축소">−</button><button class="iconbtn" type="button" data-fevzoom="0.5" aria-label="확대">+</button><button class="iconbtn" type="button" data-fevpan="1" aria-label="다음">›</button></div>
+  <p class="small muted" style="margin:-4px 4px 0;text-align:center">그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대돼요.</p>
   <div class="legend"><span><i style="background:var(--health);border-radius:5px"></i>체온</span><span><i style="background:var(--warn);height:2px"></i>38℃</span><span>💊 약</span><span>💉 접종</span><span>🏥 병원</span></div>
   ${rows?`<div class="card" style="overflow-x:auto;padding:4px 10px"><table><tbody>${rows}</tbody></table></div><p class="small muted" style="margin:0 4px">줄을 누르면 고치거나 지울 수 있어요.</p>`:`<div class="alertline">이 기간에 체온·약·병원 기록이 없어요. 열이 나면 "체온 기록"으로 남겨 보세요.</div>`}
   <p class="small muted" style="margin:0">참고 정보이며 진단이 아니에요. 열이 계속되거나 처지면 소아과 진료를 받으세요.</p>`;
@@ -995,7 +1019,7 @@ function renderVac(){
   const nxAll=nx?todo.filter(i=>i.due<=nx.due+3*DAY&&(i===nx||!relWait(i))):[];
   const dueNow=items.filter(i=>i.due<=now&&!opt(i.k)), doneNow=dueNow.filter(i=>i.ev).length;
   const relTxt=i=>relWait(i)?` (${vacLabel(i.rel[0],i.rel[1])} ${gapTxt(i.rel[2])} 뒤)`:'';
-  const row=i=>i.ev?`<button class="vrow done" type="button" data-ev="${i.ev.id}"><span class="ck">✓</span><span class="vn">${vacLabel(i.id,i.dose)}${i.ev.note&&i.ev.note!==vacLabel(i.id,i.dose)?` <span class="small muted" translate="no">${esc(i.ev.note)}</span>`:''}</span><span class="vd">${fmtDay(i.ev.start)}</span></button>`
+  const row=i=>i.ev?`<button class="vrow done" type="button" data-ev="${i.ev.id}"><span class="ck">✓</span><span class="vn">${vacLabel(i.id,i.dose)}${i.ev.note&&i.ev.note!==vacLabel(i.id,i.dose)?` <span class="small muted" translate="no">${esc(i.ev.note)}</span>`:''}</span><span class="vd">${(m=>m&&m.val>=37.5?`<b style="color:var(--${m.val>=38?'warn':'health'})">🌡️${m.val}℃</b> `:'')(vacFever(i.ev))}${fmtDay(i.ev.start)}</span></button>`
     :`<button class="vrow${i.due<=now?' due':''}" type="button" data-vac="${i.k}"><span class="ck"></span><span class="vn">${vacLabel(i.id,i.dose)}${VAC_NOTE[i.k]?` <span class="small muted">${VAC_NOTE[i.k]}</span>`:''}</span><span class="vd">${relWait(i)?i.rel[1]+'차 '+gapTxt(i.rel[2])+' 뒤':fmtDay(i.due)+'~'}</span></button>`;
   const ageM=(now-new Date(b.birth+'T00:00:00').getTime())/DAY/MONTH_D, far=g=>g>ageM+9&&!open.later; let farN=0;
   const groups=VAC_GROUPS.map(([g,name],gi)=>{ const end=(VAC_GROUPS[gi+1]||[999])[0], its=items.filter(i=>i.mo>=g&&i.mo<end); if(!its.length) return '';
@@ -1659,6 +1683,20 @@ $('#app').addEventListener('change',e=>{ const i=e.target.closest('[data-pick]')
   const [y,m,dd]=i.value.split('-').map(Number), t=Math.min(dayStart(Date.now()),new Date(y,m-1,dd).getTime());
   if(i.dataset.pick==='day'){ view.day=t; view.scrollLatest=true } else view.weekOff=Math.floor((dayStart(Date.now())-t)/(7*DAY));
   render() });
+// 열 그래프: 한 손가락으로 옆으로 밀면 앞뒤로, 두 손가락으로 벌리거나 오므리면 확대·축소. 움직이는 동안은 그래프만 다시 그림
+(()=>{ const app=$('#app'), P=new Map(); let st=null;
+  const chart=()=>$('#fevChart'), draw=w=>{ view.fevWin=w; const c=chart(); if(c) c.innerHTML=feverChart(w.from,w.to); const sp=$('#fevSpan'); if(sp) sp.textContent=L10N.t(fevSpanText(w.from,w.to)) };
+  const begin=()=>{ const c=chart(); if(!c) return; const [a,b]=fevWindow(), r=c.getBoundingClientRect(), ps=[...P.values()];
+    st={a,b,r,x:ps.length>1?(ps[0].x+ps[1].x)/2:ps[0].x,d:ps.length>1?Math.abs(ps[0].x-ps[1].x)||1:0,moved:false} };
+  app.addEventListener('pointerdown',e=>{ if(!e.target.closest('#fevChart')) return; P.set(e.pointerId,{x:e.clientX,y:e.clientY}); begin() });
+  app.addEventListener('pointermove',e=>{ if(!P.has(e.pointerId)||!st) return; P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const ps=[...P.values()], sp=st.b-st.a, pw=st.r.width*(340-42)/340;
+    if(ps.length>1&&st.d){ const d=Math.abs(ps[0].x-ps[1].x)||1, mid=(ps[0].x+ps[1].x)/2, k=st.d/d, ratio=Math.min(1,Math.max(0,(st.x-st.r.left-st.r.width*30/340)/pw)), at=st.a+sp*ratio, ns=sp*k;
+      st.moved=true; draw(fevClamp(at-ns*ratio-(mid-st.x)/pw*ns,at+ns*(1-ratio)-(mid-st.x)/pw*ns)) }
+    else { const dx=e.clientX-st.x; if(!st.moved&&Math.abs(dx)<6) return; st.moved=true; const dt=-dx/pw*sp; draw(fevClamp(st.a+dt,st.b+dt)) } });
+  const end=e=>{ if(!P.has(e.pointerId)) return; P.delete(e.pointerId); const moved=st&&st.moved; if(P.size) begin(); else { st=null; if(moved) render() } };
+  ['pointerup','pointercancel'].forEach(n=>app.addEventListener(n,end));
+})();
 // 성장 기록 표: 줄을 꾹 누르면(0.5초) 수정·삭제 화면. 그냥 눌러도 열림
 const gHold={t:0,row:null,x:0,y:0,fired:0};
 (()=>{ const app=$('#app'), stop=()=>{ clearTimeout(gHold.t); gHold.t=0; if(gHold.row) gHold.row.classList.remove('pressing'); gHold.row=null };
@@ -1683,7 +1721,11 @@ $('#app').addEventListener('click',async e=>{
   if(t.dataset.wmode){ view.weekMode=t.dataset.wmode; pref('weekMode',view.weekMode); return render() }
   if(t.dataset.gind){ view.growth=t.dataset.gind; return render() }
   if(t.dataset.gsub){ view.gsub=t.dataset.gsub; return render() }
-  if(t.dataset.fevr){ view.fevR=+t.dataset.fevr; return render() }
+  if(t.dataset.fevr!==undefined){ view.fevR=+t.dataset.fevr; view.fevWin=null; return render() }
+  if(t.dataset.fevjump){ const v=S.events.find(x=>x.id===t.dataset.fevjump); if(v){ view.fevWin=fevClamp(v.start-DAY,v.start+4*DAY) } return render() }
+  if(t.dataset.fevpan||t.dataset.fevzoom){ const [a,b]=fevWindow(), sp=b-a; let w;
+    if(t.dataset.fevpan) w=fevClamp(a+sp*.5*t.dataset.fevpan,b+sp*.5*t.dataset.fevpan); else { const c=(a+b)/2, ns=sp*t.dataset.fevzoom; w=fevClamp(c-ns/2,c+ns/2) }
+    view.fevWin=w; return render() }
   if(t.dataset.etcq) return etcSheet(t.dataset.etcq);
   if(t.dataset.vacg){ view.vacOpen=Object.assign({},view.vacOpen,{[t.dataset.vacg]:1}); return render() }
   if(t.dataset.vac!==undefined) return vacSheet(null,t.dataset.vac);
