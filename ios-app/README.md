@@ -18,7 +18,7 @@
   - 설정 > 음성 명령(`VoiceSettings.swift`): 명령별 "Siri에 추가"로 "루나 깼어"처럼 아기 이름으로 부르는 단축어를 만듦. "루나 수유"는 앱이 "몇 미리 먹었어요?"라고 묻고 음성 인식으로 양을 들음
 - 잠금화면·다이내믹 아일랜드 타이머(Live Activity): 수면 중·수유 중이면 시간이 흘러가고 "깼어요"/"수유 끝" 버튼이 있어요. 버튼을 누르면 Face ID 뒤 앱이 열리며 그 시각으로 기록돼요.
 - 배우자 기록: 앱을 열어 둘 때는 바로, 앱이 꺼져 있으면 위젯이 15분쯤마다 알림 서버(`push-server` `/summary`)에서 최신 요약을 받아 바뀌어요. 아이폰은 갤럭시처럼 푸시로 즉시 바꾸려면 Apple 푸시 키가 필요해서 지금은 이 방식이에요.
-- **아직 없는 것**: Siri, 광고. 광고(AdMob)는 스토어 출시 때 붙여요.
+- **광고**(1.1부터): 맨 위 AdMob 배너. 규칙은 갤럭시와 같음(`Babylog/Ads.swift`). App Store에서 받은 앱만 실제 광고, TestFlight는 테스트 광고.
 
 ## 주의: 기록 저장 공간이 Safari와 따로예요
 
@@ -48,7 +48,7 @@
 | `alert`·`confirm`·`prompt` | 아이폰 알림창 |
 | 사용자 에이전트 `BabylogIOS/빌드번호` | 웹앱이 아이폰 앱인지 알고 싶을 때 |
 
-웹앱과 잇는 코드는 갤럭시 앱의 `android-app/app/src/main/assets/bridge.js`를 그대로 넣어요(빌드 때 같이 묶음). 아이폰 쪽 `window.BabyNative`는 `update`·`shareFile`·`shareText`·`copy`만 있어요(광고 `adZone`, 빅스비 `voiceHelp`는 없어서 웹앱이 그 메뉴를 숨김). bridge.js에서 `BabyNative`의 새 기능을 부르면 `WebViewController.swift`의 대역에도 넣어야 해요.
+웹앱과 잇는 코드는 갤럭시 앱의 `android-app/app/src/main/assets/bridge.js`를 그대로 넣어요(빌드 때 같이 묶음). 아이폰 쪽 `window.BabyNative`는 `update`·`shareFile`·`shareText`·`copy`·`setLang`·`adZone`(광고, 1.1부터)·`voiceHelp`(Siri 사용법)가 있어요. bridge.js에서 `BabyNative`의 새 기능을 부르면 `WebViewController.swift`의 대역에도 넣어야 해요.
 
 ## 위젯 서명
 

@@ -9,12 +9,13 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
     static let host = "leecornell0131-ux.github.io"
 
     private var web: WKWebView!
+    private var adBar: AdBar!
     private var downloadNames: [ObjectIdentifier: URL] = [:]
     private var pending: [(String, Date, Int?)] = [] // 페이지가 준비되기 전에 들어온 위젯·잠금화면 버튼
 
     // 갤럭시 앱의 BabyNative(안드로이드 기능)를 아이폰 쪽으로 이어 주는 대역.
-    // bridge.js(갤럭시와 같은 파일)가 부르는 이름만 받음. 광고(adZone)처럼 아이폰에 없는 기능은
-    // 이름이 없어야 웹앱이 해당 메뉴를 숨김. 음성 명령(voiceHelp)은 아이폰에선 Siri 사용법 (platform 'ios'로 웹앱이 문구를 바꿈, voiceFeed 'ml'=0.2.3부터 "수유 120")
+    // bridge.js(갤럭시와 같은 파일)가 부르는 이름만 받음. 아이폰에 없는 기능은
+    // 이름이 없어야 웹앱이 해당 메뉴를 숨김. 광고(adZone)는 1.1부터 있음 (Ads.swift). 음성 명령(voiceHelp)은 아이폰에선 Siri 사용법 (platform 'ios'로 웹앱이 문구를 바꿈, voiceFeed 'ml'=0.2.3부터 "수유 120")
     private static let shim = """
     if (location.host === '\(host)' && !window.BabyNative) (function () {
       var post = function (m) { window.webkit.messageHandlers.babyNative.postMessage(m); };
@@ -26,6 +27,7 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
         reload: function () { post('reload'); },
         voiceHelp: function () { post('voiceHelp'); },
         setLang: function (l) { post({ t: 'setLang', l: String(l) }); },
+        adZone: function (on) { post({ t: 'adZone', on: !!on }); },
         platform: 'ios',
         voiceFeed: 'ml'
       };
@@ -57,14 +59,18 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
 
         let root = UIView()
         root.backgroundColor = .systemBackground
-        web.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(web)
+        // 맨 위에 배너 광고 자리(평소엔 숨김, 숨기면 자리도 없어짐), 그 아래 웹앱. 갤럭시 앱과 같은 배치
+        adBar = AdBar(root: self)
+        let stack = UIStackView(arrangedSubviews: [adBar, web])
+        stack.axis = .vertical
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(stack)
         NSLayoutConstraint.activate([
             // 위쪽은 시계·다이내믹 아일랜드와 겹치지 않게 안전 영역부터
-            web.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor),
-            web.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-            web.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            web.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
         ])
         view = root
     }
@@ -241,6 +247,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, W
             if let text = m["text"] as? String { share([text]) }
         case "copy":
             UIPasteboard.general.string = m["text"] as? String
+        case "adZone":
+            adBar.show((m["on"] as? Bool) ?? false)
         case "setLang":
             // 웹앱 설정 > 화면·언어 (위젯·잠금화면 타이머 글자도 같은 언어로)
             if let l = m["l"] as? String, l != Tr.lang || SharedStore.load(account: "lang") == nil {
