@@ -782,4 +782,5 @@ BabyI18n.load("en",{"이유식":"Solids",
 "이전":"Earlier",
 "축소":"Zoom out",
 "확대":"Zoom in",
-"그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대돼요.":"Swipe the chart sideways to move, pinch with two fingers to zoom."});
+"그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대돼요.":"Swipe the chart sideways to move, pinch with two fingers to zoom.",
+"그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대, 꾹 누르면 그때 수치가 보여요.":"Swipe the chart sideways to move, pinch to zoom, and press and hold to see the reading."});

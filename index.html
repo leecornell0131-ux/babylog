@@ -264,7 +264,7 @@ body.nodock .dock{display:none}
 
 <script>
 (function(){
-const VERSION='0.3.65';
+const VERSION='0.3.66';
 const MIN=60000, H=60*MIN, DAY=24*H, GAP_MIN=4*H, MONTH_D=30.4375;
 const KEY='babylog-v1';
 const $=s=>document.querySelector(s);
@@ -904,7 +904,7 @@ function renderGrowth(){
 }
 const HEALTH_SUBS=['temp','med','vomit','cough','rash','hospital','vaccine'];
 function agoText(ms){ const m=Math.max(0,Math.round(ms/MIN)), h=Math.floor(m/60); return h?(h>=48?Math.floor(h/24)+'일':h+'시간'+(m%60?' '+m%60+'분':'')):m+'분' }
-function feverChart(from,to){
+function feverChart(from,to,cur){
   const ev=S.events.filter(x=>x.type==='etc'&&x.start>=from&&x.start<=to);
   const temps=ev.filter(x=>x.sub==='temp'&&x.val).sort((a,c)=>a.start-c.start), meds=ev.filter(x=>x.sub==='med'), marks=ev.filter(x=>x.sub==='vaccine'||x.sub==='hospital').sort((a,c)=>a.start-c.start);
   const W=340,Hh=214,L=30,R=12,T=30,B=24, pw=W-L-R, ph=Hh-T-B;
@@ -935,6 +935,17 @@ function feverChart(from,to){
   const segs=[]; temps.forEach((x,i)=>{ if(!i||x.start-temps[i-1].start>2*DAY) segs.push([]); segs[segs.length-1].push(x) });
   segs.filter(g=>g.length>1).forEach(g=>s+=`<path d="M${g.map(x=>f(X(x.start))+' '+f(Y(x.val))).join('L')}" fill="none" style="stroke:var(--health)" stroke-width="2.2" stroke-linejoin="round"/>`);
   temps.forEach(x=>s+=`<circle cx="${f(X(x.start))}" cy="${f(Y(x.val))}" r="3.8" style="fill:${x.val>=38?'var(--health)':'var(--card)'};stroke:var(--health)" stroke-width="1.8"/>`);
+  // 점 위 숫자: 옆 점과 22px 넘게 떨어진 것만(겹치면 38℃ 이상·가장 높은 점 우선)
+  const byPri=temps.map((x,i)=>({x,i,cx:X(x.start)})).sort((a,c)=>(c.x.val>=38)-(a.x.val>=38)||c.x.val-a.x.val), shown=[];
+  byPri.forEach(p=>{ if(shown.some(q=>Math.abs(q.cx-p.cx)<20)) return; shown.push(p);
+    s+=`<text x="${f(p.cx)}" y="${f(Y(p.x.val)-8)}" text-anchor="middle" style="fill:var(--${p.x.val>=38?'warn':'fg'});font-weight:700;font-size:10px">${Number(p.x.val).toFixed(1)}</text>` });
+  // 꾹 누른 곳: 가장 가까운 체온 점에 세로 실선 + 시각·체온
+  if(cur!=null){ let near=null; temps.forEach(x=>{ if(!near||Math.abs(x.start-cur)<Math.abs(near.start-cur)) near=x });
+    const t=near&&Math.abs(X(near.start)-X(cur))<40?near.start:cur, cx=Math.min(W-R,Math.max(L,X(t)));
+    const lab=`${fmtDay(t)} ${hm(t)}${near&&t===near.start?' · '+Number(near.val).toFixed(1)+'℃':''}`, w=lab.length*6.2+14, bx=Math.min(W-R-w,Math.max(L,cx-w/2));
+    s+=`<line x1="${f(cx)}" x2="${f(cx)}" y1="${T}" y2="${T+ph}" style="stroke:var(--fg)" stroke-width="1.2"/>`;
+    if(near&&t===near.start) s+=`<circle cx="${f(cx)}" cy="${f(Y(near.val))}" r="6" style="fill:none;stroke:var(--fg)" stroke-width="1.5"/>`;
+    s+=`<rect x="${f(bx)}" y="${T-28}" width="${f(w)}" height="20" rx="6" style="fill:var(--fg)"/><text x="${f(bx+w/2)}" y="${T-14}" text-anchor="middle" style="fill:var(--card);font-weight:700;font-size:11px">${lab}</text>` }
   return s+'</svg>';
 }
 // 열 그래프 보기 구간. view.fevWin(드래그·확대·접종 바로 가기)이 있으면 그것, 없으면 48시간·7일·전체
@@ -961,9 +972,9 @@ function renderFever(){
   <div class="grid3">${['temp','med','hospital'].map(k=>`<button class="tile" type="button" data-etcq="${k}"><span class="ic" style="--c:var(--health)">${ETC[k].ic}</span>${ETC[k].label}</button>`).join('')}</div>
   <div class="chips">${[[2,'48시간'],[7,'7일'],[0,'전체']].map(([k,n])=>`<button class="chip" type="button" aria-pressed="${!view.fevWin&&R===k}" data-fevr="${k}">${n}</button>`).join('')}</div>
   ${vacJumps()}
-  <div class="card chart" id="fevChart" style="touch-action:pan-y;user-select:none;-webkit-user-select:none">${feverChart(from,to)}</div>
+  <div class="card chart" id="fevChart" style="touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none">${feverChart(from,to)}</div>
   <div class="row between" style="gap:6px"><button class="iconbtn" type="button" data-fevpan="-1" aria-label="이전">‹</button><span class="small muted" id="fevSpan" style="flex:1;text-align:center">${fevSpanText(from,to)}</span><button class="iconbtn" type="button" data-fevzoom="2" aria-label="축소">−</button><button class="iconbtn" type="button" data-fevzoom="0.5" aria-label="확대">+</button><button class="iconbtn" type="button" data-fevpan="1" aria-label="다음">›</button></div>
-  <p class="small muted" style="margin:-4px 4px 0;text-align:center">그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대돼요.</p>
+  <p class="small muted" style="margin:-4px 4px 0;text-align:center">그래프를 옆으로 밀면 앞뒤로, 두 손가락으로 벌리면 확대, 꾹 누르면 그때 수치가 보여요.</p>
   <div class="legend"><span><i style="background:var(--health);border-radius:5px"></i>체온</span><span><i style="background:var(--warn);height:2px"></i>38℃</span><span>💊 약</span><span>💉 접종</span><span>🏥 병원</span></div>
   ${rows?`<div class="card" style="overflow-x:auto;padding:4px 10px"><table><tbody>${rows}</tbody></table></div><p class="small muted" style="margin:0 4px">줄을 누르면 고치거나 지울 수 있어요.</p>`:`<div class="alertline">이 기간에 체온·약·병원 기록이 없어요. 열이 나면 "체온 기록"으로 남겨 보세요.</div>`}
   <p class="small muted" style="margin:0">참고 정보이며 진단이 아니에요. 열이 계속되거나 처지면 소아과 진료를 받으세요.</p>`;
@@ -1683,19 +1694,28 @@ $('#app').addEventListener('change',e=>{ const i=e.target.closest('[data-pick]')
   const [y,m,dd]=i.value.split('-').map(Number), t=Math.min(dayStart(Date.now()),new Date(y,m-1,dd).getTime());
   if(i.dataset.pick==='day'){ view.day=t; view.scrollLatest=true } else view.weekOff=Math.floor((dayStart(Date.now())-t)/(7*DAY));
   render() });
-// 열 그래프: 한 손가락으로 옆으로 밀면 앞뒤로, 두 손가락으로 벌리거나 오므리면 확대·축소. 움직이는 동안은 그래프만 다시 그림
-(()=>{ const app=$('#app'), P=new Map(); let st=null;
-  const chart=()=>$('#fevChart'), draw=w=>{ view.fevWin=w; const c=chart(); if(c) c.innerHTML=feverChart(w.from,w.to); const sp=$('#fevSpan'); if(sp) sp.textContent=L10N.t(fevSpanText(w.from,w.to)) };
+// 열 그래프: 한 손가락으로 옆으로 밀면 앞뒤로, 두 손가락으로 벌리거나 오므리면 확대·축소, 꾹 누르면 세로선과 수치
+// 움직이는 동안은 그래프(svg)만 다시 그림. 아이폰은 누른 svg가 지워지면 손가락 움직임이 끊기므로 바깥 상자에 포인터를 붙잡아 둠
+(()=>{ const app=$('#app'), P=new Map(); let st=null, hold=0;
+  const chart=()=>$('#fevChart'), redraw=(w,cur)=>{ const c=chart(); if(c) c.innerHTML=feverChart(w.from,w.to,cur) };
+  const draw=w=>{ view.fevWin=w; redraw(w); const sp=$('#fevSpan'); if(sp) sp.textContent=L10N.t(fevSpanText(w.from,w.to)) };
+  const tAt=x=>{ const [a,b]=fevWindow(), r=st.r, pw=r.width*(340-42)/340, left=r.left+r.width*30/340; return a+(b-a)*Math.min(1,Math.max(0,(x-left)/pw)) };
+  const probe=x=>{ const [a,b]=fevWindow(); redraw({from:a,to:b},tAt(x)) };
   const begin=()=>{ const c=chart(); if(!c) return; const [a,b]=fevWindow(), r=c.getBoundingClientRect(), ps=[...P.values()];
-    st={a,b,r,x:ps.length>1?(ps[0].x+ps[1].x)/2:ps[0].x,d:ps.length>1?Math.abs(ps[0].x-ps[1].x)||1:0,moved:false} };
-  app.addEventListener('pointerdown',e=>{ if(!e.target.closest('#fevChart')) return; P.set(e.pointerId,{x:e.clientX,y:e.clientY}); begin() });
-  app.addEventListener('pointermove',e=>{ if(!P.has(e.pointerId)||!st) return; P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    st={a,b,r,x:ps.length>1?(ps[0].x+ps[1].x)/2:ps[0].x,d:ps.length>1?Math.abs(ps[0].x-ps[1].x)||1:0,moved:false,probe:false} };
+  app.addEventListener('pointerdown',e=>{ const c=e.target.closest('#fevChart'); if(!c) return; try{ c.setPointerCapture(e.pointerId) }catch(_){}
+    P.set(e.pointerId,{x:e.clientX,y:e.clientY}); begin(); clearTimeout(hold);
+    if(P.size===1) hold=setTimeout(()=>{ if(st&&!st.moved&&P.size===1){ st.probe=true; try{ navigator.vibrate&&navigator.vibrate(10) }catch(_){} probe([...P.values()][0].x) } },350) });
+  app.addEventListener('pointermove',e=>{ if(!P.has(e.pointerId)||!st) return; const p0=P.get(e.pointerId); P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(st.probe){ e.preventDefault(); return probe(e.clientX) }
     const ps=[...P.values()], sp=st.b-st.a, pw=st.r.width*(340-42)/340;
-    if(ps.length>1&&st.d){ const d=Math.abs(ps[0].x-ps[1].x)||1, mid=(ps[0].x+ps[1].x)/2, k=st.d/d, ratio=Math.min(1,Math.max(0,(st.x-st.r.left-st.r.width*30/340)/pw)), at=st.a+sp*ratio, ns=sp*k;
-      st.moved=true; draw(fevClamp(at-ns*ratio-(mid-st.x)/pw*ns,at+ns*(1-ratio)-(mid-st.x)/pw*ns)) }
-    else { const dx=e.clientX-st.x; if(!st.moved&&Math.abs(dx)<6) return; st.moved=true; const dt=-dx/pw*sp; draw(fevClamp(st.a+dt,st.b+dt)) } });
-  const end=e=>{ if(!P.has(e.pointerId)) return; P.delete(e.pointerId); const moved=st&&st.moved; if(P.size) begin(); else { st=null; if(moved) render() } };
-  ['pointerup','pointercancel'].forEach(n=>app.addEventListener(n,end));
+    if(ps.length>1&&st.d){ clearTimeout(hold); const d=Math.abs(ps[0].x-ps[1].x)||1, mid=(ps[0].x+ps[1].x)/2, k=st.d/d, ratio=Math.min(1,Math.max(0,(st.x-st.r.left-st.r.width*30/340)/pw)), at=st.a+sp*ratio, ns=sp*k, sh=(mid-st.x)/pw*ns;
+      st.moved=true; draw(fevClamp(at-ns*ratio-sh,at+ns*(1-ratio)-sh)) }
+    else { const dx=e.clientX-st.x; if(!st.moved&&Math.abs(dx)<6&&Math.abs(e.clientY-p0.y)<6) return; clearTimeout(hold); if(!st.moved&&Math.abs(dx)<6) return; st.moved=true; const dt=-dx/pw*sp; draw(fevClamp(st.a+dt,st.b+dt)) } });
+  const end=e=>{ if(!P.has(e.pointerId)) return; P.delete(e.pointerId); clearTimeout(hold); const moved=st&&st.moved, pr=st&&st.probe;
+    if(P.size) begin(); else { st=null; if(moved&&!pr) render() } };
+  ['pointerup','pointercancel','lostpointercapture'].forEach(n=>app.addEventListener(n,end));
+  app.addEventListener('contextmenu',e=>{ if(e.target.closest('#fevChart')) e.preventDefault() });
 })();
 // 성장 기록 표: 줄을 꾹 누르면(0.5초) 수정·삭제 화면. 그냥 눌러도 열림
 const gHold={t:0,row:null,x:0,y:0,fired:0};
