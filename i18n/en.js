@@ -702,4 +702,10 @@ BabyI18n.load("en",{"이유식":"Solids",
 "내용을 복사했어요. 카톡에 붙여넣어 보내 주세요":"Copied. Paste it into a chat and send it",
 "복사가 안 됐어요. 화면을 캡처해 보내 주세요":"Couldn't copy. Please send a screenshot",
 "번으로 등록했어요":" registered",
-"줄을 꾹 누르면 고치거나 지울 수 있어요.":"Press and hold a row to edit or delete it."});
+"줄을 꾹 누르면 고치거나 지울 수 있어요.":"Press and hold a row to edit or delete it.",
+"벌써 끝났어요 (끝난 시각 넣기)":"Already done (enter end time)",
+"끝난 시각":"Ended at",
+"아직 자는 중이에요. 깬 시각을 넣고 저장하면 그때 깬 걸로 기록돼요.":"Still sleeping. Enter the wake time and save to end it at that time.",
+"아직 수유 중이에요. 끝난 시각을 넣고 저장하면 그때 끝난 걸로 기록돼요.":"Feeding still in progress. Enter the end time and save to end it at that time.",
+"깬 시각이 지금보다 늦어요":"Wake time is later than now",
+"끝난 시각이 지금보다 늦어요":"End time is later than now"});
